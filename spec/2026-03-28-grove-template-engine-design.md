@@ -363,12 +363,93 @@ Operator precedence (high to low): `not` → `*/%` → `+-~` → `<><=>=` → `=
 
 ```html
 {{ name | upcase }}
-{{ bio | truncate(120, "…") }}
+{{ bio | truncate(120, "…") }}           truncate(n, suffix): at most n chars, then append suffix
 {{ items | sort(attr="created_at") | reverse | first }}
 {{ price | round(2) | prepend("$") }}
 {{ content | markdown }}                 Returns SafeHTML — escaping skipped
 {{ user_input | safe }}                  Explicit trust — the only escape hatch
 ```
+
+> **`truncate` semantics:** `truncate(n, suffix)` truncates to at most `n` characters (*not* counting the suffix), then appends the suffix if truncation occurred. `truncate(10, "…")` on a 30-character string yields an 11-character result.
+
+#### Built-in Filter Catalogue
+
+**String filters**
+
+| Filter | Signature | Description |
+|---|---|---|
+| `upcase` | `upcase` | Convert to uppercase |
+| `downcase` | `downcase` | Convert to lowercase |
+| `capitalize` | `capitalize` | First character uppercase, rest lowercase |
+| `titlecase` | `titlecase` | Title-case each word |
+| `trim` | `trim` | Strip leading and trailing whitespace |
+| `lstrip` | `lstrip` | Strip leading whitespace |
+| `rstrip` | `rstrip` | Strip trailing whitespace |
+| `replace` | `replace(old, new)` | Replace first occurrence of `old` with `new` |
+| `replace_all` | `replace_all(old, new)` | Replace all occurrences |
+| `prepend` | `prepend(str)` | Prepend `str` to the value |
+| `append` | `append(str)` | Append `str` to the value |
+| `truncate` | `truncate(n, suffix="…")` | Truncate to `n` chars (suffix excluded from count) |
+| `truncate_words` | `truncate_words(n, suffix="…")` | Truncate to `n` words |
+| `split` | `split(sep)` | Split string into a list on `sep` |
+| `strip_html` | `strip_html` | Remove all HTML tags |
+| `strip_newlines` | `strip_newlines` | Remove `\n` and `\r\n` |
+| `newline_to_br` | `newline_to_br` | Replace newlines with `<br>` (returns `SafeHTML`) |
+| `escape` | `escape` | HTML-escape (alias: `h`); redundant unless piped from `safe` |
+| `url_encode` | `url_encode` | Percent-encode for use in query strings |
+| `url_decode` | `url_decode` | Decode percent-encoded string |
+| `base64_encode` | `base64_encode` | Base64-encode |
+| `base64_decode` | `base64_decode` | Base64-decode |
+| `slugify` | `slugify` | Convert to URL slug (`"Hello World"` → `"hello-world"`) |
+| `markdown` | `markdown` | Render Markdown to HTML (returns `SafeHTML`) |
+| `safe` | `safe` | Mark string as trusted HTML — bypasses auto-escape |
+| `json` | `json` | Serialize value to JSON string |
+| `default` | `default(fallback)` | Return `fallback` if value is nil, false, or empty string |
+
+**Number filters**
+
+| Filter | Signature | Description |
+|---|---|---|
+| `round` | `round(n=0)` | Round to `n` decimal places |
+| `ceil` | `ceil` | Round up to nearest integer |
+| `floor` | `floor` | Round down to nearest integer |
+| `abs` | `abs` | Absolute value |
+| `plus` | `plus(n)` | Add `n` |
+| `minus` | `minus(n)` | Subtract `n` |
+| `times` | `times(n)` | Multiply by `n` |
+| `divided_by` | `divided_by(n)` | Divide by `n` (float result) |
+| `modulo` | `modulo(n)` | Remainder after division by `n` |
+
+**List/collection filters**
+
+| Filter | Signature | Description |
+|---|---|---|
+| `join` | `join(sep="")` | Join list elements with separator |
+| `first` | `first` | First element, or nil if empty |
+| `last` | `last` | Last element, or nil if empty |
+| `size` | `size` | Number of elements (alias: `length`) |
+| `reverse` | `reverse` | Reverse the list (returns new list) |
+| `sort` | `sort` | Sort list of strings/numbers ascending |
+| `sort` | `sort(attr=key)` | Sort list of maps/Resolvables by attribute |
+| `sort` | `sort(attr=key, order="desc")` | Sort descending |
+| `uniq` | `uniq` | Remove duplicate values |
+| `compact` | `compact` | Remove nil values |
+| `flatten` | `flatten` | Flatten one level of nested lists |
+| `map` | `map(attr=key)` | Extract attribute from each element → new list |
+| `where` | `where(attr=key, value)` | Keep elements where `attr == value` |
+| `reject` | `reject(attr=key, value)` | Remove elements where `attr == value` |
+| `sum` | `sum` | Sum of numeric list |
+| `sum` | `sum(attr=key)` | Sum of attribute across list |
+| `min` | `min` | Minimum value |
+| `min` | `min(attr=key)` | Minimum by attribute |
+| `max` | `max` | Maximum value |
+| `max` | `max(attr=key)` | Maximum by attribute |
+| `slice` | `slice(start, end)` | Sub-list from `start` (inclusive) to `end` (exclusive) |
+| `push` | `push(val)` | Append `val` — returns new list |
+| `keys` | `keys` | Keys of a map → sorted list |
+| `values` | `values` | Values of a map → list (in key-sort order) |
+
+> **Filter naming:** `size` and `length` are aliases. `sort` appears twice in the table because it has two distinct call signatures (with and without `attr=`); both resolve to the same implementation. Filters that accept `attr=` use named-argument syntax (`attr="field_name"`).
 
 #### Control Flow
 
@@ -391,10 +472,22 @@ Operator precedence (high to low): `not` → `*/%` → `+-~` → `<><=>=` → `=
   No products found.
 {% endfor %}
 
+{# Key-value destructuring over maps — key and value names are free #}
+{% for key, value in config %}
+  {{ key }}: {{ value }}
+{% endfor %}
+
+{# Indexed destructuring over lists — i is 0-based, item is the element #}
+{% for i, item in products %}
+  {{ i }}: {{ item.name }}
+{% endfor %}
+
 {% for i in range(1, 11) %}
   {{ i }}
 {% endfor %}
 ```
+
+> **`range()` semantics:** `range(stop)` produces integers `[0, stop)`. `range(start, stop)` produces `[start, stop)` — end-exclusive, matching Python/Go conventions. `range(start, stop, step)` steps by `step`; a negative step produces a descending sequence (`range(5, 0, -1)` → `5 4 3 2 1`). `range(5, 1)` with a positive step and `start > stop` produces an **empty sequence** — not an error. All arguments are coerced to integers; non-integer values are truncated toward zero.
 
 `loop` magic variable inside `{% for %}`:
 
@@ -407,6 +500,8 @@ Operator precedence (high to low): `not` → `*/%` → `+-~` → `<><=>=` → `=
 | `loop.length` | Total items |
 | `loop.depth` | 1 for outer, 2 for first nested, etc. |
 | `loop.parent` | Parent loop's `loop` object |
+
+> **Map iteration:** When iterating over a Go `map`, Grove **sorts keys lexicographically** before iterating to guarantee deterministic output. `loop.length` equals `len(map)`. Slice/array iteration preserves insertion order. The two-variable form (`for k, v in map`) is **only** valid on maps; using it on a slice is a `ParseError`. On a slice, use the two-variable form with a list (`for i, item in list`) where `i` is the 0-based integer index.
 
 #### Assignment & Scoping
 
@@ -489,7 +584,7 @@ Operator precedence (high to low): `not` → `*/%` → `+-~` → `<><=>=` → `=
 {% endblock %}
 ```
 
-`super()` renders the parent block's content inline. Inheritance is resolved at **compile time** — the compiler merges blocks into a flat bytecode sequence; no runtime inheritance walk.
+`super()` is a **compile-time splice**, not a runtime call. The compiler replaces `{{ super() }}` with the parent block's bytecode inlined at that position. Using `super()` outside a `{% block %}` is a `ParseError`. Inheritance is resolved entirely at compile time — the result is a flat bytecode sequence with no runtime inheritance walk.
 
 #### Include & Import
 
@@ -503,11 +598,20 @@ Operator precedence (high to low): `not` → `*/%` → `+-~` → `<><=>=` → `=
 {# Include isolated — sub-template sees only render ctx + globals #}
 {% include "partials/widget.html" isolated %}
 
+{# Render — always isolated; passes a single named variable (component idiom) #}
+{# Equivalent to: include "..." isolated with { item: product } #}
+{% render "components/card.html" with { item: product } %}
+
+{# Render shorthand: key-value pairs without braces #}
+{% render "components/card.html" item: product, size: "lg" %}
+
 {# Import macros from another file #}
 {% import "macros/forms.html" as forms %}
 {{ forms.input("email", type="email") }}
 {{ forms.select("country", options=countries) }}
 ```
+
+> **`render` vs `include isolated`:** `{% render %}` is syntactic sugar for `{% include ... isolated with { ... } %}`. It exists to make the component idiom explicit and to signal to readers that the sub-template receives no ambient scope. The `{% render %}` tag always creates an isolated scope — there is no `{% render "..." %}` without variable passing, and there is no non-isolated variant. If you need a non-isolated include, use `{% include %}`.
 
 #### Components (Props + Slots)
 
@@ -559,6 +663,8 @@ Slot fallback content (between `{% slot %}` and `{% endslot %}`) is rendered whe
 ```
 
 If two components each declare `{% asset src="/js/datepicker.js" %}`, it appears **once** in `result.Assets.Scripts`.
+
+> **Boolean attribute encoding:** Boolean HTML attributes (`defer`, `async`, `crossorigin`) are stored in `Asset.Attrs` as `map[key]""` (empty string value). `InjectAssets()` serializes empty-string values as standalone attributes (`defer`, not `defer=""`). Non-boolean attributes are emitted as `key="value"`.
 
 #### Metadata Hoisting
 
@@ -632,6 +738,24 @@ key = SHA256(templateSource)[:16]  // hex string
 
 Content-hash (not mtime) as the cache key ensures correctness across atomic writes, symlinks, and in-memory stores. Hot-reload: `Store.Mtime()` is polled; on change, source is re-read and re-hashed.
 
+#### Bytecode Cache Eviction
+
+The cache is an **LRU** (least-recently-used) with a configurable maximum. Default: **500 entries**.
+
+```go
+eng := grove.New(
+    grove.WithCacheSize(1000),  // raise limit for large template trees
+    grove.WithCacheSize(0),     // disable cache entirely — recompile every render (dev/test only)
+)
+
+eng.ClearCache()                // evict all entries manually (e.g. after bulk template import)
+eng.CacheStats()                // returns grove.CacheStats{Len, Hits, Misses, Evictions}
+```
+
+Eviction is O(1) via a doubly-linked list + hash map. When the cache is full, the least-recently-used entry is dropped. Multi-tenant deployments rendering thousands of distinct user templates should set `WithCacheSize` to cover the expected working set, or accept that cold-start compile cost applies to evicted entries.
+
+> **Hot-reload interaction:** When hot-reload is enabled and a template's mtime changes, Grove re-reads, re-hashes, and re-compiles the template. The new bytecode gets a new content-hash key; the old key is left in the LRU and will be evicted normally. There is no explicit invalidation of the old entry on update — it becomes unreachable immediately (no new render will request the old hash) and is garbage-collected by the LRU when the cache fills.
+
 #### Why Bytecode VM over Tree-Walking
 
 | Factor | Tree-walk (pongo2/liquid) | Bytecode VM (Grove) |
@@ -684,7 +808,7 @@ type Asset struct {
     Content string            // for inline assets
     Attrs   map[string]string // defer, async, media, etc.
 }
-type Ctx map[string]any       // convenience alias
+type Data map[string]any      // template data passed to Render
 
 // Value type (internal/vm/ but exposed via pkg/grove/)
 type Value struct {
@@ -726,13 +850,14 @@ Template accesses {{ user.name }}
 #### Bytecode VM Design
 
 ```go
-// Fixed-width 64-bit instruction — cache-line friendly
+// Fixed-width 64-bit (8-byte) instruction — cache-line friendly.
+// Field order eliminates implicit padding: A(2)+B(2)+Op(1)+Flags(1)+_(2) = 8 bytes.
 type Instruction struct {
-    Op    Opcode  // uint8
     A     uint16  // primary operand (const index, jump offset, arg count)
     B     uint16  // secondary operand
-    Flags uint8   // escape flag, scope flags
-    _     uint16  // padding
+    Op    Opcode  // uint8 — which operation
+    Flags uint8   // modifier bits (escape flag, scope flags, etc.)
+    _     uint16  // reserved / future use
 }
 
 // Core opcodes
@@ -777,13 +902,13 @@ var vmPool = sync.Pool{
     New: func() any { return &VM{stack: [256]Value{}} },
 }
 
-func (e *Engine) Render(w io.Writer, name string, ctx Ctx) (RenderResult, error) {
+func (e *Engine) Render(ctx context.Context, name string, data Data) (RenderResult, error) {
     bytecode, err := e.load(name)
     if err != nil { return RenderResult{}, err }
 
     vm := vmPool.Get().(*VM)
     defer vmPool.Put(vm)
-    vm.reset(e, w, ctx)
+    vm.reset(e, ctx, data)
 
     return vm.execute(bytecode)
 }
@@ -838,7 +963,12 @@ eng := grove.New(
 )
 ```
 
-Sandbox enforcement is in the VM's main execution loop — counters are checked per `ITER_NEXT` opcode (loop budget) and per N instructions (time budget). No template trick can bypass it.
+Sandbox enforcement has two tiers:
+
+- **Compile-time:** `AllowedFilters` and `AllowedTags` are checked by the compiler. Using a banned filter or tag emits a `ParseError` before any execution begins.
+- **Runtime (VM loop):** `MaxLoopIter`, `MaxOutputBytes`, `MaxRenderTime`, and `MaxCallDepth` are checked at runtime — `MaxLoopIter` per `ITER_NEXT` opcode, `MaxRenderTime` per N instructions, output bytes per `OUTPUT` opcode. No template trick can bypass them.
+
+> **Security assumption — trusted filter/tag registry:** The sandbox controls what *templates* can do; it does **not** sandbox registered Go filters and tags. A custom filter has full Go access — it can read environment variables, make network calls, or query a database. When operating in sandbox mode, `AllowedFilters` and `AllowedTags` must enumerate **only** filters and tags that are themselves safe for untrusted input. Never register application-internal filters (auth token generation, database writes, etc.) on an engine that evaluates untrusted templates. A separate `grove.Engine` instance with a minimal filter/tag set is the recommended pattern for user-facing template sandboxes.
 
 #### Variable Isolation Levels
 
@@ -846,8 +976,19 @@ Sandbox enforcement is in the VM's main execution loop — counters are checked 
 {% include "nav.html" %}                     {# shares scope: can read parent vars #}
 {% include "nav.html" with { x: 1 } %}      {# shares scope + extra vars #}
 {% include "nav.html" isolated %}            {# only render ctx + globals #}
-{% render "card.html" with item %}           {# isolated by default — component idiom #}
+{% render "card.html" with { item: product } %} {# isolated by default — component idiom #}
 ```
+
+#### Path Traversal Prevention
+
+`FileSystemStore` normalizes all template names through `path.Clean` before any filesystem access. Names that escape the template root (contain `..` components after cleaning, or begin with `/`) are rejected with a `ParseError` at compile time — before any disk I/O occurs.
+
+```
+{% include "../../etc/passwd" %}  → ParseError: template name escapes root: "../../etc/passwd"
+{% include "/abs/path.html" %}    → ParseError: template name must be relative
+```
+
+Grove provides `grove.SafeTemplateName(name) error` as a public utility for custom store implementations to apply the same validation. Custom stores that do **not** use the local filesystem (e.g. database stores) should apply equivalent namespace isolation — for example, scoping names to a tenant prefix.
 
 #### Resolvable — Explicit Field Exposure
 
@@ -871,7 +1012,7 @@ func (u User) GroveResolve(key string) (any, bool) {
 }
 ```
 
-Grove does **not** walk struct fields via `reflect` on arbitrary types. Only types implementing `Resolvable` (or passed as `grove.Ctx`) are accessible in templates.
+Grove does **not** walk struct fields via `reflect` on arbitrary types. Only types implementing `Resolvable` (or passed as `grove.Data`) are accessible in templates.
 
 ---
 
@@ -969,7 +1110,7 @@ eng := grove.New(grove.WithStore(&DBStore{db}))
 
 ```go
 eng.OnRender(func(next grove.RenderFunc) grove.RenderFunc {
-    return func(name string, ctx grove.Ctx) (grove.RenderResult, error) {
+    return func(name string, ctx grove.Data) (grove.RenderResult, error) {
         start := time.Now()
         result, err := next(name, ctx)
         metrics.RecordRender(name, time.Since(start), err)
@@ -993,7 +1134,7 @@ eng := grove.New(
     grove.WithHotReload(true),                // default: false
     grove.WithStrictVariables(true),          // default: false (nil for missing)
     grove.WithGlobal("siteName", "Acme"),
-    grove.WithGlobals(grove.Ctx{
+    grove.WithGlobals(grove.Data{
         "site":    siteConfig,
         "helpers": helperFuncs,
     }),
@@ -1006,9 +1147,11 @@ eng := grove.New(
 
 #### Rendering
 
+All `Render*` methods accept a `context.Context` as the first argument for cancellation and timeout propagation. The VM checks `ctx.Done()` at each `ITER_NEXT` opcode (the same point where sandbox loop counters are checked), so cancellation is prompt without adding overhead on non-loop code.
+
 ```go
 // Render to RenderResult (body + assets + meta)
-result, err := eng.Render("page.html", grove.Ctx{
+result, err := eng.Render(ctx, "page.html", grove.Data{
     "user":  user,
     "items": items,
 })
@@ -1020,19 +1163,22 @@ result.Meta["title"]           // any — hoisted metadata
 // Inject assets automatically before </head>
 fullHTML := result.InjectAssets()
 
-// Render directly to writer (zero-copy HTTP path)
-err := eng.RenderTo(w, "page.html", grove.Ctx{"user": user})
+// Render directly to writer (zero-copy HTTP path; cannot collect assets for injection)
+err := eng.RenderTo(ctx, w, "page.html", grove.Data{"user": user})
 
-// Render a template literal (no file lookup — testing, dynamic templates)
-result, err := eng.RenderTemplate(`Hello {{ name }}!`, grove.Ctx{"name": "World"})
+// Render an inline template string.
+// The template has no name and no store association:
+// {% extends %}, {% import %}, and {% include %} are parse errors in inline templates.
+// Use eng.Render() with a MemoryStore for composition in tests.
+result, err := eng.RenderTemplate(ctx, `Hello {{ name }}!`, grove.Data{"name": "World"})
 ```
 
 #### HTTP Integration
 
 ```go
-// Direct handler use
+// Direct handler use — r.Context() propagates cancellation into the render
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-    result, err := h.eng.Render("page.html", grove.Ctx{"req": r})
+    result, err := h.eng.Render(r.Context(), "page.html", grove.Data{"req": r})
     if err != nil {
         http.Error(w, "render error", 500)
         return
@@ -1043,8 +1189,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Middleware helper
-mux.Handle("/about", eng.Handler("pages/about.html", func(r *http.Request) grove.Ctx {
-    return grove.Ctx{"user": sessionUser(r)}
+mux.Handle("/about", eng.Handler("pages/about.html", func(r *http.Request) grove.Data {
+    return grove.Data{"user": sessionUser(r)}
 }))
 ```
 
@@ -1070,7 +1216,10 @@ The following tests are organized by feature and are ready to drop into `grove_t
 package grove_test
 
 import (
+    "context"
+    "fmt"
     "strings"
+    "sync"
     "testing"
     "time"
 
@@ -1086,16 +1235,16 @@ func newEngine(t *testing.T, opts ...grove.Option) *grove.Engine {
     return eng
 }
 
-func render(t *testing.T, eng *grove.Engine, tmpl string, ctx grove.Ctx) string {
+func render(t *testing.T, eng *grove.Engine, tmpl string, data grove.Data) string {
     t.Helper()
-    result, err := eng.RenderTemplate(tmpl, ctx)
+    result, err := eng.RenderTemplate(context.Background(), tmpl, data)
     require.NoError(t, err)
     return result.Body
 }
 
-func renderErr(t *testing.T, eng *grove.Engine, tmpl string, ctx grove.Ctx) error {
+func renderErr(t *testing.T, eng *grove.Engine, tmpl string, data grove.Data) error {
     t.Helper()
-    _, err := eng.RenderTemplate(tmpl, ctx)
+    _, err := eng.RenderTemplate(context.Background(), tmpl, data)
     return err
 }
 
@@ -1103,15 +1252,15 @@ func renderErr(t *testing.T, eng *grove.Engine, tmpl string, ctx grove.Ctx) erro
 
 func TestVariables_SimpleString(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `Hello, {{ name }}!`, grove.Ctx{"name": "World"})
+    got := render(t, eng, `Hello, {{ name }}!`, grove.Data{"name": "World"})
     require.Equal(t, "Hello, World!", got)
 }
 
 func TestVariables_NestedAccess(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ user.address.city }}`, grove.Ctx{
-        "user": grove.Ctx{
-            "address": grove.Ctx{"city": "Berlin"},
+    got := render(t, eng, `{{ user.address.city }}`, grove.Data{
+        "user": grove.Data{
+            "address": grove.Data{"city": "Berlin"},
         },
     })
     require.Equal(t, "Berlin", got)
@@ -1119,7 +1268,7 @@ func TestVariables_NestedAccess(t *testing.T) {
 
 func TestVariables_IndexAccess(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ items[0] }}`, grove.Ctx{
+    got := render(t, eng, `{{ items[0] }}`, grove.Data{
         "items": []string{"alpha", "beta", "gamma"},
     })
     require.Equal(t, "alpha", got)
@@ -1127,7 +1276,7 @@ func TestVariables_IndexAccess(t *testing.T) {
 
 func TestVariables_MapAccess(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ config["debug"] }}`, grove.Ctx{
+    got := render(t, eng, `{{ config["debug"] }}`, grove.Data{
         "config": map[string]any{"debug": "true"},
     })
     require.Equal(t, "true", got)
@@ -1135,13 +1284,13 @@ func TestVariables_MapAccess(t *testing.T) {
 
 func TestVariables_UndefinedReturnsEmpty(t *testing.T) {
     eng := newEngine(t) // strict=false by default
-    got := render(t, eng, `[{{ missing }}]`, grove.Ctx{})
+    got := render(t, eng, `[{{ missing }}]`, grove.Data{})
     require.Equal(t, "[]", got)
 }
 
 func TestVariables_StrictModeErrors(t *testing.T) {
     eng := newEngine(t, grove.WithStrictVariables(true))
-    err := renderErr(t, eng, `{{ missing }}`, grove.Ctx{})
+    err := renderErr(t, eng, `{{ missing }}`, grove.Data{})
     require.Error(t, err)
     var re *grove.RuntimeError
     require.ErrorAs(t, err, &re)
@@ -1153,7 +1302,7 @@ func TestVariables_Resolvable(t *testing.T) {
     p := Product{Name: "Widget", price: 9.99}
     // Product must implement grove.Resolvable
     eng := newEngine(t)
-    got := render(t, eng, `{{ product.name }}`, grove.Ctx{"product": p})
+    got := render(t, eng, `{{ product.name }}`, grove.Data{"product": p})
     require.Equal(t, "Widget", got)
 }
 
@@ -1162,7 +1311,7 @@ func TestVariables_ResolvableHidesUnexposed(t *testing.T) {
     p := Product{Name: "Widget", price: 9.99}
     eng := newEngine(t, grove.WithStrictVariables(true))
     // price is exposed via GroveResolve but passwordHash is not
-    err := renderErr(t, eng, `{{ product.secret }}`, grove.Ctx{"product": p})
+    err := renderErr(t, eng, `{{ product.secret }}`, grove.Data{"product": p})
     require.Error(t, err)
 }
 
@@ -1178,41 +1327,41 @@ func TestExpressions_Arithmetic(t *testing.T) {
         {`{{ 10 % 3 }}`, "1"},
     }
     for _, tc := range cases {
-        got := render(t, eng, tc.tmpl, grove.Ctx{})
+        got := render(t, eng, tc.tmpl, grove.Data{})
         require.Equal(t, tc.want, got, "template: %s", tc.tmpl)
     }
 }
 
 func TestExpressions_StringConcat(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ "Hello" ~ ", " ~ name ~ "!" }}`, grove.Ctx{"name": "Grove"})
+    got := render(t, eng, `{{ "Hello" ~ ", " ~ name ~ "!" }}`, grove.Data{"name": "Grove"})
     require.Equal(t, "Hello, Grove!", got)
 }
 
 func TestExpressions_Comparison(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ x > 5 }}`, grove.Ctx{"x": 10})
+    got := render(t, eng, `{{ x > 5 }}`, grove.Data{"x": 10})
     require.Equal(t, "true", got)
 }
 
 func TestExpressions_LogicalOperators(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ a and b }}`, grove.Ctx{"a": true, "b": true})
+    got := render(t, eng, `{{ a and b }}`, grove.Data{"a": true, "b": true})
     require.Equal(t, "true", got)
 
-    got = render(t, eng, `{{ a and b }}`, grove.Ctx{"a": true, "b": false})
+    got = render(t, eng, `{{ a and b }}`, grove.Data{"a": true, "b": false})
     require.Equal(t, "false", got)
 }
 
 func TestExpressions_InlineTernary(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ name if active else "Guest" }}`, grove.Ctx{
+    got := render(t, eng, `{{ name if active else "Guest" }}`, grove.Data{
         "name":   "Alice",
         "active": true,
     })
     require.Equal(t, "Alice", got)
 
-    got = render(t, eng, `{{ name if active else "Guest" }}`, grove.Ctx{
+    got = render(t, eng, `{{ name if active else "Guest" }}`, grove.Data{
         "name":   "Alice",
         "active": false,
     })
@@ -1221,7 +1370,7 @@ func TestExpressions_InlineTernary(t *testing.T) {
 
 func TestExpressions_Not(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ not banned }}`, grove.Ctx{"banned": false})
+    got := render(t, eng, `{{ not banned }}`, grove.Data{"banned": false})
     require.Equal(t, "true", got)
 }
 
@@ -1229,27 +1378,34 @@ func TestExpressions_Not(t *testing.T) {
 
 func TestFilters_Upcase(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ name | upcase }}`, grove.Ctx{"name": "grove"})
+    got := render(t, eng, `{{ name | upcase }}`, grove.Data{"name": "grove"})
     require.Equal(t, "GROVE", got)
 }
 
-func TestFilters_Truncate(t *testing.T) {
+func TestFilters_Truncate_LengthExcludesSuffix(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ bio | truncate(10, "…") }}`, grove.Ctx{
+    // n=10 counts chars before suffix; "Hello, thi" (10) + "…" = 11 total
+    got := render(t, eng, `{{ bio | truncate(10, "…") }}`, grove.Data{
         "bio": "Hello, this is a long biography.",
     })
     require.Equal(t, "Hello, thi…", got)
 }
 
+func TestFilters_Truncate_NoTruncationWhenShort(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng, `{{ bio | truncate(100, "…") }}`, grove.Data{"bio": "Short."})
+    require.Equal(t, "Short.", got) // no truncation, no suffix appended
+}
+
 func TestFilters_Chain(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ name | upcase | truncate(5, "") }}`, grove.Ctx{"name": "grove engine"})
+    got := render(t, eng, `{{ name | upcase | truncate(5, "") }}`, grove.Data{"name": "grove engine"})
     require.Equal(t, "GROVE", got)
 }
 
 func TestFilters_Sort(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ items | sort | join(", ") }}`, grove.Ctx{
+    got := render(t, eng, `{{ items | sort | join(", ") }}`, grove.Data{
         "items": []string{"banana", "apple", "cherry"},
     })
     require.Equal(t, "apple, banana, cherry", got)
@@ -1258,8 +1414,8 @@ func TestFilters_Sort(t *testing.T) {
 func TestFilters_SortByAttr(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng, `{% for p in products | sort(attr="name") %}{{ p.name }} {% endfor %}`,
-        grove.Ctx{
-            "products": []grove.Ctx{
+        grove.Data{
+            "products": []grove.Data{
                 {"name": "Zebra"},
                 {"name": "Apple"},
                 {"name": "Mango"},
@@ -1270,7 +1426,7 @@ func TestFilters_SortByAttr(t *testing.T) {
 
 func TestFilters_ExpressionThenFilter(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ price * 1.2 | round(2) }}`, grove.Ctx{"price": 9.99})
+    got := render(t, eng, `{{ price * 1.2 | round(2) }}`, grove.Data{"price": 9.99})
     require.Equal(t, "11.99", got)
 }
 
@@ -1279,7 +1435,7 @@ func TestFilters_CustomFilter(t *testing.T) {
     eng.RegisterFilter("shout", func(v grove.Value, args []grove.Value) (grove.Value, error) {
         return grove.StringValue(strings.ToUpper(v.String()) + "!!!"), nil
     })
-    got := render(t, eng, `{{ msg | shout }}`, grove.Ctx{"msg": "hello"})
+    got := render(t, eng, `{{ msg | shout }}`, grove.Data{"msg": "hello"})
     require.Equal(t, "HELLO!!!", got)
 }
 
@@ -1289,13 +1445,13 @@ func TestFilters_CustomFilterWithArgs(t *testing.T) {
         n := grove.ArgInt(args, 0, 2)
         return grove.StringValue(strings.Repeat(v.String(), n)), nil
     })
-    got := render(t, eng, `{{ "ha" | repeat(3) }}`, grove.Ctx{})
+    got := render(t, eng, `{{ "ha" | repeat(3) }}`, grove.Data{})
     require.Equal(t, "hahaha", got)
 }
 
 func TestFilters_SafeFilter_TrustedHTML(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ html | safe }}`, grove.Ctx{
+    got := render(t, eng, `{{ html | safe }}`, grove.Data{
         "html": "<b>bold</b>",
     })
     require.Equal(t, "<b>bold</b>", got)
@@ -1309,7 +1465,7 @@ func TestFilters_CustomHTMLFilter_SkipsEscape(t *testing.T) {
         },
         grove.FilterOutputsHTML(),
     ))
-    got := render(t, eng, `{{ name | bold }}`, grove.Ctx{"name": "Grove"})
+    got := render(t, eng, `{{ name | bold }}`, grove.Data{"name": "Grove"})
     require.Equal(t, "<b>Grove</b>", got)
 }
 
@@ -1318,28 +1474,28 @@ func TestFilters_CustomHTMLFilter_SkipsEscape(t *testing.T) {
 func TestIf_Basic(t *testing.T) {
     eng := newEngine(t)
     tmpl := `{% if active %}yes{% else %}no{% endif %}`
-    require.Equal(t, "yes", render(t, eng, tmpl, grove.Ctx{"active": true}))
-    require.Equal(t, "no", render(t, eng, tmpl, grove.Ctx{"active": false}))
+    require.Equal(t, "yes", render(t, eng, tmpl, grove.Data{"active": true}))
+    require.Equal(t, "no", render(t, eng, tmpl, grove.Data{"active": false}))
 }
 
 func TestIf_Elif(t *testing.T) {
     eng := newEngine(t)
     tmpl := `{% if role == "admin" %}admin{% elif role == "mod" %}mod{% else %}user{% endif %}`
-    require.Equal(t, "admin", render(t, eng, tmpl, grove.Ctx{"role": "admin"}))
-    require.Equal(t, "mod", render(t, eng, tmpl, grove.Ctx{"role": "mod"}))
-    require.Equal(t, "user", render(t, eng, tmpl, grove.Ctx{"role": "viewer"}))
+    require.Equal(t, "admin", render(t, eng, tmpl, grove.Data{"role": "admin"}))
+    require.Equal(t, "mod", render(t, eng, tmpl, grove.Data{"role": "mod"}))
+    require.Equal(t, "user", render(t, eng, tmpl, grove.Data{"role": "viewer"}))
 }
 
 func TestUnless(t *testing.T) {
     eng := newEngine(t)
     tmpl := `{% unless banned %}Welcome!{% endunless %}`
-    require.Equal(t, "Welcome!", render(t, eng, tmpl, grove.Ctx{"banned": false}))
-    require.Equal(t, "", render(t, eng, tmpl, grove.Ctx{"banned": true}))
+    require.Equal(t, "Welcome!", render(t, eng, tmpl, grove.Data{"banned": false}))
+    require.Equal(t, "", render(t, eng, tmpl, grove.Data{"banned": true}))
 }
 
 func TestFor_Basic(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% for x in items %}{{ x }},{% endfor %}`, grove.Ctx{
+    got := render(t, eng, `{% for x in items %}{{ x }},{% endfor %}`, grove.Data{
         "items": []string{"a", "b", "c"},
     })
     require.Equal(t, "a,b,c,", got)
@@ -1347,7 +1503,7 @@ func TestFor_Basic(t *testing.T) {
 
 func TestFor_Empty(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% for x in items %}{{ x }}{% empty %}none{% endfor %}`, grove.Ctx{
+    got := render(t, eng, `{% for x in items %}{{ x }}{% empty %}none{% endfor %}`, grove.Data{
         "items": []string{},
     })
     require.Equal(t, "none", got)
@@ -1357,7 +1513,7 @@ func TestFor_LoopVariables(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% for x in items %}{{ loop.index }}:{{ loop.first }}:{{ loop.last }} {% endfor %}`,
-        grove.Ctx{"items": []string{"a", "b", "c"}},
+        grove.Data{"items": []string{"a", "b", "c"}},
     )
     require.Equal(t, "1:true:false 2:false:false 3:false:true ", got)
 }
@@ -1365,13 +1521,13 @@ func TestFor_LoopVariables(t *testing.T) {
 func TestFor_LoopLength(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng, `{% for x in items %}{{ loop.length }}{% endfor %}`,
-        grove.Ctx{"items": []int{1, 2, 3}})
+        grove.Data{"items": []int{1, 2, 3}})
     require.Equal(t, "333", got)
 }
 
 func TestFor_Range(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% for i in range(1, 4) %}{{ i }}{% endfor %}`, grove.Ctx{})
+    got := render(t, eng, `{% for i in range(1, 4) %}{{ i }}{% endfor %}`, grove.Data{})
     require.Equal(t, "123", got)
 }
 
@@ -1379,7 +1535,7 @@ func TestFor_NestedLoopDepth(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% for a in outer %}{% for b in inner %}{{ loop.depth }}{% endfor %}{% endfor %}`,
-        grove.Ctx{
+        grove.Data{
             "outer": []int{1, 2},
             "inner": []int{1, 2},
         },
@@ -1391,13 +1547,13 @@ func TestFor_NestedLoopDepth(t *testing.T) {
 
 func TestSet_Basic(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% set x = 42 %}{{ x }}`, grove.Ctx{})
+    got := render(t, eng, `{% set x = 42 %}{{ x }}`, grove.Data{})
     require.Equal(t, "42", got)
 }
 
 func TestSet_Expression(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% set total = price * qty %}{{ total }}`, grove.Ctx{
+    got := render(t, eng, `{% set total = price * qty %}{{ total }}`, grove.Data{
         "price": 5,
         "qty":   3,
     })
@@ -1406,7 +1562,7 @@ func TestSet_Expression(t *testing.T) {
 
 func TestWith_ScopeIsolation(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% with %}{% set x = 99 %}{{ x }}{% endwith %}[{{ x }}]`, grove.Ctx{})
+    got := render(t, eng, `{% with %}{% set x = 99 %}{{ x }}{% endwith %}[{{ x }}]`, grove.Data{})
     require.Equal(t, "99[]", got) // x not visible outside with block
 }
 
@@ -1414,7 +1570,7 @@ func TestCapture(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% capture greeting %}Hello, {{ name }}!{% endcapture %}{{ greeting | upcase }}`,
-        grove.Ctx{"name": "Grove"},
+        grove.Data{"name": "Grove"},
     )
     require.Equal(t, "HELLO, GROVE!", got)
 }
@@ -1427,7 +1583,7 @@ func TestInheritance_ExtendsBlock(t *testing.T) {
     store.Set("child.html", `{% extends "base.html" %}{% block content %}child{% endblock %}`)
 
     eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render("child.html", grove.Ctx{})
+    result, err := eng.Render(context.Background(), "child.html", grove.Data{})
     require.NoError(t, err)
     require.Equal(t, "<html><body>child</body></html>", result.Body)
 }
@@ -1438,7 +1594,7 @@ func TestInheritance_Super(t *testing.T) {
     store.Set("child.html", `{% extends "base.html" %}{% block title %}Child — {{ super() }}{% endblock %}`)
 
     eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render("child.html", grove.Ctx{})
+    result, err := eng.Render(context.Background(), "child.html", grove.Data{})
     require.NoError(t, err)
     require.Equal(t, "Child — Base Title", result.Body)
 }
@@ -1449,7 +1605,7 @@ func TestInheritance_DefaultBlock(t *testing.T) {
     store.Set("child.html", `{% extends "base.html" %}`) // no footer override
 
     eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render("child.html", grove.Ctx{})
+    result, err := eng.Render(context.Background(), "child.html", grove.Data{})
     require.NoError(t, err)
     require.Equal(t, "Default Footer", result.Body)
 }
@@ -1461,7 +1617,7 @@ func TestInheritance_MultiLevel(t *testing.T) {
     store.Set("leaf.html", `{% extends "mid.html" %}{% block a %}leaf:{{ super() }}{% endblock %}`)
 
     eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render("leaf.html", grove.Ctx{})
+    result, err := eng.Render(context.Background(), "leaf.html", grove.Data{})
     require.NoError(t, err)
     require.Equal(t, "[leaf:mid:root]", result.Body)
 }
@@ -1473,7 +1629,7 @@ func TestMacro_Basic(t *testing.T) {
     got := render(t, eng, `
 {% macro greet(name, greeting="Hello") %}{{ greeting }}, {{ name }}!{% endmacro %}
 {{ greet("Alice") }}
-{{ greet("Bob", greeting="Hi") }}`, grove.Ctx{})
+{{ greet("Bob", greeting="Hi") }}`, grove.Data{})
     require.Contains(t, got, "Hello, Alice!")
     require.Contains(t, got, "Hi, Bob!")
 }
@@ -1482,7 +1638,7 @@ func TestMacro_DefaultArgs(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% macro btn(label, type="button", disabled=false) %}<button type="{{ type }}"{{ " disabled" if disabled }}>{{ label }}</button>{% endmacro %}{{ btn("Save", type="submit") }}`,
-        grove.Ctx{},
+        grove.Data{},
     )
     require.Equal(t, `<button type="submit">Save</button>`, strings.TrimSpace(got))
 }
@@ -1491,7 +1647,7 @@ func TestMacro_CallerBody(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng, `
 {% macro card(title) %}<div><h2>{{ title }}</h2>{{ caller() }}</div>{% endmacro %}
-{% call card("News") %}<p>Breaking!</p>{% endcall %}`, grove.Ctx{})
+{% call card("News") %}<p>Breaking!</p>{% endcall %}`, grove.Data{})
     require.Contains(t, got, "<div><h2>News</h2><p>Breaking!</p></div>")
 }
 
@@ -1503,7 +1659,7 @@ func TestInclude_Basic(t *testing.T) {
     store.Set("partial.html", `[PARTIAL:{{ name }}]`)
 
     eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render("main.html", grove.Ctx{"name": "Grove"})
+    result, err := eng.Render(context.Background(), "main.html", grove.Data{"name": "Grove"})
     require.NoError(t, err)
     require.Equal(t, "before[PARTIAL:Grove]after", result.Body)
 }
@@ -1514,7 +1670,7 @@ func TestInclude_WithExtraVars(t *testing.T) {
     store.Set("p.html", `{{ label }}`)
 
     eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render("main.html", grove.Ctx{})
+    result, err := eng.Render(context.Background(), "main.html", grove.Data{})
     require.NoError(t, err)
     require.Equal(t, "Custom", result.Body)
 }
@@ -1525,7 +1681,7 @@ func TestInclude_Isolated(t *testing.T) {
     store.Set("p.html", `[{{ secret }}]`)
 
     eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render("main.html", grove.Ctx{})
+    result, err := eng.Render(context.Background(), "main.html", grove.Data{})
     require.NoError(t, err)
     require.Equal(t, "[]", result.Body) // secret not visible
 }
@@ -1536,7 +1692,7 @@ func TestImport_Macros(t *testing.T) {
     store.Set("page.html", `{% import "macros.html" as m %}{{ m.shout("hello") }}`)
 
     eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render("page.html", grove.Ctx{})
+    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
     require.NoError(t, err)
     require.Equal(t, "HELLO!", result.Body)
 }
@@ -1549,7 +1705,7 @@ func TestComponent_DefaultSlot(t *testing.T) {
     store.Set("page.html", `{% component "components/box.html" title="Hello" %}<p>Content</p>{% endcomponent %}`)
 
     eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render("page.html", grove.Ctx{})
+    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
     require.NoError(t, err)
     require.Equal(t, `<div class="box"><h2>Hello</h2><p>Content</p></div>`, result.Body)
 }
@@ -1560,7 +1716,7 @@ func TestComponent_NamedSlot(t *testing.T) {
     store.Set("page.html", `{% component "components/card.html" %}Body{% fill "header" %}Custom Header{% endfill %}{% endcomponent %}`)
 
     eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render("page.html", grove.Ctx{})
+    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
     require.NoError(t, err)
     require.Equal(t, "<div>Custom Header<main>Body</main></div>", result.Body)
 }
@@ -1571,7 +1727,7 @@ func TestComponent_SlotFallback(t *testing.T) {
     store.Set("page.html", `{% component "components/card.html" %}{% endcomponent %}`)
 
     eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render("page.html", grove.Ctx{})
+    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
     require.NoError(t, err)
     require.Equal(t, "<footer>Default Footer</footer>", result.Body)
 }
@@ -1585,7 +1741,7 @@ func TestAsset_Deduplication(t *testing.T) {
     store.Set("page.html", `{% include "a.html" %}{% include "b.html" %}`)
 
     eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render("page.html", grove.Ctx{})
+    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
     require.NoError(t, err)
 
     // Body has no injected assets
@@ -1599,8 +1755,9 @@ func TestAsset_Deduplication(t *testing.T) {
 func TestAsset_StylesCollected(t *testing.T) {
     eng := newEngine(t)
     result, err := eng.RenderTemplate(
+        context.Background(),
         `{% asset src="/css/btn.css" type="style" %}{% asset src="/css/form.css" type="style" %}hello`,
-        grove.Ctx{},
+        grove.Data{},
     )
     require.NoError(t, err)
     require.Len(t, result.Assets.Styles, 2)
@@ -1611,12 +1768,13 @@ func TestAsset_StylesCollected(t *testing.T) {
 func TestAsset_InjectAssets(t *testing.T) {
     eng := newEngine(t)
     result, err := eng.RenderTemplate(
+        context.Background(),
         `{% asset src="/js/app.js" type="script" defer %}<html><head></head><body>hi</body></html>`,
-        grove.Ctx{},
+        grove.Data{},
     )
     require.NoError(t, err)
     full := result.InjectAssets()
-    require.Contains(t, full, `<script src="/js/app.js" defer></script>`)
+    require.Contains(t, full, `<script src="/js/app.js" defer></script>`) // boolean attr: no ="defer"
     require.Contains(t, full, `</head>`)
 }
 
@@ -1625,8 +1783,9 @@ func TestAsset_InjectAssets(t *testing.T) {
 func TestHoist_BasicMetadata(t *testing.T) {
     eng := newEngine(t)
     result, err := eng.RenderTemplate(
+        context.Background(),
         `{% hoist "title" %}My Page{% endhoist %}content`,
-        grove.Ctx{},
+        grove.Data{},
     )
     require.NoError(t, err)
     require.Equal(t, "content", result.Body)
@@ -1636,8 +1795,9 @@ func TestHoist_BasicMetadata(t *testing.T) {
 func TestHoist_MultipleMeta(t *testing.T) {
     eng := newEngine(t)
     result, err := eng.RenderTemplate(
+        context.Background(),
         `{% hoist "title" %}T{% endhoist %}{% hoist "desc" %}D{% endhoist %}body`,
-        grove.Ctx{},
+        grove.Data{},
     )
     require.NoError(t, err)
     require.Equal(t, "T", result.Meta["title"])
@@ -1649,7 +1809,7 @@ func TestHoist_MultipleMeta(t *testing.T) {
 
 func TestEscape_AutoEscapeByDefault(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ input }}`, grove.Ctx{
+    got := render(t, eng, `{{ input }}`, grove.Data{
         "input": `<script>alert("xss")</script>`,
     })
     require.Equal(t, `&lt;script&gt;alert(&#34;xss&#34;)&lt;/script&gt;`, got)
@@ -1657,19 +1817,19 @@ func TestEscape_AutoEscapeByDefault(t *testing.T) {
 
 func TestEscape_SafeFilterBypassesEscape(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ html | safe }}`, grove.Ctx{"html": "<b>bold</b>"})
+    got := render(t, eng, `{{ html | safe }}`, grove.Data{"html": "<b>bold</b>"})
     require.Equal(t, "<b>bold</b>", got)
 }
 
 func TestEscape_RawBlockBypassesEscape(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% raw %}{{ not_a_variable }}{% endraw %}`, grove.Ctx{})
+    got := render(t, eng, `{% raw %}{{ not_a_variable }}{% endraw %}`, grove.Data{})
     require.Equal(t, "{{ not_a_variable }}", got)
 }
 
 func TestEscape_NilValueNoOutput(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `[{{ val }}]`, grove.Ctx{"val": nil})
+    got := render(t, eng, `[{{ val }}]`, grove.Data{"val": nil})
     require.Equal(t, "[]", got)
 }
 
@@ -1677,25 +1837,25 @@ func TestEscape_NilValueNoOutput(t *testing.T) {
 
 func TestWhitespace_StripLeft(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, "  {{- name }}", grove.Ctx{"name": "Grove"})
+    got := render(t, eng, "  {{- name }}", grove.Data{"name": "Grove"})
     require.Equal(t, "Grove", got)
 }
 
 func TestWhitespace_StripRight(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, "{{ name -}}  ", grove.Ctx{"name": "Grove"})
+    got := render(t, eng, "{{ name -}}  ", grove.Data{"name": "Grove"})
     require.Equal(t, "Grove", got)
 }
 
 func TestWhitespace_StripBoth(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, "  {{- name -}}  extra", grove.Ctx{"name": "Grove"})
+    got := render(t, eng, "  {{- name -}}  extra", grove.Data{"name": "Grove"})
     require.Equal(t, "Groveextra", got)
 }
 
 func TestWhitespace_TagStrip(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, "before\n{%- if true -%}\nhello\n{%- endif -%}\nafter", grove.Ctx{})
+    got := render(t, eng, "before\n{%- if true -%}\nhello\n{%- endif -%}\nafter", grove.Data{})
     require.Equal(t, "beforehelloafter", got)
 }
 
@@ -1706,8 +1866,9 @@ func TestSandbox_MaxLoopIterations(t *testing.T) {
         MaxLoopIter: 5,
     }))
     _, err := eng.RenderTemplate(
+        context.Background(),
         `{% for i in range(1, 100) %}{{ i }}{% endfor %}`,
-        grove.Ctx{},
+        grove.Data{},
     )
     require.Error(t, err)
     require.Contains(t, err.Error(), "loop limit")
@@ -1718,8 +1879,9 @@ func TestSandbox_MaxOutputBytes(t *testing.T) {
         MaxOutputBytes: 10,
     }))
     _, err := eng.RenderTemplate(
+        context.Background(),
         `{{ text }}`,
-        grove.Ctx{"text": strings.Repeat("x", 100)},
+        grove.Data{"text": strings.Repeat("x", 100)},
     )
     require.Error(t, err)
     require.Contains(t, err.Error(), "output limit")
@@ -1729,9 +1891,11 @@ func TestSandbox_AllowedFiltersOnly(t *testing.T) {
     eng := newEngine(t, grove.WithSandbox(grove.SandboxConfig{
         AllowedFilters: []string{"upcase"},
     }))
-    _, err := eng.RenderTemplate(`{{ name | downcase }}`, grove.Ctx{"name": "Grove"})
+    _, err := eng.RenderTemplate(context.Background(), `{{ name | downcase }}`, grove.Data{"name": "Grove"})
     require.Error(t, err)
-    require.Contains(t, err.Error(), "downcase")
+    var pe *grove.ParseError // AllowedFilters is enforced at compile time
+    require.ErrorAs(t, err, &pe)
+    require.Contains(t, pe.Message, "downcase")
 }
 
 func TestSandbox_DisableIncludes(t *testing.T) {
@@ -1741,7 +1905,7 @@ func TestSandbox_DisableIncludes(t *testing.T) {
     eng := newEngine(t, grove.WithStore(store), grove.WithSandbox(grove.SandboxConfig{
         DisableIncludes: true,
     }))
-    _, err := eng.Render("page.html", grove.Ctx{})
+    _, err := eng.Render(context.Background(), "page.html", grove.Data{})
     require.Error(t, err)
 }
 
@@ -1763,7 +1927,7 @@ func TestCustomTag_ConditionalRender(t *testing.T) {
         return ctx.DiscardBody()
     }))
 
-    got := render(t, eng, `{% feature "dark-mode" %}dark{% endfeature %}{% feature "beta" %}beta{% endfeature %}`, grove.Ctx{})
+    got := render(t, eng, `{% feature "dark-mode" %}dark{% endfeature %}{% feature "beta" %}beta{% endfeature %}`, grove.Data{})
     require.Equal(t, "dark", got)
 }
 
@@ -1773,8 +1937,8 @@ func TestGlobalContext_AvailableInAllRenders(t *testing.T) {
     eng := newEngine(t)
     eng.SetGlobal("siteName", "Acme Corp")
 
-    got1 := render(t, eng, `{{ siteName }}`, grove.Ctx{})
-    got2 := render(t, eng, `Welcome to {{ siteName }}`, grove.Ctx{})
+    got1 := render(t, eng, `{{ siteName }}`, grove.Data{})
+    got2 := render(t, eng, `Welcome to {{ siteName }}`, grove.Data{})
     require.Equal(t, "Acme Corp", got1)
     require.Equal(t, "Welcome to Acme Corp", got2)
 }
@@ -1783,13 +1947,13 @@ func TestGlobalContext_RenderContextOverridesGlobal(t *testing.T) {
     eng := newEngine(t)
     eng.SetGlobal("greeting", "Hello")
 
-    got := render(t, eng, `{{ greeting }}`, grove.Ctx{"greeting": "Hi"})
+    got := render(t, eng, `{{ greeting }}`, grove.Data{"greeting": "Hi"})
     require.Equal(t, "Hi", got) // render ctx wins
 }
 
 func TestGlobalContext_LocalScopeOverridesRenderContext(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% set x = "local" %}{{ x }}`, grove.Ctx{"x": "render"})
+    got := render(t, eng, `{% set x = "local" %}{{ x }}`, grove.Data{"x": "render"})
     require.Equal(t, "local", got)
 }
 
@@ -1798,21 +1962,22 @@ func TestGlobalContext_LocalScopeOverridesRenderContext(t *testing.T) {
 func TestRenderResult_BodyAndAssets(t *testing.T) {
     eng := newEngine(t)
     result, err := eng.RenderTemplate(
+        context.Background(),
         `{% asset src="/app.css" type="style" %}{% asset src="/app.js" type="script" async %}Hello`,
-        grove.Ctx{},
+        grove.Data{},
     )
     require.NoError(t, err)
     require.Equal(t, "Hello", result.Body)
     require.Len(t, result.Assets.Styles, 1)
     require.Len(t, result.Assets.Scripts, 1)
-    require.Equal(t, "async", result.Assets.Scripts[0].Attrs["async"])
+    require.Equal(t, "", result.Assets.Scripts[0].Attrs["async"]) // boolean attr stored as empty string
 }
 
 // ─── 18. ERROR HANDLING ──────────────────────────────────────────────────────
 
 func TestError_ParseError_LineNumber(t *testing.T) {
     eng := newEngine(t)
-    _, err := eng.RenderTemplate("line1\n{% if %}\nline3", grove.Ctx{})
+    _, err := eng.RenderTemplate(context.Background(), "line1\n{% if %}\nline3", grove.Data{})
     require.Error(t, err)
     var pe *grove.ParseError
     require.ErrorAs(t, err, &pe)
@@ -1821,13 +1986,13 @@ func TestError_ParseError_LineNumber(t *testing.T) {
 
 func TestError_UndefinedFilterInStrictMode(t *testing.T) {
     eng := newEngine(t)
-    _, err := eng.RenderTemplate(`{{ name | nonexistent }}`, grove.Ctx{"name": "x"})
+    _, err := eng.RenderTemplate(context.Background(), `{{ name | nonexistent }}`, grove.Data{"name": "x"})
     require.Error(t, err)
 }
 
 func TestError_DivisionByZero(t *testing.T) {
     eng := newEngine(t)
-    _, err := eng.RenderTemplate(`{{ 10 / x }}`, grove.Ctx{"x": 0})
+    _, err := eng.RenderTemplate(context.Background(), `{{ 10 / x }}`, grove.Data{"x": 0})
     require.Error(t, err)
 }
 
@@ -1837,7 +2002,7 @@ func TestError_MaxInheritanceDepth(t *testing.T) {
     store.Set("a.html", `{% extends "b.html" %}`)
     store.Set("b.html", `{% extends "a.html" %}`)
     eng := newEngine(t, grove.WithStore(store))
-    _, err := eng.Render("a.html", grove.Ctx{})
+    _, err := eng.Render(context.Background(), "a.html", grove.Data{})
     require.Error(t, err)
     require.Contains(t, err.Error(), "circular")
 }
@@ -1849,7 +2014,7 @@ func TestMemoryStore_SetAndRender(t *testing.T) {
     store.Set("hello.html", `Hello, {{ name }}!`)
     eng := newEngine(t, grove.WithStore(store))
 
-    result, err := eng.Render("hello.html", grove.Ctx{"name": "World"})
+    result, err := eng.Render(context.Background(), "hello.html", grove.Data{"name": "World"})
     require.NoError(t, err)
     require.Equal(t, "Hello, World!", result.Body)
 }
@@ -1859,13 +2024,13 @@ func TestMemoryStore_HotReload(t *testing.T) {
     store.Set("t.html", `v1`)
     eng := newEngine(t, grove.WithStore(store), grove.WithHotReload(true))
 
-    r1, _ := eng.Render("t.html", grove.Ctx{})
+    r1, _ := eng.Render(context.Background(), "t.html", grove.Data{})
     require.Equal(t, "v1", r1.Body)
 
     store.Set("t.html", `v2`) // update template
     time.Sleep(time.Millisecond) // ensure mtime advances
 
-    r2, _ := eng.Render("t.html", grove.Ctx{})
+    r2, _ := eng.Render(context.Background(), "t.html", grove.Data{})
     require.Equal(t, "v2", r2.Body)
 }
 
@@ -1873,11 +2038,12 @@ func TestMemoryStore_HotReload(t *testing.T) {
 
 func BenchmarkRender_SimpleSubstitution(b *testing.B) {
     eng := grove.New()
-    ctx := grove.Ctx{"name": "World", "count": 42}
+    data := grove.Data{"name": "World", "count": 42}
+    bgCtx := context.Background()
     b.ReportAllocs()
     b.ResetTimer()
     for i := 0; i < b.N; i++ {
-        _, err := eng.RenderTemplate(`Hello, {{ name }}! Count: {{ count }}.`, ctx)
+        _, err := eng.RenderTemplate(bgCtx, `Hello, {{ name }}! Count: {{ count }}.`, data)
         if err != nil {
             b.Fatal(err)
         }
@@ -1886,13 +2052,15 @@ func BenchmarkRender_SimpleSubstitution(b *testing.B) {
 
 func BenchmarkRender_FilterChain(b *testing.B) {
     eng := grove.New()
-    ctx := grove.Ctx{"items": []string{"banana", "apple", "cherry", "date"}}
+    data := grove.Data{"items": []string{"banana", "apple", "cherry", "date"}}
+    bgCtx := context.Background()
     b.ReportAllocs()
     b.ResetTimer()
     for i := 0; i < b.N; i++ {
         _, err := eng.RenderTemplate(
+            bgCtx,
             `{{ items | sort | first | upcase | truncate(10, "…") }}`,
-            ctx,
+            data,
         )
         if err != nil {
             b.Fatal(err)
@@ -1902,17 +2070,19 @@ func BenchmarkRender_FilterChain(b *testing.B) {
 
 func BenchmarkRender_ForLoop(b *testing.B) {
     eng := grove.New()
-    items := make([]grove.Ctx, 100)
+    items := make([]grove.Data, 100)
     for i := range items {
-        items[i] = grove.Ctx{"name": "Item", "price": float64(i) * 1.5}
+        items[i] = grove.Data{"name": "Item", "price": float64(i) * 1.5}
     }
-    ctx := grove.Ctx{"items": items}
+    data := grove.Data{"items": items}
+    bgCtx := context.Background()
     b.ReportAllocs()
     b.ResetTimer()
     for i := 0; i < b.N; i++ {
         _, err := eng.RenderTemplate(
+            bgCtx,
             `{% for item in items %}<li>{{ item.name }}: ${{ item.price | round(2) }}</li>{% endfor %}`,
-            ctx,
+            data,
         )
         if err != nil {
             b.Fatal(err)
@@ -1925,11 +2095,12 @@ func BenchmarkRender_Inheritance(b *testing.B) {
     store.Set("base.html", `<html><head>{% block head %}{% endblock %}</head><body>{% block body %}{% endblock %}</body></html>`)
     store.Set("page.html", `{% extends "base.html" %}{% block head %}<title>{{ title }}</title>{% endblock %}{% block body %}<h1>{{ title }}</h1><p>{{ content }}</p>{% endblock %}`)
     eng := grove.New(grove.WithStore(store))
-    ctx := grove.Ctx{"title": "Benchmark Page", "content": "Lorem ipsum dolor sit amet."}
+    data := grove.Data{"title": "Benchmark Page", "content": "Lorem ipsum dolor sit amet."}
+    bgCtx := context.Background()
     b.ReportAllocs()
     b.ResetTimer()
     for i := 0; i < b.N; i++ {
-        _, err := eng.Render("page.html", ctx)
+        _, err := eng.Render(bgCtx, "page.html", data)
         if err != nil {
             b.Fatal(err)
         }
@@ -1938,17 +2109,348 @@ func BenchmarkRender_Inheritance(b *testing.B) {
 
 func BenchmarkRender_Parallel(b *testing.B) {
     eng := grove.New()
-    ctx := grove.Ctx{"name": "World"}
+    data := grove.Data{"name": "World"}
+    bgCtx := context.Background()
     b.ReportAllocs()
     b.ResetTimer()
     b.RunParallel(func(pb *testing.PB) {
         for pb.Next() {
-            _, err := eng.RenderTemplate(`Hello, {{ name }}!`, ctx)
+            _, err := eng.RenderTemplate(bgCtx, `Hello, {{ name }}!`, data)
             if err != nil {
                 b.Fatal(err)
             }
         }
     })
+}
+
+// ─── 21. UNLESS ───────────────────────────────────────────────────────────────
+
+func TestUnless_RendersWhenFalse(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng, `{% unless banned %}Welcome!{% endunless %}`, grove.Data{"banned": false})
+    require.Equal(t, "Welcome!", got)
+}
+
+func TestUnless_SuppressedWhenTrue(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng, `{% unless banned %}Welcome!{% endunless %}`, grove.Data{"banned": true})
+    require.Equal(t, "", got)
+}
+
+// ─── 22. WITH (scope isolation) ───────────────────────────────────────────────
+
+func TestWith_LeakedSetIsNotVisible(t *testing.T) {
+    eng := newEngine(t)
+    // Variable set inside {% with %} must not be accessible outside
+    got := render(t, eng,
+        `{% with %}{% set x = "inner" %}{{ x }}{% endwith %}[{{ x }}]`,
+        grove.Data{})
+    require.Equal(t, "inner[]", got)
+}
+
+func TestWith_OuterVarsReadable(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng,
+        `{% with %}{{ name }}{% endwith %}`,
+        grove.Data{"name": "Grove"})
+    require.Equal(t, "Grove", got) // outer vars are visible inside
+}
+
+// ─── 23. CAPTURE ──────────────────────────────────────────────────────────────
+
+func TestCapture_RendersToVariable(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng,
+        `{% capture greeting %}Hello, {{ name }}!{% endcapture %}[{{ greeting }}]`,
+        grove.Data{"name": "World"})
+    require.Equal(t, "[Hello, World!]", got)
+}
+
+func TestCapture_NotOutputtedDuringCapture(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng,
+        `before{% capture x %}captured{% endcapture %}after`,
+        grove.Data{})
+    require.Equal(t, "beforeafter", got) // capture block produces no direct output
+}
+
+// ─── 24. MACROS ───────────────────────────────────────────────────────────────
+
+func TestMacro_PositionalArgs(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng,
+        `{% macro greet(name) %}Hello, {{ name }}!{% endmacro %}{{ greet("Alice") }}`,
+        grove.Data{})
+    require.Equal(t, "Hello, Alice!", got)
+}
+
+func TestMacro_NamedArgsWithDefaults(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng,
+        `{% macro greet(name, greeting="Hello") %}{{ greeting }}, {{ name }}!{% endmacro %}{{ greet("Bob", greeting="Hi") }}`,
+        grove.Data{})
+    require.Equal(t, "Hi, Bob!", got)
+}
+
+func TestMacro_DefaultUsedWhenArgOmitted(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng,
+        `{% macro greet(name, greeting="Hello") %}{{ greeting }}, {{ name }}!{% endmacro %}{{ greet("Alice") }}`,
+        grove.Data{})
+    require.Equal(t, "Hello, Alice!", got)
+}
+
+func TestMacro_CallerBlock(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng,
+        `{% macro card(title) %}<div><h2>{{ title }}</h2>{{ caller() }}</div>{% endmacro %}{% call card("Orders") %}<p>3 items</p>{% endcall %}`,
+        grove.Data{})
+    require.Equal(t, "<div><h2>Orders</h2><p>3 items</p></div>", got)
+}
+
+// ─── 25. RESOLVABLE ───────────────────────────────────────────────────────────
+
+type testUser struct {
+    Name  string
+    Email string
+    token string // unexported — should be unreachable
+}
+
+func (u testUser) GroveResolve(key string) (any, bool) {
+    switch key {
+    case "name":  return u.Name, true
+    case "email": return u.Email, true
+    }
+    return nil, false // token is deliberately not exposed
+}
+
+func TestResolvable_ExposedFieldsAccessible(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng, `{{ user.name }} <{{ user.email }}>`,
+        grove.Data{"user": testUser{Name: "Alice", Email: "alice@example.com"}})
+    require.Equal(t, "Alice <alice@example.com>", got)
+}
+
+func TestResolvable_UnexposedFieldReturnsEmpty(t *testing.T) {
+    eng := newEngine(t) // strict=false — missing returns empty, not error
+    got := render(t, eng, `[{{ user.token }}]`,
+        grove.Data{"user": testUser{Name: "Alice", Email: "alice@example.com", token: "secret"}})
+    require.Equal(t, "[]", got) // token not in GroveResolve — silently empty
+}
+
+func TestResolvable_UnexposedFieldStrictModeErrors(t *testing.T) {
+    eng := newEngine(t, grove.WithStrictVariables(true))
+    err := renderErr(t, eng, `{{ user.token }}`,
+        grove.Data{"user": testUser{Name: "Alice", token: "secret"}})
+    require.Error(t, err)
+}
+
+// ─── 26. NESTED LOOPS ─────────────────────────────────────────────────────────
+
+func TestForLoop_NestedLoopParent(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng,
+        `{% for i in outer %}{% for j in inner %}{{ loop.parent.index }}.{{ loop.index }} {% endfor %}{% endfor %}`,
+        grove.Data{"outer": []int{1, 2}, "inner": []int{1, 2}})
+    require.Equal(t, "1.1 1.2 2.1 2.2 ", got)
+}
+
+func TestForLoop_LoopDepth(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng,
+        `{% for i in outer %}{{ loop.depth }}{% for j in inner %}{{ loop.depth }}{% endfor %}{% endfor %}`,
+        grove.Data{"outer": []int{1}, "inner": []int{1, 2}})
+    require.Equal(t, "112", got) // outer=1, inner=2,2
+}
+
+func TestForLoop_LoopLength(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng,
+        `{{ loop.length }}`,  // available outside loop? No — only inside
+        grove.Data{})
+    // loop.length is only defined inside {% for %}
+    got = render(t, eng,
+        `{% for i in items %}{{ loop.length }}{% endfor %}`,
+        grove.Data{"items": []string{"a", "b", "c"}})
+    require.Equal(t, "333", got)
+}
+
+// ─── 27. MAP ITERATION ORDER ──────────────────────────────────────────────────
+
+func TestForLoop_MapIterationSorted(t *testing.T) {
+    eng := newEngine(t)
+    got := render(t, eng,
+        `{% for k, v in data %}{{ k }}={{ v }} {% endfor %}`,
+        grove.Data{"data": map[string]string{"z": "1", "a": "2", "m": "3"}})
+    require.Equal(t, "a=2 m=3 z=1 ", got) // keys sorted lexicographically
+}
+
+// ─── 28. RENDERTEMPLAT INLINE RESTRICTIONS ────────────────────────────────────
+
+func TestRenderTemplate_ExtendsIsParseError(t *testing.T) {
+    eng := newEngine(t)
+    _, err := eng.RenderTemplate(context.Background(),
+        `{% extends "base.html" %}`, grove.Data{})
+    require.Error(t, err)
+    var pe *grove.ParseError
+    require.ErrorAs(t, err, &pe)
+    require.Contains(t, pe.Message, "extends not allowed in inline templates")
+}
+
+func TestRenderTemplate_ImportIsParseError(t *testing.T) {
+    eng := newEngine(t)
+    _, err := eng.RenderTemplate(context.Background(),
+        `{% import "macros.html" as m %}`, grove.Data{})
+    require.Error(t, err)
+    var pe *grove.ParseError
+    require.ErrorAs(t, err, &pe)
+    require.Contains(t, pe.Message, "import not allowed in inline templates")
+}
+
+// ─── 29. RENDER TAG ───────────────────────────────────────────────────────────
+
+func TestRender_IsolatedScope(t *testing.T) {
+    store := grove.NewMemoryStore()
+    store.Set("card.html", `[{{ item.name }}:{{ secret }}]`)
+    store.Set("page.html", `{% set secret = "hidden" %}{% render "card.html" with { item: item } %}`)
+
+    eng := newEngine(t, grove.WithStore(store))
+    result, err := eng.Render(context.Background(), "page.html", grove.Data{
+        "item": grove.Data{"name": "Widget"},
+    })
+    require.NoError(t, err)
+    require.Equal(t, "[Widget:]", result.Body) // secret not visible in render scope
+}
+
+func TestRender_ShorthandSyntax(t *testing.T) {
+    store := grove.NewMemoryStore()
+    store.Set("label.html", `{{ text | upcase }}`)
+    store.Set("page.html", `{% render "label.html" text: "hello" %}`)
+
+    eng := newEngine(t, grove.WithStore(store))
+    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+    require.NoError(t, err)
+    require.Equal(t, "HELLO", result.Body)
+}
+
+// ─── 30. CIRCULAR INCLUDE ─────────────────────────────────────────────────────
+
+func TestInclude_CircularIsParseError(t *testing.T) {
+    store := grove.NewMemoryStore()
+    store.Set("a.html", `{% include "b.html" %}`)
+    store.Set("b.html", `{% include "a.html" %}`)
+
+    eng := newEngine(t, grove.WithStore(store))
+    _, err := eng.Render(context.Background(), "a.html", grove.Data{})
+    require.Error(t, err)
+    require.Contains(t, err.Error(), "circular")
+}
+
+// ─── 31. HOIST WITH EXPRESSION ────────────────────────────────────────────────
+
+func TestHoist_WithExpression(t *testing.T) {
+    eng := newEngine(t)
+    result, err := eng.RenderTemplate(
+        context.Background(),
+        `{% hoist "title" %}{{ site }} — {{ page }}{% endhoist %}body`,
+        grove.Data{"site": "Acme", "page": "Home"},
+    )
+    require.NoError(t, err)
+    require.Equal(t, "body", result.Body)
+    require.Equal(t, "Acme — Home", result.Meta["title"])
+}
+
+// ─── 32. CAPTURE INSIDE FOR LOOP ──────────────────────────────────────────────
+
+func TestCapture_InsideForLoop(t *testing.T) {
+    eng := newEngine(t)
+    // Each iteration overwrites the capture variable; final value is from last iteration.
+    got := render(t, eng,
+        `{% for x in items %}{% capture last %}{{ x }}{% endcapture %}{% endfor %}{{ last }}`,
+        grove.Data{"items": []string{"a", "b", "c"}},
+    )
+    require.Equal(t, "c", got)
+}
+
+// ─── 33. INJECT ASSETS — NO HEAD ──────────────────────────────────────────────
+
+func TestInjectAssets_NoHeadTagIsNoop(t *testing.T) {
+    eng := newEngine(t)
+    result, err := eng.RenderTemplate(
+        context.Background(),
+        `{% asset src="/app.js" type="script" %}just a fragment`,
+        grove.Data{},
+    )
+    require.NoError(t, err)
+    // InjectAssets returns body unchanged when there is no </head> to inject before
+    full := result.InjectAssets()
+    require.Equal(t, "just a fragment", full)
+    // Assets are still collected and accessible directly
+    require.Len(t, result.Assets.Scripts, 1)
+}
+
+// ─── 34. CONCURRENT RENDERS ───────────────────────────────────────────────────
+
+func TestEngine_ConcurrentRenders(t *testing.T) {
+    eng := newEngine(t)
+    const goroutines = 50
+    const renders = 100
+
+    var wg sync.WaitGroup
+    errors := make(chan error, goroutines*renders)
+
+    for g := 0; g < goroutines; g++ {
+        wg.Add(1)
+        go func(id int) {
+            defer wg.Done()
+            for i := 0; i < renders; i++ {
+                got, err := eng.RenderTemplate(context.Background(),
+                    `Hello, {{ name }}! ({{ id }})`,
+                    grove.Data{"name": "Grove", "id": id},
+                )
+                if err != nil {
+                    errors <- err
+                    return
+                }
+                expected := fmt.Sprintf("Hello, Grove! (%d)", id)
+                if got.Body != expected {
+                    errors <- fmt.Errorf("goroutine %d: got %q, want %q", id, got.Body, expected)
+                    return
+                }
+            }
+        }(g)
+    }
+
+    wg.Wait()
+    close(errors)
+    for err := range errors {
+        t.Fatal(err)
+    }
+}
+
+// ─── 35. COMPONENT PROPS VALIDATION ──────────────────────────────────────────
+
+func TestComponent_MissingRequiredPropIsError(t *testing.T) {
+    store := grove.NewMemoryStore()
+    // title has no default — it is required
+    store.Set("components/card.html", `{% props title, variant="default" %}<div>{{ title }}</div>`)
+    store.Set("page.html", `{% component "components/card.html" variant="primary" %}{% endcomponent %}`)
+
+    eng := newEngine(t, grove.WithStore(store))
+    _, err := eng.Render(context.Background(), "page.html", grove.Data{})
+    require.Error(t, err)
+    require.Contains(t, err.Error(), "title") // error names the missing prop
+}
+
+func TestComponent_OptionalPropUsesDefault(t *testing.T) {
+    store := grove.NewMemoryStore()
+    store.Set("components/badge.html", `{% props label, color="blue" %}<span class="{{ color }}">{{ label }}</span>`)
+    store.Set("page.html", `{% component "components/badge.html" label="New" %}{% endcomponent %}`)
+
+    eng := newEngine(t, grove.WithStore(store))
+    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+    require.NoError(t, err)
+    require.Equal(t, `<span class="blue">New</span>`, result.Body)
 }
 ```
 
@@ -1972,7 +2474,7 @@ The Jinja2-inspired expression language (ternary, inline if/else, chained filter
 
 **Resolvable Interface vs reflect**
 
-Not using reflection on arbitrary structs is correct for security but imposes a boilerplate burden on callers. Every domain type needs a `GroveResolve` method, or must be converted to `grove.Ctx` at the call site. In large applications this adds friction. A possible mitigation is a `grove.Reflect(v)` adapter that wraps a struct with reflection, opt-in per call site, making the danger explicit.
+Not using reflection on arbitrary structs is correct for security but imposes a boilerplate burden on callers. Every domain type needs a `GroveResolve` method, or must be converted to `grove.Data` at the call site. In large applications this adds friction. A possible mitigation is a `grove.Reflect(v)` adapter that wraps a struct with reflection, opt-in per call site, making the danger explicit.
 
 **RenderResult vs io.Writer**
 
@@ -2030,16 +2532,80 @@ Grove makes no attempt at Shopify Liquid or Django template compatibility. Teams
 
 ### 4.4 Open Design Questions
 
-1. **Partial serialisation of bytecode** — Should Grove support serialising compiled bytecode to disk for faster cold-starts? This requires opcode versioning but would help applications with large template trees.
+1. ~~**Partial serialisation of bytecode**~~ — **Resolved (Option A — Ephemeral only):** Bytecode lives exclusively in the in-process LRU cache, keyed by content hash. Every process restart recompiles from source. No binary format to define, no opcode versioning to maintain.
 
-2. **Template validation CLI** — Should `grovec validate` be a first-class deliverable, and what schema format should it accept for variable type hints?
+   ```
+   Process start
+     → eng.Render("page.html", data)   // cache miss — compile takes ~2ms
+     → eng.Render("page.html", data)   // cache hit — render takes ~0.3ms
+   Process restart
+     → eng.Render("page.html", data)   // cache miss again — recompile
+   ```
 
-3. **Async rendering** — Should `Render` accept a `context.Context` for cancellation/timeout, or should that be handled exclusively by the sandbox? (Recommendation: both — context for cancellation, sandbox for limit enforcement.)
+   Disk-cache and deploy-time precompilation were considered and rejected. The core risk — a Grove version bump that changes opcode semantics without invalidating cached files — creates a class of silent correctness bug with no safe recovery path. For long-running servers the compile cost is amortized over millions of renders; for environments with genuinely frequent cold starts (serverless, aggressive auto-scaling) the recommended mitigation is cache warming at startup, not persisted bytecode. Revisit in v2 if real-world data shows cold-start cost is a consistent bottleneck.
 
-4. **`grove.Reflect()` adapter** — Should reflection-based access to Go structs be an official but opt-in feature? Removing the boilerplate of `GroveResolve` for read-only data structs would significantly improve DX for typical web apps.
+2. ~~**Template validation CLI**~~ — **Deferred (not in v1):** A `grovec` CLI tool is out of scope for the initial release. The engine itself is the deliverable; a companion validator can be built once the template language is stable and real-world usage reveals which error classes are actually painful in practice. Building a schema format before that data exists risks designing for the wrong problems. The `cmd/grovec/` directory placeholder in §3.5 remains reserved but empty for v1.
+
+3. ~~**Async rendering**~~ — **Resolved:** All `Render*` methods accept `context.Context` as the first argument. Cancellation is checked at `ITER_NEXT` opcodes. The sandbox handles resource limits (loop count, output size, time budget) independently. Both mechanisms coexist.
+
+4. ~~**`grove.Reflect()` adapter**~~ — **Resolved (Option A — Mandatory `Resolvable` only):** Every type exposed to templates must implement `GroveResolve`. No reflection on arbitrary structs.
+
+   ```go
+   type User struct {
+       ID           int
+       Name         string
+       Email        string
+       passwordHash string  // unexported — unreachable anyway
+       AuthToken    string  // exported, but deliberately hidden
+   }
+
+   func (u User) GroveResolve(key string) (any, bool) {
+       switch key {
+       case "id":    return u.ID, true
+       case "name":  return u.Name, true
+       case "email": return u.Email, true
+       }
+       return nil, false  // AuthToken not listed — hidden
+   }
+   ```
+
+   The boilerplate cost is real (~10 lines per type, ~40 for a large struct) but the security model is unambiguous: sensitive fields cannot leak by accident, and a full audit of template-visible data is a single `grep GroveResolve`. Reflection-based opt-in (`grove.Reflect()`) was considered and deferred to v1.1 — the allowlist model is the right default for a new engine, and the friction should be validated against real usage before adding an escape hatch.
 
 5. **Asset ordering guarantees** — Assets are currently deduplicated by `Src` in insertion order (first declaration wins). Should later declarations be able to override attributes (e.g., change `defer` to `async`)? This needs a defined policy.
 
-6. **Slot prop passing** — Should `{% slot %}` be able to pass data *back* to the fill block (like Svelte's `let:` binding or Vue's scoped slots)? This is powerful but significantly complicates the scope model.
+6. ~~**Slot prop passing**~~ — **Resolved (Option C — Render-prop pattern via macros):** Slots remain pure content holes with no data flowing back to the fill block. For components that own their own data and need per-item customization, the solution is to accept a macro as a prop and call it per item.
+
+   This requires **macros as first-class values** — a `ValueTypeMacro` in the VM's `Value` type, storable in `Data` and passable as a `{% component %}` prop. This is a smaller VM change than scoped slots and does not introduce a bidirectional scope model.
+
+   ```html
+   {# Caller defines a rendering macro in their scope #}
+   {% macro order_row(row, index) %}
+     <td>{{ index }}</td>
+     <td>{{ row.id }}</td>
+     <td class="{{ "highlight" if row.overdue }}">{{ row.total | round(2) }}</td>
+   {% endmacro %}
+
+   {# Pass the macro as a prop — component calls it per row #}
+   {% component "components/data-table.html" src="/api/orders" row_renderer=order_row %}
+   {% endcomponent %}
+   ```
+
+   ```html
+   {# components/data-table.html #}
+   {% props src, row_renderer %}
+   <table>
+     <tbody>
+       {% for row in rows %}
+         <tr>{{ row_renderer(row, loop.index) }}</tr>
+       {% endfor %}
+     </tbody>
+   </table>
+   ```
+
+   The macro carries a closure over the caller's scope at definition time, so `order_row` can reference any variable from the caller's scope in addition to its explicit arguments. The component receives it as an opaque callable — it does not need to know anything about the caller's scope.
+
+   **Spec implications:** `grove.Value` gains a `ValueTypeMacro` variant. The `{% props %}` declaration accepts macro-typed props without special syntax. Calling a macro-valued variable uses the same `{{ row_renderer(args) }}` call syntax as inline macro calls. Passing a non-macro value where a macro call is attempted is a `RuntimeError`. The `MacroValue` type is not serializable (cannot be passed to `grove.Data` from Go — only from within a template via `{% macro %}`).
+
+   Scoped slots (Option B) were considered and rejected: the bidirectional scope model requires closures in the VM frame stack at slot boundaries, has a history of subtle bugs in Vue/Svelte, and complicates the mental model for template authors in ways that are hard to document clearly. The render-prop pattern achieves the same expressive power with a single, well-understood primitive (function passing) and no new scoping rules.
 
 7. **Error recovery** — Should the VM attempt to continue rendering after a non-fatal error (e.g., undefined variable in non-strict mode) or always halt? Continuing enables partial renders useful for debugging but can produce malformed HTML.
