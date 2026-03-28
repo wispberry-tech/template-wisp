@@ -17,8 +17,8 @@
 <h2>Examples</h2>
 <pre><code>{% raw %}
 {% with .user as .u %}
-{%.u.name%}
-{%.u.email%}
+{% .u.name%}
+{% .u.email%}
 {% end %}
 {% endraw %}</code></pre>
 

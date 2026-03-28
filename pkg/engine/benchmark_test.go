@@ -6,7 +6,7 @@ import (
 
 func BenchmarkRenderStringSimple(b *testing.B) {
 	e := New()
-	template := `Hello, {%.name%}!`
+	template := `Hello, {% .name%}!`
 	data := map[string]interface{}{"name": "World"}
 
 	b.ResetTimer()
@@ -17,7 +17,7 @@ func BenchmarkRenderStringSimple(b *testing.B) {
 
 func BenchmarkRenderStringWithConditionals(b *testing.B) {
 	e := New()
-	template := `{% if .show %}{%.content%}{% else %}hidden{% end %}`
+	template := `{% if .show %}{% .content%}{% else %}hidden{% end %}`
 	data := map[string]interface{}{
 		"show":    true,
 		"content": "Hello World",
@@ -31,7 +31,7 @@ func BenchmarkRenderStringWithConditionals(b *testing.B) {
 
 func BenchmarkRenderStringWithLoop(b *testing.B) {
 	e := New()
-	template := `{% for .item in .items %}{%.item%}{% end %}`
+	template := `{% for .item in .items %}{% .item%}{% end %}`
 	items := make([]interface{}, 100)
 	for i := 0; i < 100; i++ {
 		items[i] = "item"
@@ -82,7 +82,7 @@ func BenchmarkRenderStringComplex(b *testing.B) {
 	{% if .show_list %}
 	<ul>
 		{% for .item in .items %}
-		<li>{%.item.name%} - {%.item.price | currency %}</li>
+		<li>{% .item.name%} - {% .item.price | currency %}</li>
 		{% end %}
 	</ul>
 	{% else %}
@@ -112,7 +112,7 @@ func BenchmarkRenderStringComplex(b *testing.B) {
 
 func BenchmarkCaching(b *testing.B) {
 	e := New()
-	template := `Hello, {%.name%}!`
+	template := `Hello, {% .name%}!`
 	data := map[string]interface{}{"name": "World"}
 
 	for i := 0; i < b.N; i++ {
@@ -134,13 +134,13 @@ func BenchmarkAutoEscape(b *testing.B) {
 func BenchmarkRegisterTemplate(b *testing.B) {
 	e := New()
 	for i := 0; i < b.N; i++ {
-		e.RegisterTemplate("test", `Hello, {%.name%}!`)
+		e.RegisterTemplate("test", `Hello, {% .name%}!`)
 	}
 }
 
 func BenchmarkRenderFile(b *testing.B) {
 	e := New()
-	e.RegisterTemplate("greeting", `Hello, {%.name%}!`)
+	e.RegisterTemplate("greeting", `Hello, {% .name%}!`)
 
 	data := map[string]interface{}{"name": "World"}
 
@@ -152,7 +152,7 @@ func BenchmarkRenderFile(b *testing.B) {
 
 func BenchmarkValidate(b *testing.B) {
 	e := New()
-	template := `{% if .show %}{%.content%}{% elsif .alt %}alt{% else %}default{% end %}`
+	template := `{% if .show %}{% .content%}{% elsif .alt %}alt{% else %}default{% end %}`
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

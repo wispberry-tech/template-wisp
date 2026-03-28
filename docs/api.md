@@ -80,7 +80,7 @@ Renders a template string with the given data context.
 **Example:**
 
 ```go
-result, err := e.RenderString(`Hello, {%.name%}!`, map[string]interface{}{
+result, err := e.RenderString(`Hello, {% .name%}!`, map[string]interface{}{
     "name": "World",
 })
 // result: "Hello, World!"
@@ -132,7 +132,7 @@ result, err := e.RenderFile("index.html", data)
 **Example - Using MemoryStore:**
 
 ```go
-e.RegisterTemplate("header", `<header>{%.title%}</header>`)
+e.RegisterTemplate("header", `<header>{% .title%}</header>`)
 result, err := e.RenderFile("header", data)
 ```
 
@@ -164,7 +164,7 @@ Validates template syntax without rendering. Useful for checking templates befor
 **Example:**
 
 ```go
-err := e.Validate(`{% if .show %}{%.content%}{% end %}`)
+err := e.Validate(`{% if .show %}{% .content%}{% end %}`)
 if err != nil {
     fmt.Println("Invalid:", err)
 }
@@ -214,9 +214,9 @@ Registers a template for rendering by name. Uses MemoryStore internally if no st
 **Example:**
 
 ```go
-e.RegisterTemplate("header", `<header>{%.title%}</header>`)
+e.RegisterTemplate("header", `<header>{% .title%}</header>`)
 e.RegisterTemplate("footer", `<footer>Copyright 2024</footer>`)
-e.RegisterTemplate("card", `<div class="card">{%.content%}</div>`)
+e.RegisterTemplate("card", `<div class="card">{% .content%}</div>`)
 ```
 
 ### ClearCache
@@ -322,7 +322,7 @@ Enables or disables HTML auto-escaping.
 
 ```go
 e.SetAutoEscape(false)  // Disable for JSON responses
-result, _ := e.RenderString(`{"name": "{%.name%}"}`, data)
+result, _ := e.RenderString(`{"name": "{% .name%}"}`, data)
 // Output: {"name": "Alice"} (no escaping)
 ```
 
@@ -376,7 +376,7 @@ safe := engine.SafeString("<b>Bold</b>")
 ### Usage
 
 ```go
-result, _ := e.RenderString(`{%.html%}`, map[string]interface{}{
+result, _ := e.RenderString(`{% .html%}`, map[string]interface{}{
     "html": engine.SafeString("<b>Bold</b>"),
 })
 // result: "<b>Bold</b>" (NOT escaped - output as-is)
@@ -491,11 +491,11 @@ Renders a template with JSON data.
 
 ```bash
 # From argument
-wisp render 'Hello, {%.name%}!' '{"name": "World"}'
+wisp render 'Hello, {% .name%}!' '{"name": "World"}'
 # Output: Hello, World!
 
 # From stdin
-echo '{"name": "World"}' | wisp render 'Hello, {%.name%}!'
+echo '{"name": "World"}' | wisp render 'Hello, {% .name%}!'
 # Output: Hello, World!
 ```
 
@@ -508,7 +508,7 @@ wisp validate <template>
 Validates template syntax without rendering.
 
 ```bash
-wisp validate '{% if .show %}{%.content%}{% end %}'
+wisp validate '{% if .show %}{% .content%}{% end %}'
 # Valid: (no output)
 # Invalid: Error message with details
 ```

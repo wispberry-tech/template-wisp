@@ -15,7 +15,7 @@
 <h2>Examples</h2>
 <pre><code>{% raw %}
 {% for .item in .items %}
-&lt;li class="{% cycle "odd", "even" %}"&gt;{%.item%}&lt;/li&gt;
+&lt;li class="{% cycle "odd", "even" %}"&gt;{% .item%}&lt;/li&gt;
 {% end %}
 {% endraw %}</code></pre>
 

@@ -36,19 +36,19 @@ func TestRenderString(t *testing.T) {
 		},
 		{
 			name:     "for loop",
-			template: `{% for .item in .items %}{%.item%}{%end%}`,
+			template: `{% for .item in .items %}{% .item%}{%end%}`,
 			data:     map[string]interface{}{"items": []interface{}{"a", "b", "c"}},
 			expected: "abc",
 		},
 		{
 			name:     "text content",
-			template: `Hello{%.name%}!`,
+			template: `Hello{% .name%}!`,
 			data:     map[string]interface{}{"name": "World"},
 			expected: "HelloWorld!",
 		},
 		{
 			name:     "assign variable",
-			template: `{%assign.x="hello"%}{%.x%}`,
+			template: `{%assign.x="hello"%}{% .x%}`,
 			data:     map[string]interface{}{},
 			expected: "hello",
 		},
@@ -66,7 +66,7 @@ func TestRenderString(t *testing.T) {
 		},
 		{
 			name:     "nested access",
-			template: `{%.user.name%}`,
+			template: `{% .user.name%}`,
 			data:     map[string]interface{}{"user": map[string]interface{}{"name": "Bob"}},
 			expected: "Bob",
 		},
@@ -111,7 +111,7 @@ func TestRegisterFilter(t *testing.T) {
 
 func TestRegisterTemplate(t *testing.T) {
 	e := New()
-	e.RegisterTemplate("greeting", `Hello {%.name%}!`)
+	e.RegisterTemplate("greeting", `Hello {% .name%}!`)
 
 	result, err := e.RenderFile("greeting", map[string]interface{}{"name": "World"})
 	if err != nil {
@@ -151,7 +151,7 @@ func TestMemoryStore(t *testing.T) {
 func TestAutoEscaping(t *testing.T) {
 	e := New()
 
-	result, err := e.RenderString(`<p>{%.html%}</p>`, map[string]interface{}{
+	result, err := e.RenderString(`<p>{% .html%}</p>`, map[string]interface{}{
 		"html": "<script>alert('xss')</script>",
 	})
 	if err != nil {
@@ -168,7 +168,7 @@ func TestAutoEscaping(t *testing.T) {
 func TestAutoEscapingDisabled(t *testing.T) {
 	e := NewUnsafe()
 
-	result, err := e.RenderString(`<p>{%.html%}</p>`, map[string]interface{}{
+	result, err := e.RenderString(`<p>{% .html%}</p>`, map[string]interface{}{
 		"html": "<b>bold</b>",
 	})
 	if err != nil {
@@ -182,7 +182,7 @@ func TestAutoEscapingDisabled(t *testing.T) {
 func TestTemplateCaching(t *testing.T) {
 	e := New()
 
-	template := `{%.name%}`
+	template := `{% .name%}`
 	data := map[string]interface{}{"name": "Alice"}
 
 	result1, err := e.RenderString(template, data)

@@ -19,7 +19,7 @@ data := map[string]interface{}{
 }
 
 {# Use default to debug #}
-{%.email | default "NOT_FOUND"}
+{% .email | default "NOT_FOUND"}
 {% endraw %}</code></pre>
 
 <h3>"template not found: X"</h3>
@@ -36,7 +36,7 @@ e.RegisterTemplate("header", "&lt;header&gt;Header&lt;/header&gt;")
 <pre><code>{% raw %}
 {# Common mistakes #}
 {% if .show %}     {# Missing {% end %} #}
-{%.name }}       {# Extra } #}
+{% .name }}       {# Extra } #}
 
 {# Validate before rendering #}
 e.Validate(template)
@@ -46,7 +46,7 @@ e.Validate(template)
 <p>Auto-escaping is on by default.</p>
 <pre><code>{% raw %}
 {# Use raw for trusted content #}
-{%.trusted_html | raw}
+{% .trusted_html | raw}
 
 {# Or disable auto-escaping for non-HTML #}
 e.SetAutoEscape(false)
@@ -80,11 +80,11 @@ e.SetAutoEscape(false)
 <h3>Print Variables</h3>
 <pre><code>{% raw %}
 {# Use json filter to see data #}
-{%. | json %}
-{%.user | json }
+{% . | json %}
+{% .user | json }
 
 {# Use default to check #}
-{%.name | default "NOT_SET"}
+{% .name | default "NOT_SET"}
 {% endraw %}</code></pre>
 
 <h3>Validate Templates</h3>
@@ -113,7 +113,7 @@ e.RegisterFilter("myfilter", func(input interface{}) string {
 })
 
 {# Use without parens #}
-{%.name | myfilter}
+{% .name | myfilter}
 {% endraw %}</code></pre>
 
 <h3>How do I render JSON?</h3>
@@ -122,7 +122,7 @@ e.RegisterFilter("myfilter", func(input interface{}) string {
 e.SetAutoEscape(false)
 
 {# Use json filter #}
-{%.data | json}
+{% .data | json}
 {% endraw %}</code></pre>
 
 <h2>See Also</h2>

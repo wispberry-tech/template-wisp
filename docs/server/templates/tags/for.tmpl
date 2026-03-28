@@ -28,7 +28,7 @@
 <h3>Basic Array Iteration</h3>
 <pre><code>{% raw %}
 {% for .item in .items %}
-{%.item%}
+{% .item%}
 {% end %}
 {% endraw %}</code></pre>
 <p><strong>Input:</strong> <code>{"items": ["apple", "banana", "cherry"]}</code></p>
@@ -37,7 +37,7 @@
 <h3>With Index</h3>
 <pre><code>{% raw %}
 {% for .index, .item in .items %}
-{%.index%}: {%.item%}
+{% .index%}: {% .item%}
 {% end %}
 {% endraw %}</code></pre>
 <p><strong>Input:</strong> <code>{"items": ["a", "b", "c"]}</code></p>
@@ -46,7 +46,7 @@
 <h3>Map Iteration</h3>
 <pre><code>{% raw %}
 {% for .key, .value in .user %}
-{%.key%}: {%.value%}
+{% .key%}: {% .value%}
 {% end %}
 {% endraw %}</code></pre>
 <p><strong>Input:</strong> <code>{"user": {"name": "Alice", "email": "alice@example.com"}}</code></p>
@@ -54,7 +54,7 @@
 <h3>Range Loop</h3>
 <pre><code>{% raw %}
 {% for .i in (range 1 5) %}
-{%.i%}
+{% .i%}
 {% end %}
 {% endraw %}</code></pre>
 <p><strong>Output:</strong> 1 2 3 4 5</p>
@@ -62,7 +62,7 @@
 <h3>Empty Array with else</h3>
 <pre><code>{% raw %}
 {% for .item in .items %}
-{%.item%}
+{% .item%}
 {% else %}
 No items found
 {% end %}

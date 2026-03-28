@@ -28,7 +28,7 @@ import (
 
 func main() {
     e := engine.New()
-    template := "Hello, {%.name%}!"
+    template := "Hello, {% .name%}!"
     data := map[string]interface{}{"name": "World"}
     result, _ := e.RenderString(template, data)
     fmt.Println(result)
@@ -36,10 +36,10 @@ func main() {
 
 <h2>Basic Syntax</h2>
 <h3>Variables</h3>
-<p>Access with dot: <code>{% raw %}{%.name%}{% endraw %}</code></p>
+<p>Access with dot: <code>{% raw %}{% .name%}{% endraw %}</code></p>
 
 <h3>Filters</h3>
-<p>Transform: <code>{% raw %}{%.name | upcase %}{% endraw %}</code></p>
+<p>Transform: <code>{% raw %}{% .name | upcase %}{% endraw %}</code></p>
 
 <h3>Conditionals</h3>
 <p><code>{% raw %}{% if .show %}...{% end %}{% endraw %}</code></p>

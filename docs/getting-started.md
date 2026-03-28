@@ -38,7 +38,7 @@ func main() {
     
     // Template with Wisp syntax
     // {% .name %} accesses the 'name' variable from data
-    template := `Hello, {%.name%}!`
+    template := `Hello, {% .name%}!`
     data := map[string]interface{}{"name": "World"}
     
     // Render the template
@@ -102,7 +102,7 @@ Access variables from the data map:
 
 ```liquid
 {% for .item in .items %}
-    <li>{%.item.name%}</li>
+    <li>{% .item.name%}</li>
 {% end %}
 ```
 
@@ -172,8 +172,8 @@ Use MemoryStore for embedded or dynamically created templates:
 e := engine.New()
 
 // Register templates manually
-e.RegisterTemplate("header", `Header: {%.title%}`)
-e.RegisterTemplate("card", `<div class="card">{%.content%}</div>`)
+e.RegisterTemplate("header", `Header: {% .title%}`)
+e.RegisterTemplate("card", `<div class="card">{% .content%}</div>`)
 
 // Templates are stored in MemoryStore automatically
 result, err := e.RenderFile("header", map[string]interface{}{"title": "Welcome"})
@@ -337,7 +337,7 @@ Mark content as safe when you trust it (e.g., rendered markdown):
 import "github.com/anomalyco/wisp/pkg/engine"
 
 safe := engine.SafeString("<b>Bold</b>")
-result, _ := e.RenderString(`{%.content%}`, map[string]interface{}{
+result, _ := e.RenderString(`{% .content%}`, map[string]interface{}{
     "content": safe,
 })
 // Output: <b>Bold</b> (NOT escaped!)
@@ -428,10 +428,10 @@ The `wisp` CLI is useful for testing and scripting:
 
 ```bash
 # Render a template
-echo '{"name": "World"}' | wisp render 'Hello, {%.name%}!'
+echo '{"name": "World"}' | wisp render 'Hello, {% .name%}!'
 
 # Validate template syntax
-wisp validate '{% if .show %}{%.content%}{% end %}'
+wisp validate '{% if .show %}{% .content%}{% end %}'
 
 # Show version
 wisp version

@@ -15,9 +15,9 @@
 <h2>Examples</h2>
 <pre><code>{% raw %}
 {% capture greeting %}
-  Hello, {%.name%}!
+  Hello, {% .name%}!
 {% endcapture %}
-{%.greeting%}
+{% .greeting%}
 {% endraw %}</code></pre>
 
 <h2>See Also</h2>

@@ -263,14 +263,14 @@ Iterate over arrays, slices, maps, or ranges:
 
 ```liquid
 {% for .item in .items %}
-    <li>{%.item%}</li>
+    <li>{% .item%}</li>
 {% end %}
 ```
 
 **With index:**
 ```liquid
 {% for .index, .item in .items %}
-    <li>{%.index%}: {%.item%}</li>
+    <li>{% .index%}: {% .item%}</li>
 {% end %}
 ```
 
@@ -286,7 +286,7 @@ Loop over a numeric range:
 
 ```liquid
 {% for .i in (range 1 5) %}
-    {%.i%}
+    {% .i%}
 {% end %}
 {# Outputs: 1 2 3 4 5 #}
 ```
@@ -301,7 +301,7 @@ Loop while a condition is true:
 
 ```liquid
 {% while .condition %}
-    {%.value%}
+    {% .value%}
     {% assign .value = .value | plus 1 %}
 {% end %}
 ```
@@ -359,7 +359,7 @@ Alternate between values on each iteration:
 ```liquid
 {% for .item in .items %}
     <div class="{% cycle "odd" "even" %}">
-        {%.item%}
+        {% .item%}
     </div>
 {% end %}
 ```
@@ -484,7 +484,7 @@ Capture output to a variable:
 
 ```liquid
 {% capture .output %}
-    Captured content: {%.value%}
+    Captured content: {% .value%}
 {%endcapture%}
 
 {% .output %}  {# Use captured content #}
@@ -509,7 +509,7 @@ Exit loop early:
     {% if .item.last %}
         {% break %}
     {% end %}
-    {%.item.name%}
+    {% .item.name%}
 {% end %}
 ```
 
@@ -522,7 +522,7 @@ Skip to next iteration:
     {% if .item.skip %}
         {% continue %}
     {% end %}
-    {%.item.name%}
+    {% .item.name%}
 {% end %}
 ```
 
@@ -534,7 +534,7 @@ Output literal content without processing:
 
 ```liquid
 {% raw %}
-    This {%.will_not%} be processed
+    This {% .will_not%} be processed
     {% if .ignored %}...{% end %}
 {% endraw %}
 ```

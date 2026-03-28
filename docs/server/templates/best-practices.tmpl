@@ -14,8 +14,8 @@
 
 <h3>Use raw Filter Only for Trusted Content</h3>
 <pre><code>{% raw %}
-{%.trusted_content %}
-{%.user_input %}
+{% .trusted_content %}
+{% .user_input %}
 {% endraw %}</code></pre>
 
 <h3>Resource Limits</h3>
@@ -38,7 +38,7 @@
 
 <h3>Default Values</h3>
 <pre><code>{% raw %}
-{%.user.name %}
+{% .user.name %}
 {% endraw %}</code></pre>
 
 <h2>See Also</h2>
