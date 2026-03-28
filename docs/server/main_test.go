@@ -92,7 +92,7 @@ func TestDocPagesRenderWithoutErrors(t *testing.T) {
 
 	for _, page := range pages {
 		t.Run(page, func(t *testing.T) {
-			_, err := docEngine.RenderFile(page, map[string]interface{}{})
+			_, err := docEngine.RenderFile(page, map[string]any{})
 			if err != nil {
 				t.Errorf("page %s failed: %v", page, err)
 			}
