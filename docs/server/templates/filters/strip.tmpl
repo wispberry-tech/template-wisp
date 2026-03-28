@@ -40,14 +40,14 @@
 
 <h2>Notes</h2>
 <ul>
-  <li><code>strip</code> removes all leading and trailing Unicode whitespace: spaces (<code> </code>), horizontal tabs (<code>\t</code>), newlines (<code>\n</code>), and carriage returns (<code>\r</code>).</li>
+  <li><code>strip</code> removes all leading and trailing whitespace as defined by Go's <code>strings.TrimSpace</code>: spaces (<code> </code>), horizontal tabs (<code>\t</code>), newlines (<code>\n</code>), vertical tabs (<code>\v</code>), form feeds (<code>\f</code>), carriage returns (<code>\r</code>), NEL (U+0085), and NBSP (U+00A0).</li>
   <li>Whitespace in the middle of the string is never affected.</li>
   <li>Use <code>lstrip</code> or <code>rstrip</code> when you only want to trim one side.</li>
 </ul>
 
 <h2>See Also</h2>
 <ul>
-  <li><a href="/test/filters/lstrip">lstrip</a></li>
-  <li><a href="/test/filters/rstrip">rstrip</a></li>
+  <li><a href="/docs/filters/lstrip">lstrip</a></li>
+  <li><a href="/docs/filters/rstrip">rstrip</a></li>
 </ul>
 {% end %}
