@@ -180,8 +180,6 @@ Filters transform values. The output of one filter becomes the input of the next
 |--------|-------------|---------|
 | `default val` | Default if empty | `{% .val \| default "N/A" %}` |
 | `json` | JSON encode | `{% .obj \| json %}` |
-| `escape` | HTML escape | `{% .html \| escape %}` |
-| `escape_once` | Escape only entities | `{% .html \| escape_once %}` |
 | `raw` | Mark as safe | `{% .html \| raw %}` |
 
 ### Math Filters

@@ -2,7 +2,6 @@ package engine
 
 import (
 	"fmt"
-	"html"
 	"math"
 	"math/rand"
 	"net/url"
@@ -54,9 +53,6 @@ func (e *Engine) registerBuiltinFilters() {
 	e.filters["default"] = filterDefault
 	e.filters["json"] = filterJSON
 	e.filters["raw"] = filterRaw
-	e.filters["escape"] = filterEscape
-	e.filters["escape_once"] = filterEscapeOnce
-
 	// Date filters
 	e.filters["date"] = filterDate
 	e.filters["date_format"] = filterDateFormat
@@ -414,22 +410,6 @@ func toStringSlice(v interface{}) []string {
 // filterRaw marks a value as safe (bypasses HTML escaping).
 func filterRaw(v interface{}) evaluator.SafeString {
 	return evaluator.SafeString{Value: toString(v)}
-}
-
-// filterEscape HTML-escapes a value. Returns SafeString to prevent double-escaping.
-func filterEscape(v interface{}) evaluator.SafeString {
-	return evaluator.SafeString{Value: html.EscapeString(toString(v))}
-}
-
-// filterEscapeOnce escapes HTML but doesn't double-escape already escaped content.
-// Returns SafeString to prevent further auto-escaping.
-func filterEscapeOnce(v interface{}) evaluator.SafeString {
-	s := toString(v)
-	// If it looks already escaped (&amp; etc), return as-is
-	if strings.Contains(s, "&amp;") || strings.Contains(s, "&lt;") || strings.Contains(s, "&gt;") || strings.Contains(s, "&#") {
-		return evaluator.SafeString{Value: s}
-	}
-	return evaluator.SafeString{Value: html.EscapeString(s)}
 }
 
 // Date filters

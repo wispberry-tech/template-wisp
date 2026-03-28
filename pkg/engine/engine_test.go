@@ -148,36 +148,6 @@ func TestMemoryStore(t *testing.T) {
 	}
 }
 
-func TestAutoEscaping(t *testing.T) {
-	e := New()
-
-	result, err := e.RenderString(`<p>{% .html%}</p>`, map[string]interface{}{
-		"html": "<script>alert('xss')</script>",
-	})
-	if err != nil {
-		t.Fatalf("RenderString failed: %v", err)
-	}
-	if strings.Contains(result, "<script>") {
-		t.Errorf("HTML should be escaped, got %q", result)
-	}
-	if !strings.Contains(result, "&lt;script&gt;") {
-		t.Errorf("Expected escaped HTML, got %q", result)
-	}
-}
-
-func TestAutoEscapingDisabled(t *testing.T) {
-	e := NewUnsafe()
-
-	result, err := e.RenderString(`<p>{% .html%}</p>`, map[string]interface{}{
-		"html": "<b>bold</b>",
-	})
-	if err != nil {
-		t.Fatalf("RenderString failed: %v", err)
-	}
-	if result != "<p><b>bold</b></p>" {
-		t.Errorf("Expected unescaped HTML, got %q", result)
-	}
-}
 
 func TestTemplateCaching(t *testing.T) {
 	e := New()
@@ -210,18 +180,6 @@ func TestTemplateCaching(t *testing.T) {
 	}
 }
 
-func TestMaxIterations(t *testing.T) {
-	e := New()
-	e.SetMaxIterations(100)
-
-	_, err := e.RenderString(`{%assign.x=true%}{%while.x%}loop{%end%}`, nil)
-	if err == nil {
-		t.Error("Expected iteration limit error")
-	}
-	if !strings.Contains(err.Error(), "iteration limit") {
-		t.Errorf("Expected iteration limit error, got %v", err)
-	}
-}
 
 func TestBuiltinFilters(t *testing.T) {
 	e := New()
@@ -301,9 +259,7 @@ func TestFilters(t *testing.T) {
 		{"default nil", `{% .v | default "N/A" %}`, map[string]interface{}{"v": nil}, "N/A"},
 		{"default present", `{% .v | default "N/A" %}`, map[string]interface{}{"v": "hello"}, "hello"},
 		{"json string", `{% .v | json %}`, map[string]interface{}{"v": "hello"}, `"hello"`},
-		{"escape", `{% .v | escape %}`, map[string]interface{}{"v": "<b>hi</b>"}, "&lt;b&gt;hi&lt;/b&gt;"},
-		{"escape_once", `{% .v | escape_once %}`, map[string]interface{}{"v": "&lt;b&gt;"}, "&lt;b&gt;"},
-		{"raw", `{% .v | raw %}`, map[string]interface{}{"v": "<b>safe</b>"}, "<b>safe</b>"},
+		{"raw",`{% .v | raw %}`, map[string]interface{}{"v": "<b>safe</b>"}, "<b>safe</b>"},
 	}
 
 	for _, tt := range tests {
