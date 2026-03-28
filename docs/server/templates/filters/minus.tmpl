@@ -1,0 +1,40 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Minus Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Minus Filter</h1>
+
+<p>Subtracts a number from another number.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ number | minus: subtrahend }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ 10 | minus: 3 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 7</p>
+
+<pre><code>{% raw %}
+{{ 5.5 | minus: 2.2 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 3.3</p>
+
+<pre><code>{% raw %}
+{{ 0 | minus: 10 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> -10</p>
+
+<h2>Notes</h2>
+<p>Both the input and the argument are converted to floating-point numbers before subtraction. String values that represent numbers are handled automatically.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/plus">plus</a></li>
+  <li><a href="/docs/filters/times">times</a></li>
+  <li><a href="/docs/filters/divided_by">divided_by</a></li>
+</ul>
+{% end %}

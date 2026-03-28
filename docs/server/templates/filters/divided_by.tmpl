@@ -1,0 +1,40 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Divided By Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Divided By Filter</h1>
+
+<p>Divides a number by another number.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ number | divided_by: divisor }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ 10 | divided_by: 2 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 5</p>
+
+<pre><code>{% raw %}
+{{ 7 | divided_by: 2 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 3.5</p>
+
+<pre><code>{% raw %}
+{{ 9 | divided_by: 3 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 3</p>
+
+<h2>Notes</h2>
+<p>Division is always floating-point. If the divisor is 0, the result is 0 (to prevent panics).</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/times">times</a></li>
+  <li><a href="/docs/filters/modulo">modulo</a></li>
+  <li><a href="/docs/filters/minus">minus</a></li>
+</ul>
+{% end %}

@@ -1,0 +1,39 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Json Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Json Filter</h1>
+
+<p>Serializes a value to its JSON representation.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ value | json }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ "hello" | json }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> "hello"</p>
+
+<pre><code>{% raw %}
+{{ 42 | json }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 42</p>
+
+<pre><code>{% raw %}
+{{ nil | json }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> null</p>
+
+<h2>Notes</h2>
+<p>The output is marked as a safe string to prevent HTML-escaping of the JSON content (e.g. angle brackets in strings). Strings are output with Go's <code>%q</code> formatting (double-quoted with escape sequences). Boolean values are rendered as <code>true</code> or <code>false</code>.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/raw">raw</a></li>
+  <li><a href="/docs/filters/escape">escape</a></li>
+</ul>
+{% end %}

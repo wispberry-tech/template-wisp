@@ -1,0 +1,37 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Raw Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Raw Filter</h1>
+
+<p>Marks a string as safe HTML, bypassing the auto-escaping that normally protects against XSS.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ value | raw }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ "<strong>bold</strong>" | raw }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> <strong>bold</strong> (rendered as bold HTML)</p>
+
+<pre><code>{% raw %}
+{{ trustedHtmlContent | raw }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> The HTML is rendered as-is without escaping.</p>
+
+<h2>Notes</h2>
+<p><strong>Security warning:</strong> Never use <code>raw</code> on user-provided content. This filter completely bypasses HTML auto-escaping, which means any HTML or JavaScript in the value will be rendered directly in the browser. Only use it on content you fully control and trust, such as pre-sanitized HTML from your own application code.</p>
+
+<p>By default, Wisp escapes all output to prevent XSS attacks. The <code>raw</code> filter opts out of this protection for the specific value.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/escape">escape</a></li>
+  <li><a href="/docs/filters/escape_once">escape_once</a></li>
+  <li><a href="/docs/templates/security">Security</a></li>
+</ul>
+{% end %}

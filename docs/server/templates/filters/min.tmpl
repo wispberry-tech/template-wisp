@@ -1,0 +1,39 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Min Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Min Filter</h1>
+
+<p>Returns the smaller of two numbers.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ number | min: other }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ 5 | min: 10 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 5</p>
+
+<pre><code>{% raw %}
+{{ 10 | min: 3 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 3</p>
+
+<pre><code>{% raw %}
+{{ -5 | min: 0 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> -5</p>
+
+<h2>Notes</h2>
+<p>Both values are converted to floating-point numbers before comparison. If only one argument is provided, that value is returned unchanged.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/max">max</a></li>
+  <li><a href="/docs/filters/abs">abs</a></li>
+</ul>
+{% end %}

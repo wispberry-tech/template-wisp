@@ -1,0 +1,40 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Abs Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Abs Filter</h1>
+
+<p>Returns the absolute value of a number.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ number | abs }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ -5 | abs }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 5</p>
+
+<pre><code>{% raw %}
+{{ -3.14 | abs }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 3.14</p>
+
+<pre><code>{% raw %}
+{{ 7 | abs }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 7</p>
+
+<h2>Notes</h2>
+<p>Positive numbers are returned unchanged. The filter converts string values to numbers before computing the absolute value.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/ceil">ceil</a></li>
+  <li><a href="/docs/filters/floor">floor</a></li>
+  <li><a href="/docs/filters/round">round</a></li>
+</ul>
+{% end %}

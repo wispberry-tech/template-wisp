@@ -1,0 +1,38 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Url Encode Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Url Encode Filter</h1>
+
+<p>URL-encodes a string, making it safe for use in query parameters.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ value | url_encode }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ "hello world" | url_encode }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> hello+world</p>
+
+<pre><code>{% raw %}
+{{ "foo=bar&baz=qux" | url_encode }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> foo%3Dbar%26baz%3Dqux</p>
+
+<pre><code>{% raw %}
+{{ "user@example.com" | url_encode }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> user%40example.com</p>
+
+<h2>Notes</h2>
+<p>Uses Go's <code>url.QueryEscape</code>, which encodes spaces as <code>+</code> (query string encoding). Special characters such as <code>=</code>, <code>&amp;</code>, <code>?</code>, <code>@</code>, and <code>/</code> are percent-encoded.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/url_decode">url_decode</a></li>
+</ul>
+{% end %}

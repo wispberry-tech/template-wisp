@@ -1,0 +1,41 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Date Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Date Filter</h1>
+
+<p>Formats a time value using Go's reference time layout.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ timeValue | date: "layout" }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ publishedAt | date: "January 2, 2006" }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> March 28, 2026</p>
+
+<pre><code>{% raw %}
+{{ publishedAt | date: "2006-01-02" }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 2026-03-28</p>
+
+<pre><code>{% raw %}
+{{ publishedAt | date: "Mon, 02 Jan 2006 15:04:05 MST" }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> Sat, 28 Mar 2026 00:00:00 UTC</p>
+
+<h2>Notes</h2>
+<p>This filter uses Go's reference time layout, not strftime directives. The reference time is:</p>
+<pre><code>Mon Jan 2 15:04:05 MST 2006</code></pre>
+<p>In other words: year=2006, month=01, day=02, hour=15, minute=04, second=05.</p>
+<p>The input can be a <code>time.Time</code> value or an RFC3339 string (e.g. <code>"2026-03-28T12:00:00Z"</code>). If no layout is provided, the default is <code>"2006-01-02"</code>. For Liquid-style <code>%Y</code>/<code>%m</code>/<code>%d</code> directives, use <a href="/docs/filters/date_format">date_format</a> instead.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/date_format">date_format</a></li>
+</ul>
+{% end %}

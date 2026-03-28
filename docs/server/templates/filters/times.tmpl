@@ -1,0 +1,40 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Times Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Times Filter</h1>
+
+<p>Multiplies a number by another number.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ number | times: multiplier }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ 4 | times: 3 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 12</p>
+
+<pre><code>{% raw %}
+{{ 2.5 | times: 4 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 10</p>
+
+<pre><code>{% raw %}
+{{ 5 | times: 0.5 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 2.5</p>
+
+<h2>Notes</h2>
+<p>Both values are converted to floating-point numbers before multiplication. String values that represent numbers are handled automatically.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/divided_by">divided_by</a></li>
+  <li><a href="/docs/filters/plus">plus</a></li>
+  <li><a href="/docs/filters/minus">minus</a></li>
+</ul>
+{% end %}

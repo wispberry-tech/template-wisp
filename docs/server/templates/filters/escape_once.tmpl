@@ -1,0 +1,36 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Escape Once Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Escape Once Filter</h1>
+
+<p>Escapes HTML special characters in a string without double-escaping content that is already escaped.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ value | escape_once }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ "<script>" | escape_once }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> &amp;lt;script&amp;gt;</p>
+
+<pre><code>{% raw %}
+{{ "&amp;lt;already escaped&amp;gt;" | escape_once }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> &amp;lt;already escaped&amp;gt; (not double-escaped)</p>
+
+<h2>Notes</h2>
+<p>If the string already contains HTML entities such as <code>&amp;amp;</code>, <code>&amp;lt;</code>, <code>&amp;gt;</code>, or numeric entities (<code>&amp;#</code>), the string is returned as-is. Otherwise, HTML special characters are escaped. The result is marked as a safe string to prevent further auto-escaping.</p>
+
+<p>Use this filter when your data may already be partially escaped and you need to avoid rendering garbled output like <code>&amp;amp;amp;</code>.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/escape">escape</a></li>
+  <li><a href="/docs/filters/raw">raw</a></li>
+</ul>
+{% end %}

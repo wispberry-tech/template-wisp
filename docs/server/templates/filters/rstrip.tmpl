@@ -1,0 +1,34 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Rstrip Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Rstrip Filter</h1>
+
+<p>Strips trailing whitespace (spaces, tabs, and newlines) from the end of a string.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ "string   " | rstrip }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ "Hello   " | rstrip }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> Hello</p>
+
+<pre><code>{% raw %}
+{{ "   Hello World   " | rstrip }}
+{% endraw %}</code></pre>
+<p><strong>Output:   Hello World</strong></p>
+
+<h2>Notes</h2>
+<p>Only trailing whitespace is removed. Leading whitespace is preserved. To strip both ends, use <a href="/docs/filters/strip">strip</a>. To strip only leading whitespace, use <a href="/docs/filters/lstrip">lstrip</a>.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/strip">strip</a></li>
+  <li><a href="/docs/filters/lstrip">lstrip</a></li>
+</ul>
+{% end %}

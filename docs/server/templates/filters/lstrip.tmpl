@@ -1,0 +1,34 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Lstrip Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Lstrip Filter</h1>
+
+<p>Strips leading whitespace (spaces, tabs, and newlines) from the beginning of a string.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ "  string" | lstrip }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ "   Hello" | lstrip }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> Hello</p>
+
+<pre><code>{% raw %}
+{{ "   Hello World   " | lstrip }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> Hello World   </p>
+
+<h2>Notes</h2>
+<p>Only leading whitespace is removed. Trailing whitespace is preserved. To strip both ends, use <a href="/docs/filters/strip">strip</a>. To strip only trailing whitespace, use <a href="/docs/filters/rstrip">rstrip</a>.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/strip">strip</a></li>
+  <li><a href="/docs/filters/rstrip">rstrip</a></li>
+</ul>
+{% end %}

@@ -1,0 +1,55 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Date Format Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Date Format Filter</h1>
+
+<p>Formats a time value using Liquid-style strftime directives.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ timeValue | date_format: "%Y-%m-%d" }}
+{% endraw %}</code></pre>
+
+<h2>Supported Directives</h2>
+<table>
+  <thead>
+    <tr><th>Directive</th><th>Meaning</th><th>Example</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>%Y</code></td><td>4-digit year</td><td>2026</td></tr>
+    <tr><td><code>%m</code></td><td>2-digit month</td><td>03</td></tr>
+    <tr><td><code>%d</code></td><td>2-digit day</td><td>28</td></tr>
+    <tr><td><code>%H</code></td><td>Hour (24h)</td><td>15</td></tr>
+    <tr><td><code>%M</code></td><td>Minute</td><td>04</td></tr>
+    <tr><td><code>%S</code></td><td>Second</td><td>05</td></tr>
+    <tr><td><code>%A</code></td><td>Full weekday name</td><td>Monday</td></tr>
+    <tr><td><code>%B</code></td><td>Full month name</td><td>January</td></tr>
+  </tbody>
+</table>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ publishedAt | date_format: "%Y-%m-%d" }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 2026-03-28</p>
+
+<pre><code>{% raw %}
+{{ publishedAt | date_format: "%B %d, %Y" }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> March 28, 2026</p>
+
+<pre><code>{% raw %}
+{{ publishedAt | date_format: "%A, %B %d" }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> Saturday, March 28</p>
+
+<h2>Notes</h2>
+<p>The input can be a <code>time.Time</code> value or an RFC3339 string. Directives not listed above are passed through unchanged. If you prefer Go's native reference time syntax (Mon Jan 2 15:04:05 MST 2006), use <a href="/docs/filters/date">date</a> instead.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/date">date</a></li>
+</ul>
+{% end %}

@@ -1,0 +1,39 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Max Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Max Filter</h1>
+
+<p>Returns the larger of two numbers.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ number | max: other }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ 5 | max: 10 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 10</p>
+
+<pre><code>{% raw %}
+{{ 10 | max: 3 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 10</p>
+
+<pre><code>{% raw %}
+{{ -5 | max: 0 }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 0</p>
+
+<h2>Notes</h2>
+<p>Both values are converted to floating-point numbers before comparison. If only one argument is provided, that value is returned unchanged.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/min">min</a></li>
+  <li><a href="/docs/filters/abs">abs</a></li>
+</ul>
+{% end %}

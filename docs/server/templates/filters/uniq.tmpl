@@ -1,0 +1,36 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Uniq Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Uniq Filter</h1>
+
+<p>Removes duplicate values from an array, keeping the first occurrence of each value.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ array | uniq }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{% assign tags = "go,web,go,api,web" | split: "," %}
+{{ tags | uniq | join: ", " }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> go, web, api</p>
+
+<pre><code>{% raw %}
+{% assign nums = "1,2,2,3,1,4" | split: "," %}
+{{ nums | uniq | join: " " }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 1 2 3 4</p>
+
+<h2>Notes</h2>
+<p>Uniqueness is determined by string representation of each value. The first occurrence of each value is kept; subsequent duplicates are removed. The original order is preserved.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/sort">sort</a></li>
+  <li><a href="/docs/filters/size">size</a></li>
+</ul>
+{% end %}

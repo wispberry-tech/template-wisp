@@ -1,0 +1,33 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Prepend Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Prepend Filter</h1>
+
+<p>Adds content to the beginning of a string.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ "string" | prepend: "prefix" }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{{ "World" | prepend: "Hello " }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> Hello World</p>
+
+<pre><code>{% raw %}
+{{ "/about" | prepend: "https://example.com" }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> https://example.com/about</p>
+
+<h2>Notes</h2>
+<p>If no prefix is provided, the original string is returned unchanged.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/append">append</a></li>
+</ul>
+{% end %}

@@ -1,0 +1,37 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Reverse Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Reverse Filter</h1>
+
+<p>Reverses the order of elements in an array.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ array | reverse }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<pre><code>{% raw %}
+{% assign fruits = "apple,banana,cherry" | split: "," %}
+{{ fruits | reverse | join: ", " }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> cherry, banana, apple</p>
+
+<pre><code>{% raw %}
+{% assign nums = "1,2,3,4,5" | split: "," %}
+{{ nums | reverse | join: " " }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 5 4 3 2 1</p>
+
+<h2>Notes</h2>
+<p>Returns a new array; the original is not modified. The filter operates on any array value.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/sort">sort</a></li>
+  <li><a href="/docs/filters/first">first</a></li>
+  <li><a href="/docs/filters/last">last</a></li>
+</ul>
+{% end %}

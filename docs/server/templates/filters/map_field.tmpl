@@ -1,0 +1,36 @@
+{% extends "layouts/doc-layout" %}
+
+{% block title %}Map Field Filter - Wisp Template Documentation{% end %}
+
+{% block body %}
+<h1>Map Field Filter</h1>
+
+<p>Extracts a named field from each object in an array, returning an array of the field values.</p>
+
+<h2>Syntax</h2>
+<pre><code>{% raw %}
+{{ array | map_field: "fieldname" }}
+{% endraw %}</code></pre>
+
+<h2>Examples</h2>
+<p>Given a variable <code>products</code> containing an array of objects with <code>name</code> and <code>price</code> fields:</p>
+<pre><code>{% raw %}
+{{ products | map_field: "name" | join: ", " }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> Widget, Gadget, Doohickey</p>
+
+<pre><code>{% raw %}
+{{ products | map_field: "price" | join: ", " }}
+{% endraw %}</code></pre>
+<p><strong>Output:</strong> 9.99, 24.99, 4.99</p>
+
+<h2>Notes</h2>
+<p>Only objects (maps) in the array are processed. Items that are not objects, or objects that do not have the specified field, are silently skipped and not included in the result.</p>
+
+<h2>See Also</h2>
+<ul>
+  <li><a href="/docs/filters/sort">sort</a></li>
+  <li><a href="/docs/filters/uniq">uniq</a></li>
+  <li><a href="/docs/filters/first">first</a></li>
+</ul>
+{% end %}
