@@ -36,3 +36,8 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
+
+# Claude stuff
+.claude/
+.superpowers/
+.worktrees/
