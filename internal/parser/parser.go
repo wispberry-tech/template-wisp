@@ -56,6 +56,58 @@ func (p *parser) parseNode() (ast.Node, error) {
 	}
 }
 
+// parseBody reads nodes until one of the stopTags is the current tag name.
+// It does NOT consume the stop tag itself.
+func (p *parser) parseBody(stopTags ...string) ([]ast.Node, error) {
+	var nodes []ast.Node
+	for !p.atEOF() {
+		// Peek at next tag name to detect stop conditions
+		if p.peek().Kind == lexer.TK_TAG_START {
+			name, ok := p.peekTagName()
+			if ok {
+				for _, stop := range stopTags {
+					if name == stop {
+						return nodes, nil
+					}
+				}
+			}
+		}
+		node, err := p.parseNode()
+		if err != nil {
+			return nil, err
+		}
+		if node != nil {
+			nodes = append(nodes, node)
+		}
+	}
+	return nodes, nil
+}
+
+// peekTagName returns the tag name of the upcoming {% name ... %} without consuming it.
+func (p *parser) peekTagName() (string, bool) {
+	if p.pos+1 < len(p.tokens) {
+		return tokenTagName(p.tokens[p.pos+1])
+	}
+	return "", false
+}
+
+// tokenTagName extracts the string tag name from a token (handles keywords used as tag names).
+func tokenTagName(tk lexer.Token) (string, bool) {
+	switch tk.Kind {
+	case lexer.TK_IDENT:
+		return tk.Value, true
+	case lexer.TK_IF:
+		return "if", true
+	case lexer.TK_ELSE:
+		return "else", true
+	case lexer.TK_NOT:
+		return "not", true
+	case lexer.TK_IN:
+		return "in", true
+	}
+	return "", false
+}
+
 // ─── Output {{ expr }} ────────────────────────────────────────────────────────
 
 func (p *parser) parseOutput() (*ast.OutputNode, error) {
@@ -81,89 +133,278 @@ func (p *parser) parseOutput() (*ast.OutputNode, error) {
 
 func (p *parser) parseTag() (ast.Node, error) {
 	tagStart := p.advance() // consume TAG_START
-	name := p.peek()
-	if name.Kind != lexer.TK_IDENT {
-		return nil, p.errorf(name.Line, name.Col, "expected tag name after {%%")
+
+	nameTok := p.peek()
+	name, ok := tokenTagName(nameTok)
+	if !ok {
+		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected tag name after {%%")
 	}
 
-	switch name.Value {
+	switch name {
 	case "raw":
-		// {% raw %} was already handled at the lexer level and emitted as TK_TEXT.
-		// If we reach here, the lexer emitted {% raw %} as TAG_START + IDENT + TAG_END
-		// (i.e. an empty raw block or parser called incorrectly). Consume and return empty.
 		p.advance() // consume "raw"
 		if p.peek().Kind != lexer.TK_TAG_END {
 			return nil, p.errorf(p.peek().Line, p.peek().Col, "expected %%} after raw")
 		}
-		p.advance() // consume TAG_END
-		// Collect TK_TEXT until {% endraw %}
+		p.advance()
 		return p.consumeUntilEndraw(tagStart)
 
 	case "extends":
 		if p.inline {
 			return nil, &groverrors.ParseError{
-				Line:    name.Line,
-				Column:  name.Col,
+				Line:    nameTok.Line,
+				Column:  nameTok.Col,
 				Message: "extends not allowed in inline templates",
 			}
 		}
-		return p.consumeTagRemainder(name.Value, tagStart)
+		return p.consumeTagRemainder(name, tagStart)
 
 	case "import":
 		if p.inline {
 			return nil, &groverrors.ParseError{
-				Line:    name.Line,
-				Column:  name.Col,
+				Line:    nameTok.Line,
+				Column:  nameTok.Col,
 				Message: "import not allowed in inline templates",
 			}
 		}
-		return p.consumeTagRemainder(name.Value, tagStart)
+		return p.consumeTagRemainder(name, tagStart)
+
+	case "if":
+		return p.parseIf(tagStart)
+
+	case "unless":
+		return p.parseUnless(tagStart)
+
+	case "for":
+		return p.parseFor(tagStart)
+
+	case "set":
+		return p.parseSet(tagStart)
+
+	case "with":
+		return p.parseWith(tagStart)
+
+	case "capture":
+		return p.parseCapture(tagStart)
 
 	default:
-		return p.consumeTagRemainder(name.Value, tagStart)
+		return p.consumeTagRemainder(name, tagStart)
 	}
 }
 
-// consumeTagRemainder skips to TAG_END and emits a TagNode (stub for unimplemented tags).
-func (p *parser) consumeTagRemainder(name string, tagStart lexer.Token) (ast.Node, error) {
-	p.advance() // consume tag name
-	for p.peek().Kind != lexer.TK_TAG_END && !p.atEOF() {
-		p.advance()
-	}
-	if p.peek().Kind == lexer.TK_TAG_END {
-		p.advance() // consume TAG_END
-	}
-	return &ast.TagNode{Name: name, Line: tagStart.Line}, nil
-}
+// ─── {% if %} ─────────────────────────────────────────────────────────────────
 
-// consumeUntilEndraw is the fallback for raw blocks not handled at lex time.
-func (p *parser) consumeUntilEndraw(tagStart lexer.Token) (ast.Node, error) {
-	var content string
-	for !p.atEOF() {
-		tk := p.peek()
-		if tk.Kind == lexer.TK_TAG_START {
-			// Look ahead for endraw
-			if p.pos+1 < len(p.tokens) && p.tokens[p.pos+1].Kind == lexer.TK_IDENT &&
-				p.tokens[p.pos+1].Value == "endraw" {
-				p.advance() // TAG_START
-				p.advance() // endraw
-				if p.peek().Kind == lexer.TK_TAG_END {
-					p.advance() // TAG_END
-				}
-				return &ast.RawNode{Value: content, Line: tagStart.Line}, nil
+func (p *parser) parseIf(tagStart lexer.Token) (*ast.IfNode, error) {
+	p.advance() // consume "if" token
+	cond, err := p.parseExpr(0)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+
+	node := &ast.IfNode{Condition: cond, Line: tagStart.Line}
+
+	// Parse body until elif/else/endif
+	node.Body, err = p.parseBody("elif", "else", "endif")
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse elif/else chains
+	for {
+		tagName, _ := p.peekTagName()
+		if tagName == "elif" {
+			p.advance() // TAG_START
+			p.advance() // "elif"
+			elifCond, err := p.parseExpr(0)
+			if err != nil {
+				return nil, err
 			}
+			if err := p.expectTagEnd(); err != nil {
+				return nil, err
+			}
+			body, err := p.parseBody("elif", "else", "endif")
+			if err != nil {
+				return nil, err
+			}
+			node.Elifs = append(node.Elifs, ast.ElifClause{Condition: elifCond, Body: body})
+		} else if tagName == "else" {
+			p.advance() // TAG_START
+			p.advance() // "else"
+			if err := p.expectTagEnd(); err != nil {
+				return nil, err
+			}
+			node.Else, err = p.parseBody("endif")
+			if err != nil {
+				return nil, err
+			}
+			break
+		} else {
+			break
 		}
-		if tk.Kind == lexer.TK_TEXT {
-			content += tk.Value
-		}
-		p.advance()
 	}
-	return nil, p.errorf(tagStart.Line, tagStart.Col, "unclosed raw block")
+
+	// Consume {% endif %}
+	if err := p.expectTag("endif"); err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+// ─── {% unless %} ─────────────────────────────────────────────────────────────
+
+func (p *parser) parseUnless(tagStart lexer.Token) (*ast.UnlessNode, error) {
+	p.advance() // consume "unless"
+	cond, err := p.parseExpr(0)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	body, err := p.parseBody("endunless")
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTag("endunless"); err != nil {
+		return nil, err
+	}
+	return &ast.UnlessNode{Condition: cond, Body: body, Line: tagStart.Line}, nil
+}
+
+// ─── {% for %} ────────────────────────────────────────────────────────────────
+
+func (p *parser) parseFor(tagStart lexer.Token) (*ast.ForNode, error) {
+	p.advance() // consume "for"
+
+	// Parse variable name(s)
+	var1Tok := p.advance()
+	if var1Tok.Kind != lexer.TK_IDENT {
+		return nil, p.errorf(var1Tok.Line, var1Tok.Col, "expected loop variable name after for")
+	}
+	var1 := var1Tok.Value
+
+	var var2 string
+	if p.peek().Kind == lexer.TK_COMMA {
+		p.advance() // consume comma
+		var2Tok := p.advance()
+		if var2Tok.Kind != lexer.TK_IDENT {
+			return nil, p.errorf(var2Tok.Line, var2Tok.Col, "expected second loop variable name after ,")
+		}
+		var2 = var2Tok.Value
+	}
+
+	// Expect "in"
+	inTok := p.advance()
+	if inTok.Kind != lexer.TK_IN {
+		return nil, p.errorf(inTok.Line, inTok.Col, "expected 'in' after loop variable(s)")
+	}
+
+	iterable, err := p.parseExpr(0)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+
+	body, err := p.parseBody("empty", "endfor")
+	if err != nil {
+		return nil, err
+	}
+
+	var emptyBody []ast.Node
+	tagName, _ := p.peekTagName()
+	if tagName == "empty" {
+		p.advance() // TAG_START
+		p.advance() // "empty"
+		if err := p.expectTagEnd(); err != nil {
+			return nil, err
+		}
+		emptyBody, err = p.parseBody("endfor")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := p.expectTag("endfor"); err != nil {
+		return nil, err
+	}
+
+	return &ast.ForNode{
+		Var1:     var1,
+		Var2:     var2,
+		Iterable: iterable,
+		Body:     body,
+		Empty:    emptyBody,
+		Line:     tagStart.Line,
+	}, nil
+}
+
+// ─── {% set %} ────────────────────────────────────────────────────────────────
+
+func (p *parser) parseSet(tagStart lexer.Token) (*ast.SetNode, error) {
+	p.advance() // consume "set"
+	nameTok := p.advance()
+	if nameTok.Kind != lexer.TK_IDENT {
+		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected variable name after set")
+	}
+	eqTok := p.advance()
+	if eqTok.Kind != lexer.TK_ASSIGN {
+		return nil, p.errorf(eqTok.Line, eqTok.Col, "expected = after variable name in set")
+	}
+	expr, err := p.parseExpr(0)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	return &ast.SetNode{Name: nameTok.Value, Expr: expr, Line: tagStart.Line}, nil
+}
+
+// ─── {% with %} ───────────────────────────────────────────────────────────────
+
+func (p *parser) parseWith(tagStart lexer.Token) (*ast.WithNode, error) {
+	p.advance() // consume "with"
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	body, err := p.parseBody("endwith")
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTag("endwith"); err != nil {
+		return nil, err
+	}
+	return &ast.WithNode{Body: body, Line: tagStart.Line}, nil
+}
+
+// ─── {% capture %} ────────────────────────────────────────────────────────────
+
+func (p *parser) parseCapture(tagStart lexer.Token) (*ast.CaptureNode, error) {
+	p.advance() // consume "capture"
+	nameTok := p.advance()
+	if nameTok.Kind != lexer.TK_IDENT {
+		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected variable name after capture")
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	body, err := p.parseBody("endcapture")
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTag("endcapture"); err != nil {
+		return nil, err
+	}
+	return &ast.CaptureNode{Name: nameTok.Value, Body: body, Line: tagStart.Line}, nil
 }
 
 // ─── Expression parsing (Pratt) ───────────────────────────────────────────────
 
-// parseExpr parses an expression with minimum precedence minPrec.
 func (p *parser) parseExpr(minPrec int) (ast.Node, error) {
 	left, err := p.parseUnary()
 	if err != nil {
@@ -179,8 +420,6 @@ func (p *parser) parseExpr(minPrec int) (ast.Node, error) {
 
 		switch tk.Kind {
 		case lexer.TK_IF:
-			// Inline ternary: consequence if condition else alternative
-			// left is already the consequence
 			p.advance() // consume if
 			cond, err := p.parseExpr(0)
 			if err != nil {
@@ -226,12 +465,35 @@ func (p *parser) parseExpr(minPrec int) (ast.Node, error) {
 			if p.peek().Kind != lexer.TK_RBRACKET {
 				return nil, p.errorf(p.peek().Line, p.peek().Col, "expected ]")
 			}
-			p.advance() // consume ]
+			p.advance()
 			left = &ast.IndexAccess{Object: left, Key: idx, Line: tk.Line}
 
+		case lexer.TK_LPAREN:
+			// Function call: left must be an Identifier
+			p.advance() // consume (
+			ident, ok := left.(*ast.Identifier)
+			if !ok {
+				return nil, p.errorf(tk.Line, tk.Col, "only identifiers are callable")
+			}
+			var args []ast.Node
+			for p.peek().Kind != lexer.TK_RPAREN && !p.atEOF() {
+				arg, err := p.parseExpr(0)
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, arg)
+				if p.peek().Kind == lexer.TK_COMMA {
+					p.advance()
+				}
+			}
+			if p.peek().Kind != lexer.TK_RPAREN {
+				return nil, p.errorf(p.peek().Line, p.peek().Col, "expected ) after function arguments")
+			}
+			p.advance() // consume )
+			left = &ast.FuncCallNode{Name: ident.Name, Args: args, Line: ident.Line}
+
 		default:
-			// Binary operator
-			p.advance() // consume operator
+			p.advance()
 			right, err := p.parseExpr(prec)
 			if err != nil {
 				return nil, err
@@ -326,7 +588,7 @@ func (p *parser) parseFilter(value ast.Node) (ast.Node, error) {
 		if p.peek().Kind != lexer.TK_RPAREN {
 			return nil, p.errorf(p.peek().Line, p.peek().Col, "expected ) after filter arguments")
 		}
-		p.advance() // consume )
+		p.advance()
 	}
 
 	return &ast.FilterExpr{
@@ -337,12 +599,10 @@ func (p *parser) parseFilter(value ast.Node) (ast.Node, error) {
 	}, nil
 }
 
-// infixPrec returns the infix precedence for a token kind.
-// Higher precedence = binds tighter.
 func infixPrec(k lexer.TokenKind) (int, bool) {
 	switch k {
 	case lexer.TK_IF:
-		return 5, true // inline ternary — lowest
+		return 5, true
 	case lexer.TK_OR:
 		return 10, true
 	case lexer.TK_AND:
@@ -357,10 +617,78 @@ func infixPrec(k lexer.TokenKind) (int, bool) {
 		return 70, true
 	case lexer.TK_PIPE:
 		return 90, true
-	case lexer.TK_DOT, lexer.TK_LBRACKET:
+	case lexer.TK_DOT, lexer.TK_LBRACKET, lexer.TK_LPAREN:
 		return 100, true
 	}
 	return 0, false
+}
+
+// ─── Tag helpers ──────────────────────────────────────────────────────────────
+
+// consumeTagRemainder skips to TAG_END and emits a TagNode.
+func (p *parser) consumeTagRemainder(name string, tagStart lexer.Token) (ast.Node, error) {
+	p.advance() // consume tag name
+	for p.peek().Kind != lexer.TK_TAG_END && !p.atEOF() {
+		p.advance()
+	}
+	if p.peek().Kind == lexer.TK_TAG_END {
+		p.advance()
+	}
+	return &ast.TagNode{Name: name, Line: tagStart.Line}, nil
+}
+
+func (p *parser) consumeUntilEndraw(tagStart lexer.Token) (ast.Node, error) {
+	var content string
+	for !p.atEOF() {
+		tk := p.peek()
+		if tk.Kind == lexer.TK_TAG_START {
+			if p.pos+1 < len(p.tokens) && p.tokens[p.pos+1].Kind == lexer.TK_IDENT &&
+				p.tokens[p.pos+1].Value == "endraw" {
+				p.advance()
+				p.advance()
+				if p.peek().Kind == lexer.TK_TAG_END {
+					p.advance()
+				}
+				return &ast.RawNode{Value: content, Line: tagStart.Line}, nil
+			}
+		}
+		if tk.Kind == lexer.TK_TEXT {
+			content += tk.Value
+		}
+		p.advance()
+	}
+	return nil, p.errorf(tagStart.Line, tagStart.Col, "unclosed raw block")
+}
+
+// expectTagEnd consumes the closing %} of the current tag.
+func (p *parser) expectTagEnd() error {
+	if p.peek().Kind != lexer.TK_TAG_END {
+		return p.errorf(p.peek().Line, p.peek().Col, "expected %%} got %q", p.peek().Value)
+	}
+	p.advance()
+	return nil
+}
+
+// expectTag consumes a full {% name %} tag and errors if name doesn't match.
+func (p *parser) expectTag(name string) error {
+	if p.peek().Kind != lexer.TK_TAG_START {
+		return p.errorf(p.peek().Line, p.peek().Col, "expected {%% %s %%}", name)
+	}
+	p.advance() // TAG_START
+	tok := p.peek()
+	tokName, ok := tokenTagName(tok)
+	if !ok || tokName != name {
+		return p.errorf(tok.Line, tok.Col, "expected tag %q, got %q", name, tok.Value)
+	}
+	p.advance() // tag name
+	// skip any remaining tokens until TAG_END (handles end tags with no content)
+	for p.peek().Kind != lexer.TK_TAG_END && !p.atEOF() {
+		p.advance()
+	}
+	if p.peek().Kind == lexer.TK_TAG_END {
+		p.advance()
+	}
+	return nil
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
