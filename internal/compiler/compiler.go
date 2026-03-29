@@ -33,28 +33,164 @@ func (c *cmp) compileProgram(prog *ast.Program) error {
 	return nil
 }
 
+func (c *cmp) compileBody(nodes []ast.Node) error {
+	for _, node := range nodes {
+		if err := c.compileNode(node); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c *cmp) compileNode(node ast.Node) error {
 	switch n := node.(type) {
 	case *ast.TextNode:
 		c.emitPushConst(n.Value)
 		c.emit(OP_OUTPUT_RAW, 0, 0, 0)
+
 	case *ast.RawNode:
 		c.emitPushConst(n.Value)
 		c.emit(OP_OUTPUT_RAW, 0, 0, 0)
+
 	case *ast.OutputNode:
 		if err := c.compileExpr(n.Expr); err != nil {
 			return err
 		}
 		c.emit(OP_OUTPUT, 0, 0, 0)
+
 	case *ast.TagNode:
-		// Unimplemented tags are no-ops in Plan 1
-		// (extends/import already rejected by parser in inline mode)
+		// Unimplemented tags are no-ops
 		return nil
+
+	case *ast.IfNode:
+		return c.compileIf(n)
+
+	case *ast.UnlessNode:
+		return c.compileUnless(n)
+
+	case *ast.ForNode:
+		return c.compileFor(n)
+
+	case *ast.SetNode:
+		if err := c.compileExpr(n.Expr); err != nil {
+			return err
+		}
+		c.emit(OP_STORE_VAR, uint16(c.addName(n.Name)), 0, 0)
+
+	case *ast.WithNode:
+		c.emit(OP_PUSH_SCOPE, 0, 0, 0)
+		if err := c.compileBody(n.Body); err != nil {
+			return err
+		}
+		c.emit(OP_POP_SCOPE, 0, 0, 0)
+
+	case *ast.CaptureNode:
+		c.emit(OP_CAPTURE_START, uint16(c.addName(n.Name)), 0, 0)
+		if err := c.compileBody(n.Body); err != nil {
+			return err
+		}
+		c.emit(OP_CAPTURE_END, uint16(c.addName(n.Name)), 0, 0)
+
 	default:
 		return fmt.Errorf("compiler: unknown node type %T", node)
 	}
 	return nil
 }
+
+// ─── {% if %} compiler ────────────────────────────────────────────────────────
+
+func (c *cmp) compileIf(n *ast.IfNode) error {
+	if err := c.compileExpr(n.Condition); err != nil {
+		return err
+	}
+	jfIdx := c.emitPlaceholder(OP_JUMP_FALSE)
+
+	if err := c.compileBody(n.Body); err != nil {
+		return err
+	}
+
+	var endJumps []int
+	endJumps = append(endJumps, c.emitPlaceholder(OP_JUMP))
+	c.instrs[jfIdx].A = uint16(len(c.instrs))
+
+	for _, elif := range n.Elifs {
+		if err := c.compileExpr(elif.Condition); err != nil {
+			return err
+		}
+		elifJfIdx := c.emitPlaceholder(OP_JUMP_FALSE)
+		if err := c.compileBody(elif.Body); err != nil {
+			return err
+		}
+		endJumps = append(endJumps, c.emitPlaceholder(OP_JUMP))
+		c.instrs[elifJfIdx].A = uint16(len(c.instrs))
+	}
+
+	if len(n.Else) > 0 {
+		if err := c.compileBody(n.Else); err != nil {
+			return err
+		}
+	}
+
+	end := uint16(len(c.instrs))
+	for _, jIdx := range endJumps {
+		c.instrs[jIdx].A = end
+	}
+
+	return nil
+}
+
+// ─── {% unless %} compiler ────────────────────────────────────────────────────
+
+func (c *cmp) compileUnless(n *ast.UnlessNode) error {
+	if err := c.compileExpr(n.Condition); err != nil {
+		return err
+	}
+	c.emit(OP_NOT, 0, 0, 0)
+	jfIdx := c.emitPlaceholder(OP_JUMP_FALSE)
+	if err := c.compileBody(n.Body); err != nil {
+		return err
+	}
+	c.instrs[jfIdx].A = uint16(len(c.instrs))
+	return nil
+}
+
+// ─── {% for %} compiler ───────────────────────────────────────────────────────
+
+func (c *cmp) compileFor(n *ast.ForNode) error {
+	if err := c.compileExpr(n.Iterable); err != nil {
+		return err
+	}
+
+	forInitIdx := c.emitPlaceholder(OP_FOR_INIT)
+
+	loopTop := uint16(len(c.instrs))
+	if n.Var2 == "" {
+		c.emit(OP_FOR_BIND_1, uint16(c.addName(n.Var1)), 0, 0)
+	} else {
+		c.emit(OP_FOR_BIND_KV, uint16(c.addName(n.Var1)), uint16(c.addName(n.Var2)), 0)
+	}
+
+	if err := c.compileBody(n.Body); err != nil {
+		return err
+	}
+
+	c.emit(OP_FOR_STEP, loopTop, 0, 0)
+
+	if len(n.Empty) > 0 {
+		jumpPastEmptyIdx := c.emitPlaceholder(OP_JUMP)
+		c.instrs[forInitIdx].A = uint16(len(c.instrs))
+		if err := c.compileBody(n.Empty); err != nil {
+			return err
+		}
+		c.instrs[jumpPastEmptyIdx].A = uint16(len(c.instrs))
+	} else {
+		c.instrs[forInitIdx].A = uint16(len(c.instrs))
+	}
+
+	return nil
+}
+
+// ─── Expression compiler ──────────────────────────────────────────────────────
 
 func (c *cmp) compileExpr(node ast.Node) error {
 	switch n := node.(type) {
@@ -145,27 +281,18 @@ func (c *cmp) compileExpr(node ast.Node) error {
 		}
 
 	case *ast.TernaryExpr:
-		// Compile condition
 		if err := c.compileExpr(n.Condition); err != nil {
 			return err
 		}
-		// JUMP_FALSE to alternative
-		jfIdx := len(c.instrs)
-		c.emit(OP_JUMP_FALSE, 0, 0, 0) // placeholder A
-		// Compile consequence
+		jfIdx := c.emitPlaceholder(OP_JUMP_FALSE)
 		if err := c.compileExpr(n.Consequence); err != nil {
 			return err
 		}
-		// JUMP over alternative
-		jIdx := len(c.instrs)
-		c.emit(OP_JUMP, 0, 0, 0) // placeholder A
-		// Patch JUMP_FALSE → here
+		jIdx := c.emitPlaceholder(OP_JUMP)
 		c.instrs[jfIdx].A = uint16(len(c.instrs))
-		// Compile alternative
 		if err := c.compileExpr(n.Alternative); err != nil {
 			return err
 		}
-		// Patch JUMP → here
 		c.instrs[jIdx].A = uint16(len(c.instrs))
 
 	case *ast.FilterExpr:
@@ -179,6 +306,19 @@ func (c *cmp) compileExpr(node ast.Node) error {
 		}
 		c.emit(OP_FILTER, uint16(c.addName(n.Filter)), uint16(len(n.Args)), 0)
 
+	case *ast.FuncCallNode:
+		switch n.Name {
+		case "range":
+			for _, arg := range n.Args {
+				if err := c.compileExpr(arg); err != nil {
+					return err
+				}
+			}
+			c.emit(OP_CALL_RANGE, uint16(len(n.Args)), 0, 0)
+		default:
+			return fmt.Errorf("compiler: unknown function %q", n.Name)
+		}
+
 	default:
 		return fmt.Errorf("compiler: unknown expr type %T", node)
 	}
@@ -189,6 +329,13 @@ func (c *cmp) compileExpr(node ast.Node) error {
 
 func (c *cmp) emit(op Opcode, a, b uint16, flags uint8) {
 	c.instrs = append(c.instrs, Instruction{Op: op, A: a, B: b, Flags: flags})
+}
+
+// emitPlaceholder emits an instruction with A=0 and returns its index for back-patching.
+func (c *cmp) emitPlaceholder(op Opcode) int {
+	idx := len(c.instrs)
+	c.emit(op, 0, 0, 0)
+	return idx
 }
 
 func (c *cmp) emitPushConst(v any) {
