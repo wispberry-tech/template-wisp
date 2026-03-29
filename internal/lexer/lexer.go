@@ -411,6 +411,8 @@ func (l *lx) lexIdent() error {
 		kind = TK_FALSE
 	case "nil", "null":
 		kind = TK_NIL
+	case "in":
+		kind = TK_IN
 	}
 	l.tokens = append(l.tokens, Token{Kind: kind, Value: val, Line: line, Col: col})
 	return nil

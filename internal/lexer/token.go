@@ -49,6 +49,7 @@ const (
 	TK_NOT  // not
 	TK_IF   // if   (inline ternary)
 	TK_ELSE // else (inline ternary)
+	TK_IN   // in   (for...in)
 )
 
 // Token is a single lexed unit.
