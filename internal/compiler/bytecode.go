@@ -42,6 +42,18 @@ const (
 	OP_JUMP             // A = target instruction index (unconditional)
 	OP_JUMP_FALSE       // A = target; pop value, jump if falsy
 	OP_FILTER           // A = name index, B = argc; pop argc args then value, push result
+
+	// ─── Control flow opcodes (Plan 2) ────────────────────────────────────────
+	OP_STORE_VAR     // A=name_idx; pop value, store to local scope (set)
+	OP_PUSH_SCOPE    // push a new child scope (with)
+	OP_POP_SCOPE     // pop to parent scope (endwith)
+	OP_FOR_INIT      // A=fallthrough_ip; pop collection, push loop state; if empty jump to A
+	OP_FOR_BIND_1    // A=var_name_idx; bind items[idx] to scope; bind "loop" map
+	OP_FOR_BIND_KV   // A=key_idx B=val_idx; bind sorted key+val (map iteration) or index+val (list two-var)
+	OP_FOR_STEP      // A=loop_top_ip; advance idx; if more jump to A; else pop loop state
+	OP_CAPTURE_START // A=var_name_idx; redirect output to capture buffer
+	OP_CAPTURE_END   // flush capture to scope[A]; restore output
+	OP_CALL_RANGE    // A=argc; pop argc int args, push []Value list per range semantics
 )
 
 // Bytecode is the compiled output for a single template.
