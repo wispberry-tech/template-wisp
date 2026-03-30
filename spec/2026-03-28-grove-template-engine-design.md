@@ -584,7 +584,7 @@ Operator precedence (high to low): `not` → `*/%` → `+-~` → `<><=>=` → `=
 {% endblock %}
 ```
 
-`super()` is a **compile-time splice**, not a runtime call. The compiler replaces `{{ super() }}` with the parent block's bytecode inlined at that position. Using `super()` outside a `{% block %}` is a `ParseError`. Inheritance is resolved entirely at compile time — the result is a flat bytecode sequence with no runtime inheritance walk.
+`super()` is a **runtime call** that renders the parent's version of the current block. The VM maintains a per-block super-chain (a stack of block bodies from deepest child to root parent); `OP_SUPER` advances one level up the chain. Inheritance is resolved at runtime: `OP_EXTENDS` loads the parent bytecode via `EngineIface.LoadTemplate`, merges block slot tables (child overrides win), then executes the parent. Chained inheritance (grandchild → child → parent) recurses naturally — each `OP_EXTENDS` layer accumulates block overrides before delegating to its own parent. Using `super()` outside a `{% block %}` is a `RuntimeError`.
 
 #### Include & Import
 
@@ -592,18 +592,18 @@ Operator precedence (high to low): `not` → `*/%` → `+-~` → `<><=>=` → `=
 {# Include — shares current scope #}
 {% include "partials/nav.html" %}
 
-{# Include with extra variables #}
-{% include "partials/nav.html" with { active: "home", user: user } %}
+{# Include with extra variables — key=value pairs after "with" #}
+{% include "partials/nav.html" with active="home", user=user %}
 
 {# Include isolated — sub-template sees only render ctx + globals #}
 {% include "partials/widget.html" isolated %}
 
-{# Render — always isolated; passes a single named variable (component idiom) #}
-{# Equivalent to: include "..." isolated with { item: product } #}
-{% render "components/card.html" with { item: product } %}
+{# Include with extra variables AND isolated #}
+{% include "partials/widget.html" with active="home" isolated %}
 
-{# Render shorthand: key-value pairs without braces #}
-{% render "components/card.html" item: product, size: "lg" %}
+{# Render — always isolated; key=value pairs after "with" #}
+{% render "components/card.html" with item=product %}
+{% render "components/card.html" with item=product, size="lg" %}
 
 {# Import macros from another file #}
 {% import "macros/forms.html" as forms %}
@@ -611,7 +611,7 @@ Operator precedence (high to low): `not` → `*/%` → `+-~` → `<><=>=` → `=
 {{ forms.select("country", options=countries) }}
 ```
 
-> **`render` vs `include isolated`:** `{% render %}` is syntactic sugar for `{% include ... isolated with { ... } %}`. It exists to make the component idiom explicit and to signal to readers that the sub-template receives no ambient scope. The `{% render %}` tag always creates an isolated scope — there is no `{% render "..." %}` without variable passing, and there is no non-isolated variant. If you need a non-isolated include, use `{% include %}`.
+> **`with` clause syntax:** Both `{% include %}` and `{% render %}` accept a `with key=val, key2=val2` clause using `=` (not `:` or `{}`). The `with` keyword is required when passing variables. `{% render %}` is equivalent to `{% include ... isolated with ... %}` — it always creates an isolated scope. There is no non-isolated variant of `{% render %}`.
 
 #### Components (Props + Slots)
 
@@ -952,7 +952,7 @@ Fixed 256-slot `stack` array — no allocation for typical templates. Stack dept
 
 1. **Constant folding** — `"Hello" ~ ", " ~ name` → `PUSH_CONST("Hello, ") LOAD(name) CONCAT`
 2. **Dead branch elimination** — `{% if false %}...{% endif %}` → zero instructions emitted
-3. **Inheritance resolution** — block merging happens at compile time; `extends` leaves a flat bytecode sequence with no runtime inheritance logic
+3. **Inheritance resolution** — resolved at runtime: `OP_EXTENDS` loads the parent via `LoadTemplate`, merges block slot tables (child overrides win), and executes the parent; block bodies are compiled into `Bytecode.Blocks` and referenced by index
 4. **Filter chain inlining** — `| upcase | truncate(20)` compiles to two consecutive `FILTER` instructions with no intermediate allocations
 
 #### Expected Throughput
@@ -1006,9 +1006,9 @@ Sandbox enforcement has two tiers:
 
 ```html
 {% include "nav.html" %}                     {# shares scope: can read parent vars #}
-{% include "nav.html" with { x: 1 } %}      {# shares scope + extra vars #}
+{% include "nav.html" with x=1 %}           {# shares scope + extra vars #}
 {% include "nav.html" isolated %}            {# only render ctx + globals #}
-{% render "card.html" with { item: product } %} {# isolated by default — component idiom #}
+{% render "card.html" with item=product %}   {# isolated by default — component idiom #}
 ```
 
 #### Path Traversal Prevention
@@ -2514,7 +2514,7 @@ Returning `RenderResult` (which buffers the body as a string) prevents zero-copy
 
 **Component System Complexity**
 
-Components with named slots, `{% fill %}`, `{% props %}`, and `{% asset %}` declarations form a sub-language inside the template language. This is powerful but adds significant surface area: slot resolution, fill matching, props validation, and scope isolation between component and caller all need careful specification and testing. Vue, Svelte, and React have all had subtle slot scoping bugs in their histories. Grove's compile-time inheritance resolution helps, but slot content is evaluated at runtime in the caller's scope — this boundary is a known source of confusion.
+Components with named slots, `{% fill %}`, `{% props %}`, and `{% asset %}` declarations form a sub-language inside the template language. This is powerful but adds significant surface area: slot resolution, fill matching, props validation, and scope isolation between component and caller all need careful specification and testing. Vue, Svelte, and React have all had subtle slot scoping bugs in their histories. Grove uses runtime inheritance resolution (not compile-time), but slot content is still evaluated in the caller's scope — this boundary is a known source of confusion.
 
 ---
 
@@ -2542,7 +2542,7 @@ Unlike quicktemplate, Grove templates are not type-checked at build time. A typo
 
 **Deep Inheritance Performance**
 
-The spec states that inheritance is resolved at compile time. However, for templates loaded from a database store, `extends` chains must be followed at parse time (each parent must be loaded and compiled). For a 5-level inheritance chain with 5 database round-trips, cold-start parse time could be 50–100ms. Warm (cached) renders are unaffected, but cold starts in auto-scaling environments need careful cache warming strategies.
+Inheritance is resolved at runtime: each `OP_EXTENDS` call loads the parent via `LoadTemplate` (which compiles and may hit the store). For a 5-level inheritance chain, a cold render triggers 5 sequential store loads. Warm renders are unaffected (bytecode is cached per template), but cold starts in auto-scaling environments may see latency spikes. A future optimization could pre-resolve and flatten inheritance chains into the bytecode cache.
 
 ---
 
