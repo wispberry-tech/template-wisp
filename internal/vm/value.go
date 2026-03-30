@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+
+	"grove/internal/compiler"
 )
 
 // ValueType identifies the runtime type of a Value.
@@ -20,6 +22,7 @@ const (
 	TypeList                 // oval: []Value
 	TypeMap                  // oval: map[string]any (Go map, accessed via key lookup)
 	TypeResolvable           // oval: Resolvable
+	TypeMacro                // oval: *compiler.MacroDef
 )
 
 // Value is the runtime value type. Zero value is Nil.
@@ -56,6 +59,7 @@ func SafeHTMLVal(s string) Value { return Value{typ: TypeSafeHTML, sval: s} }
 func ListVal(items []Value) Value { return Value{typ: TypeList, oval: items} }
 func MapVal(m map[string]any) Value { return Value{typ: TypeMap, oval: m} }
 func ResolvableVal(r Resolvable) Value { return Value{typ: TypeResolvable, oval: r} }
+func MacroVal(m *compiler.MacroDef) Value { return Value{typ: TypeMacro, oval: m} }
 
 // ─── String representation ────────────────────────────────────────────────────
 
@@ -90,6 +94,36 @@ func (v Value) IsSafeHTML() bool { return v.typ == TypeSafeHTML }
 
 // IsNil reports whether this is the nil value.
 func (v Value) IsNil() bool { return v.typ == TypeNil }
+
+// Type returns the ValueType of this value.
+func (v Value) Type() ValueType { return v.typ }
+
+// AsList returns the underlying []Value and true for TypeList, else nil and false.
+func (v Value) AsList() ([]Value, bool) {
+	if v.typ != TypeList {
+		return nil, false
+	}
+	lst, ok := v.oval.([]Value)
+	return lst, ok
+}
+
+// AsMap returns the underlying map[string]any and true for TypeMap, else nil and false.
+func (v Value) AsMap() (map[string]any, bool) {
+	if v.typ != TypeMap {
+		return nil, false
+	}
+	m, ok := v.oval.(map[string]any)
+	return m, ok
+}
+
+// AsMacroDef returns the *compiler.MacroDef and true for TypeMacro, else nil and false.
+func (v Value) AsMacroDef() (*compiler.MacroDef, bool) {
+	if v.typ != TypeMacro {
+		return nil, false
+	}
+	m, ok := v.oval.(*compiler.MacroDef)
+	return m, ok
+}
 
 // ─── Type coercions ───────────────────────────────────────────────────────────
 
@@ -212,14 +246,22 @@ func FromAny(v any) Value {
 		if r, ok := v.(Resolvable); ok {
 			return ResolvableVal(r)
 		}
-		// Handle named map types (e.g. grove.Data which is map[string]any)
 		rv := reflect.ValueOf(v)
+		// Handle named map types (e.g. grove.Data which is map[string]any)
 		if rv.Kind() == reflect.Map && rv.Type().Key().Kind() == reflect.String {
 			m := make(map[string]any, rv.Len())
 			for _, k := range rv.MapKeys() {
 				m[k.String()] = rv.MapIndex(k).Interface()
 			}
 			return MapVal(m)
+		}
+		// Handle arbitrary slice types (e.g. []map[string]any)
+		if rv.Kind() == reflect.Slice {
+			vals := make([]Value, rv.Len())
+			for i := 0; i < rv.Len(); i++ {
+				vals[i] = FromAny(rv.Index(i).Interface())
+			}
+			return ListVal(vals)
 		}
 		return StringVal(fmt.Sprintf("%v", v))
 	}
@@ -318,6 +360,9 @@ type EngineIface interface {
 	LookupFilter(name string) (FilterFn, bool)
 	StrictVariables() bool
 	GlobalData() map[string]any
+	// LoadTemplate compiles the named template from the engine's store.
+	// Returns (nil, error) if the store is not configured or the template is not found.
+	LoadTemplate(name string) (*compiler.Bytecode, error)
 }
 
 // ArgInt reads args[i] as an integer, returning def if out of range or not convertible.

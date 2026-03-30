@@ -159,16 +159,6 @@ func (p *parser) parseTag() (ast.Node, error) {
 		}
 		return p.consumeTagRemainder(name, tagStart)
 
-	case "import":
-		if p.inline {
-			return nil, &groverrors.ParseError{
-				Line:    nameTok.Line,
-				Column:  nameTok.Col,
-				Message: "import not allowed in inline templates",
-			}
-		}
-		return p.consumeTagRemainder(name, tagStart)
-
 	case "if":
 		return p.parseIf(tagStart)
 
@@ -186,6 +176,28 @@ func (p *parser) parseTag() (ast.Node, error) {
 
 	case "capture":
 		return p.parseCapture(tagStart)
+
+	case "macro":
+		return p.parseMacro(tagStart)
+
+	case "call":
+		return p.parseCall(tagStart)
+
+	case "include":
+		return p.parseInclude(tagStart)
+
+	case "render":
+		return p.parseRender(tagStart)
+
+	case "import":
+		if p.inline {
+			return nil, &groverrors.ParseError{
+				Line:    tagStart.Line,
+				Column:  tagStart.Col,
+				Message: "import not allowed in inline templates",
+			}
+		}
+		return p.parseImport(tagStart)
 
 	default:
 		return p.consumeTagRemainder(name, tagStart)
@@ -469,28 +481,32 @@ func (p *parser) parseExpr(minPrec int) (ast.Node, error) {
 			left = &ast.IndexAccess{Object: left, Key: idx, Line: tk.Line}
 
 		case lexer.TK_LPAREN:
-			// Function call: left must be an Identifier
+			// Function/macro call: identifier(args...) or obj.method(args...)
 			p.advance() // consume (
-			ident, ok := left.(*ast.Identifier)
-			if !ok {
-				return nil, p.errorf(tk.Line, tk.Col, "only identifiers are callable")
+			posArgs, namedArgs, err := p.parseCallArgs()
+			if err != nil {
+				return nil, err
 			}
-			var args []ast.Node
-			for p.peek().Kind != lexer.TK_RPAREN && !p.atEOF() {
-				arg, err := p.parseExpr(0)
-				if err != nil {
-					return nil, err
+			// Distinguish built-in functions from macro calls
+			if ident, ok := left.(*ast.Identifier); ok {
+				switch ident.Name {
+				case "range":
+					if len(namedArgs) > 0 {
+						return nil, p.errorf(tk.Line, tk.Col, "range() does not accept named arguments")
+					}
+					left = &ast.FuncCallNode{Name: "range", Args: posArgs, Line: ident.Line}
+				case "caller":
+					if len(posArgs)+len(namedArgs) > 0 {
+						return nil, p.errorf(tk.Line, tk.Col, "caller() takes no arguments")
+					}
+					left = &ast.FuncCallNode{Name: "caller", Args: nil, Line: ident.Line}
+				default:
+					left = &ast.MacroCallExpr{Callee: left, PosArgs: posArgs, NamedArgs: namedArgs, Line: ident.Line}
 				}
-				args = append(args, arg)
-				if p.peek().Kind == lexer.TK_COMMA {
-					p.advance()
-				}
+			} else {
+				// AttributeAccess callee: forms.input(...)
+				left = &ast.MacroCallExpr{Callee: left, PosArgs: posArgs, NamedArgs: namedArgs, Line: tk.Line}
 			}
-			if p.peek().Kind != lexer.TK_RPAREN {
-				return nil, p.errorf(p.peek().Line, p.peek().Col, "expected ) after function arguments")
-			}
-			p.advance() // consume )
-			left = &ast.FuncCallNode{Name: ident.Name, Args: args, Line: ident.Line}
 
 		default:
 			p.advance()
@@ -718,4 +734,222 @@ func (p *parser) errorf(line, col int, format string, args ...any) *groverrors.P
 		Column:  col,
 		Message: fmt.Sprintf(format, args...),
 	}
+}
+
+// ─── Plan 4: Macro + composition parser methods ───────────────────────────────
+
+// parseCallArgs parses the argument list inside ( ) of a macro/function call.
+// Returns positional args (in order) and named args (key=value).
+// Positional args must come before named args.
+func (p *parser) parseCallArgs() (posArgs []ast.Node, namedArgs []ast.NamedArgNode, err error) {
+	for p.peek().Kind != lexer.TK_RPAREN && !p.atEOF() {
+		// Named arg: ident = expr (look-ahead two tokens)
+		if p.peek().Kind == lexer.TK_IDENT &&
+			p.pos+1 < len(p.tokens) &&
+			p.tokens[p.pos+1].Kind == lexer.TK_ASSIGN {
+			keyTok := p.advance() // consume ident
+			p.advance()           // consume =
+			val, e := p.parseExpr(0)
+			if e != nil {
+				return nil, nil, e
+			}
+			namedArgs = append(namedArgs, ast.NamedArgNode{Key: keyTok.Value, Value: val, Line: keyTok.Line})
+		} else {
+			if len(namedArgs) > 0 {
+				return nil, nil, p.errorf(p.peek().Line, p.peek().Col, "positional argument after named argument")
+			}
+			arg, e := p.parseExpr(0)
+			if e != nil {
+				return nil, nil, e
+			}
+			posArgs = append(posArgs, arg)
+		}
+		if p.peek().Kind == lexer.TK_COMMA {
+			p.advance()
+		}
+	}
+	if p.peek().Kind != lexer.TK_RPAREN {
+		return nil, nil, p.errorf(p.peek().Line, p.peek().Col, "expected ) after arguments")
+	}
+	p.advance() // consume )
+	return posArgs, namedArgs, nil
+}
+
+// parseMacroParams parses the parameter list of a macro definition: (p1, p2="default")
+func (p *parser) parseMacroParams() ([]ast.MacroParam, error) {
+	if p.peek().Kind != lexer.TK_LPAREN {
+		return nil, p.errorf(p.peek().Line, p.peek().Col, "expected ( after macro name")
+	}
+	p.advance() // consume (
+	var params []ast.MacroParam
+	for p.peek().Kind != lexer.TK_RPAREN && !p.atEOF() {
+		nameTok := p.advance()
+		if nameTok.Kind != lexer.TK_IDENT {
+			return nil, p.errorf(nameTok.Line, nameTok.Col, "expected parameter name in macro definition")
+		}
+		param := ast.MacroParam{Name: nameTok.Value}
+		if p.peek().Kind == lexer.TK_ASSIGN {
+			p.advance() // consume =
+			def, err := p.parseExpr(0)
+			if err != nil {
+				return nil, err
+			}
+			param.Default = def
+		}
+		params = append(params, param)
+		if p.peek().Kind == lexer.TK_COMMA {
+			p.advance()
+		}
+	}
+	if p.peek().Kind != lexer.TK_RPAREN {
+		return nil, p.errorf(p.peek().Line, p.peek().Col, "expected ) after macro parameters")
+	}
+	p.advance() // consume )
+	return params, nil
+}
+
+// parseMacro parses {% macro name(params) %}...{% endmacro %}.
+func (p *parser) parseMacro(tagStart lexer.Token) (*ast.MacroNode, error) {
+	p.advance() // consume "macro"
+	nameTok := p.advance()
+	if nameTok.Kind != lexer.TK_IDENT {
+		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected macro name after macro")
+	}
+	params, err := p.parseMacroParams()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	body, err := p.parseBody("endmacro")
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTag("endmacro"); err != nil {
+		return nil, err
+	}
+	return &ast.MacroNode{Name: nameTok.Value, Params: params, Body: body, Line: tagStart.Line}, nil
+}
+
+// parseCall parses {% call macro(args) %}body{% endcall %}.
+func (p *parser) parseCall(tagStart lexer.Token) (*ast.CallNode, error) {
+	p.advance() // consume "call"
+	callee, err := p.parseExpr(90)
+	if err != nil {
+		return nil, err
+	}
+	mc, ok := callee.(*ast.MacroCallExpr)
+	if !ok {
+		return nil, p.errorf(tagStart.Line, tagStart.Col, "{%% call %%} requires a macro call expression, e.g. {%% call myMacro(args) %%}")
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	body, err := p.parseBody("endcall")
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTag("endcall"); err != nil {
+		return nil, err
+	}
+	return &ast.CallNode{
+		Callee:    mc.Callee,
+		PosArgs:   mc.PosArgs,
+		NamedArgs: mc.NamedArgs,
+		Body:      body,
+		Line:      tagStart.Line,
+	}, nil
+}
+
+// parseWithVars parses an optional "with key=val, key2=val2" clause.
+// Stops at tag end or "isolated" keyword.
+func (p *parser) parseWithVars() ([]ast.NamedArgNode, error) {
+	if p.peek().Kind != lexer.TK_IDENT || p.peek().Value != "with" {
+		return nil, nil
+	}
+	p.advance() // consume "with"
+	var vars []ast.NamedArgNode
+	for p.peek().Kind != lexer.TK_TAG_END && !p.atEOF() {
+		if p.peek().Kind == lexer.TK_IDENT && p.peek().Value == "isolated" {
+			break
+		}
+		keyTok := p.advance()
+		if keyTok.Kind != lexer.TK_IDENT {
+			return nil, p.errorf(keyTok.Line, keyTok.Col, "expected variable name in with clause")
+		}
+		if p.peek().Kind != lexer.TK_ASSIGN {
+			return nil, p.errorf(p.peek().Line, p.peek().Col, "expected = after variable name in with clause")
+		}
+		p.advance() // consume =
+		val, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		vars = append(vars, ast.NamedArgNode{Key: keyTok.Value, Value: val, Line: keyTok.Line})
+		if p.peek().Kind == lexer.TK_COMMA {
+			p.advance()
+		}
+	}
+	return vars, nil
+}
+
+// parseInclude parses {% include "name" [with k=v, ...] [isolated] %}.
+func (p *parser) parseInclude(tagStart lexer.Token) (*ast.IncludeNode, error) {
+	p.advance() // consume "include"
+	nameTok := p.advance()
+	if nameTok.Kind != lexer.TK_STRING {
+		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected quoted template name after include")
+	}
+	withVars, err := p.parseWithVars()
+	if err != nil {
+		return nil, err
+	}
+	isolated := false
+	if p.peek().Kind == lexer.TK_IDENT && p.peek().Value == "isolated" {
+		p.advance()
+		isolated = true
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	return &ast.IncludeNode{Name: nameTok.Value, WithVars: withVars, Isolated: isolated, Line: tagStart.Line}, nil
+}
+
+// parseRender parses {% render "name" [with k=v, ...] %} — always isolated.
+func (p *parser) parseRender(tagStart lexer.Token) (*ast.RenderNode, error) {
+	p.advance() // consume "render"
+	nameTok := p.advance()
+	if nameTok.Kind != lexer.TK_STRING {
+		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected quoted template name after render")
+	}
+	withVars, err := p.parseWithVars()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	return &ast.RenderNode{Name: nameTok.Value, WithVars: withVars, Line: tagStart.Line}, nil
+}
+
+// parseImport parses {% import "name" as alias %}.
+func (p *parser) parseImport(tagStart lexer.Token) (*ast.ImportNode, error) {
+	p.advance() // consume "import"
+	nameTok := p.advance()
+	if nameTok.Kind != lexer.TK_STRING {
+		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected quoted template name after import")
+	}
+	asTok := p.advance()
+	if asTok.Kind != lexer.TK_IDENT || asTok.Value != "as" {
+		return nil, p.errorf(asTok.Line, asTok.Col, "expected 'as' after template name in import")
+	}
+	aliasTok := p.advance()
+	if aliasTok.Kind != lexer.TK_IDENT {
+		return nil, p.errorf(aliasTok.Line, aliasTok.Col, "expected alias name after 'as' in import")
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	return &ast.ImportNode{Name: nameTok.Value, Alias: aliasTok.Value, Line: tagStart.Line}, nil
 }

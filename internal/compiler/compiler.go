@@ -14,7 +14,7 @@ func Compile(prog *ast.Program) (*Bytecode, error) {
 		return nil, err
 	}
 	c.emit(OP_HALT, 0, 0, 0)
-	return &Bytecode{Instrs: c.instrs, Consts: c.consts, Names: c.names}, nil
+	return &Bytecode{Instrs: c.instrs, Consts: c.consts, Names: c.names, Macros: c.macros}, nil
 }
 
 type cmp struct {
@@ -22,6 +22,7 @@ type cmp struct {
 	consts  []any
 	names   []string
 	nameIdx map[string]int
+	macros  []MacroDef
 }
 
 func (c *cmp) compileProgram(prog *ast.Program) error {
@@ -90,6 +91,21 @@ func (c *cmp) compileNode(node ast.Node) error {
 			return err
 		}
 		c.emit(OP_CAPTURE_END, uint16(c.addName(n.Name)), 0, 0)
+
+	case *ast.MacroNode:
+		return c.compileMacro(n)
+
+	case *ast.CallNode:
+		return c.compileCallNode(n)
+
+	case *ast.IncludeNode:
+		return c.compileInclude(n)
+
+	case *ast.RenderNode:
+		return c.compileRender(n)
+
+	case *ast.ImportNode:
+		return c.compileImport(n)
 
 	default:
 		return fmt.Errorf("compiler: unknown node type %T", node)
@@ -306,6 +322,9 @@ func (c *cmp) compileExpr(node ast.Node) error {
 		}
 		c.emit(OP_FILTER, uint16(c.addName(n.Filter)), uint16(len(n.Args)), 0)
 
+	case *ast.MacroCallExpr:
+		return c.compileMacroCall(n.Callee, n.PosArgs, n.NamedArgs, false)
+
 	case *ast.FuncCallNode:
 		switch n.Name {
 		case "range":
@@ -315,6 +334,8 @@ func (c *cmp) compileExpr(node ast.Node) error {
 				}
 			}
 			c.emit(OP_CALL_RANGE, uint16(len(n.Args)), 0, 0)
+		case "caller":
+			c.emit(OP_CALL_CALLER, 0, 0, 0)
 		default:
 			return fmt.Errorf("compiler: unknown function %q", n.Name)
 		}
@@ -352,4 +373,127 @@ func (c *cmp) addName(name string) int {
 	c.names = append(c.names, name)
 	c.nameIdx[name] = idx
 	return idx
+}
+
+// ─── Plan 4 compile methods ───────────────────────────────────────────────────
+
+// compileMacro compiles {% macro name(params) %}body{% endmacro %}.
+func (c *cmp) compileMacro(n *ast.MacroNode) error {
+	sub := &cmp{nameIdx: make(map[string]int)}
+	if err := sub.compileBody(n.Body); err != nil {
+		return err
+	}
+	sub.emit(OP_HALT, 0, 0, 0)
+	bodyBC := &Bytecode{Instrs: sub.instrs, Consts: sub.consts, Names: sub.names, Macros: sub.macros}
+
+	params := make([]MacroParam, len(n.Params))
+	for i, p := range n.Params {
+		params[i].Name = p.Name
+		if p.Default != nil {
+			params[i].Default = constValueOf(p.Default)
+		}
+	}
+
+	def := MacroDef{Name: n.Name, Params: params, Body: bodyBC}
+	macroIdx := len(c.macros)
+	c.macros = append(c.macros, def)
+	c.emit(OP_MACRO_DEF, uint16(c.addName(n.Name)), uint16(macroIdx), 0)
+	return nil
+}
+
+// constValueOf extracts a compile-time constant from a literal AST node.
+func constValueOf(node ast.Node) any {
+	switch n := node.(type) {
+	case *ast.StringLiteral:
+		return n.Value
+	case *ast.IntLiteral:
+		return n.Value
+	case *ast.FloatLiteral:
+		return n.Value
+	case *ast.BoolLiteral:
+		return n.Value
+	case *ast.NilLiteral:
+		return nil
+	}
+	return nil
+}
+
+// compileMacroCall compiles a macro call expression.
+// withCaller=true means an extra caller body MacroVal sits below the macro on the stack.
+func (c *cmp) compileMacroCall(callee ast.Node, posArgs []ast.Node, namedArgs []ast.NamedArgNode, withCaller bool) error {
+	if err := c.compileExpr(callee); err != nil {
+		return err
+	}
+	for _, arg := range posArgs {
+		if err := c.compileExpr(arg); err != nil {
+			return err
+		}
+	}
+	for _, na := range namedArgs {
+		c.emitPushConst(na.Key)
+		if err := c.compileExpr(na.Value); err != nil {
+			return err
+		}
+	}
+	op := OP_CALL_MACRO_VAL
+	if withCaller {
+		op = OP_CALL_MACRO_CALL
+	}
+	c.emit(op, uint16(len(posArgs)), 0, uint8(len(namedArgs)))
+	return nil
+}
+
+// compileCallNode compiles {% call macro(args) %}body{% endcall %}.
+func (c *cmp) compileCallNode(n *ast.CallNode) error {
+	sub := &cmp{nameIdx: make(map[string]int)}
+	if err := sub.compileBody(n.Body); err != nil {
+		return err
+	}
+	sub.emit(OP_HALT, 0, 0, 0)
+	bodyBC := &Bytecode{Instrs: sub.instrs, Consts: sub.consts, Names: sub.names, Macros: sub.macros}
+	callerDef := MacroDef{Name: "__caller__", Params: nil, Body: bodyBC}
+	callerIdx := len(c.macros)
+	c.macros = append(c.macros, callerDef)
+
+	c.emit(OP_MACRO_DEF_PUSH, uint16(callerIdx), 0, 0)
+	if err := c.compileMacroCall(n.Callee, n.PosArgs, n.NamedArgs, true); err != nil {
+		return err
+	}
+	// {% call %} is a statement — emit OP_OUTPUT to write result to output buffer
+	c.emit(OP_OUTPUT, 0, 0, 0)
+	return nil
+}
+
+// compileInclude compiles {% include "name" [with k=v] [isolated] %}.
+func (c *cmp) compileInclude(n *ast.IncludeNode) error {
+	for _, kv := range n.WithVars {
+		c.emitPushConst(kv.Key)
+		if err := c.compileExpr(kv.Value); err != nil {
+			return err
+		}
+	}
+	flags := uint8(0)
+	if n.Isolated {
+		flags = 1
+	}
+	c.emit(OP_INCLUDE, uint16(c.addName(n.Name)), uint16(len(n.WithVars)), flags)
+	return nil
+}
+
+// compileRender compiles {% render "name" [with k=v] %}.
+func (c *cmp) compileRender(n *ast.RenderNode) error {
+	for _, kv := range n.WithVars {
+		c.emitPushConst(kv.Key)
+		if err := c.compileExpr(kv.Value); err != nil {
+			return err
+		}
+	}
+	c.emit(OP_RENDER, uint16(c.addName(n.Name)), uint16(len(n.WithVars)), 0)
+	return nil
+}
+
+// compileImport compiles {% import "name" as alias %}.
+func (c *cmp) compileImport(n *ast.ImportNode) error {
+	c.emit(OP_IMPORT, uint16(c.addName(n.Name)), uint16(c.addName(n.Alias)), 0)
+	return nil
 }

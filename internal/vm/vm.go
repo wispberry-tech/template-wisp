@@ -350,11 +350,237 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			}
 			v.push(buildRange(args))
 
+		// ─── Plan 4 opcodes ───────────────────────────────────────────────────
+
+		case compiler.OP_MACRO_DEF:
+			def := &bc.Macros[instr.B]
+			v.sc.Set(bc.Names[instr.A], MacroVal(def))
+
+		case compiler.OP_MACRO_DEF_PUSH:
+			def := &bc.Macros[instr.A]
+			v.push(MacroVal(def))
+
+		case compiler.OP_CALL_MACRO_VAL, compiler.OP_CALL_MACRO_CALL:
+			posArgCount := int(instr.A)
+			namedArgCount := int(instr.Flags)
+
+			// Pop named args (key, value pairs) in reverse order
+			namedArgs := make(map[string]Value, namedArgCount)
+			for i := namedArgCount - 1; i >= 0; i-- {
+				val := v.pop()
+				key := v.pop()
+				namedArgs[key.String()] = val
+			}
+
+			// Pop positional args in reverse order
+			posArgs := make([]Value, posArgCount)
+			for i := posArgCount - 1; i >= 0; i-- {
+				posArgs[i] = v.pop()
+			}
+
+			// Pop the macro value
+			macroVal := v.pop()
+			def, ok := macroVal.AsMacroDef()
+			if !ok {
+				return "", &runtimeErr{msg: "cannot call non-macro value"}
+			}
+
+			// Pop caller body (for OP_CALL_MACRO_CALL)
+			var callerDef *compiler.MacroDef
+			if instr.Op == compiler.OP_CALL_MACRO_CALL {
+				callerVal := v.pop()
+				callerDef, _ = callerVal.AsMacroDef()
+			}
+
+			// Build macro scope: globals only (macros are isolated)
+			globalSc := scope.New(nil)
+			for k, val := range v.eng.GlobalData() {
+				globalSc.Set(k, val)
+			}
+			macroSc := scope.New(globalSc)
+
+			// Bind params: positional first, named override, defaults for rest
+			for i, param := range def.Params {
+				if i < len(posArgs) {
+					macroSc.Set(param.Name, posArgs[i])
+				} else if val, ok := namedArgs[param.Name]; ok {
+					macroSc.Set(param.Name, val)
+				} else if param.Default != nil {
+					macroSc.Set(param.Name, fromConst(param.Default))
+				} else {
+					macroSc.Set(param.Name, Nil)
+				}
+			}
+
+			// Bind __caller__ if present
+			if callerDef != nil {
+				macroSc.Set("__caller__", MacroVal(callerDef))
+			}
+
+			result, err := v.execMacro(ctx, def.Body, macroSc)
+			if err != nil {
+				return "", err
+			}
+			v.push(SafeHTMLVal(result))
+
+		case compiler.OP_CALL_CALLER:
+			callerRaw, found := v.sc.Get("__caller__")
+			if !found {
+				return "", &runtimeErr{msg: "caller() called outside of a {% call %} block"}
+			}
+			callerVal := FromAny(callerRaw)
+			callerDef, ok := callerVal.AsMacroDef()
+			if !ok {
+				return "", &runtimeErr{msg: "caller() called outside of a {% call %} block"}
+			}
+			// Caller body runs in the current scope (not isolated) — so it sees outer vars
+			result, err := v.execMacro(ctx, callerDef.Body, v.sc)
+			if err != nil {
+				return "", err
+			}
+			v.push(SafeHTMLVal(result))
+
+		case compiler.OP_INCLUDE:
+			tmplName := bc.Names[instr.A]
+			pairCount := int(instr.B)
+			isolated := instr.Flags&1 != 0
+
+			// Pop with-var pairs
+			withVars := make(map[string]any, pairCount)
+			for i := pairCount - 1; i >= 0; i-- {
+				val := v.pop()
+				key := v.pop()
+				withVars[key.String()] = val
+			}
+
+			subBC, err := v.eng.LoadTemplate(tmplName)
+			if err != nil {
+				return "", &runtimeErr{msg: fmt.Sprintf("include %q: %v", tmplName, err)}
+			}
+
+			savedSC := v.sc
+			if isolated {
+				globalSc := scope.New(nil)
+				for k, val := range v.eng.GlobalData() {
+					globalSc.Set(k, val)
+				}
+				v.sc = scope.New(globalSc)
+			}
+			if len(withVars) > 0 || isolated {
+				v.sc = scope.New(v.sc)
+				for k, val := range withVars {
+					v.sc.Set(k, val)
+				}
+			}
+
+			if _, err := v.run(ctx, subBC); err != nil {
+				v.sc = savedSC
+				return "", err
+			}
+			v.sc = savedSC
+
+		case compiler.OP_RENDER:
+			tmplName := bc.Names[instr.A]
+			pairCount := int(instr.B)
+
+			withVars := make(map[string]any, pairCount)
+			for i := pairCount - 1; i >= 0; i-- {
+				val := v.pop()
+				key := v.pop()
+				withVars[key.String()] = val
+			}
+
+			subBC, err := v.eng.LoadTemplate(tmplName)
+			if err != nil {
+				return "", &runtimeErr{msg: fmt.Sprintf("render %q: %v", tmplName, err)}
+			}
+
+			globalSc := scope.New(nil)
+			for k, val := range v.eng.GlobalData() {
+				globalSc.Set(k, val)
+			}
+			renderSc := scope.New(globalSc)
+			for k, val := range withVars {
+				renderSc.Set(k, val)
+			}
+
+			savedSC := v.sc
+			v.sc = renderSc
+			if _, err := v.run(ctx, subBC); err != nil {
+				v.sc = savedSC
+				return "", err
+			}
+			v.sc = savedSC
+
+		case compiler.OP_IMPORT:
+			tmplName := bc.Names[instr.A]
+			alias := bc.Names[instr.B]
+
+			subBC, err := v.eng.LoadTemplate(tmplName)
+			if err != nil {
+				return "", &runtimeErr{msg: fmt.Sprintf("import %q: %v", tmplName, err)}
+			}
+
+			// Execute imported template in isolated scope to collect macro definitions
+			globalSc := scope.New(nil)
+			for k, val := range v.eng.GlobalData() {
+				globalSc.Set(k, val)
+			}
+			importSc := scope.New(globalSc)
+			savedSC := v.sc
+			v.sc = importSc
+
+			// Redirect output of imported template to a throwaway capture
+			if v.cdepth >= len(v.captures) {
+				v.sc = savedSC
+				return "", &runtimeErr{msg: "import: capture nesting too deep"}
+			}
+			v.captures[v.cdepth].buf.Reset()
+			v.captures[v.cdepth].varIdx = -1
+			v.cdepth++
+			_, importErr := v.run(ctx, subBC)
+			v.cdepth--
+			v.sc = savedSC
+			if importErr != nil {
+				return "", importErr
+			}
+
+			// Collect all MacroVal entries from importSc into a map
+			macroMap := make(map[string]any)
+			importSc.ForEach(func(k string, val any) {
+				if mv, ok := val.(Value); ok && mv.typ == TypeMacro {
+					macroMap[k] = mv
+				}
+			})
+			v.sc.Set(alias, FromAny(macroMap))
+
 		default:
 			return "", fmt.Errorf("vm: unknown opcode %d at ip=%d", instr.Op, ip-1)
 		}
 	}
 	return v.out.String(), nil
+}
+
+// execMacro runs bc in the given scope, capturing output to a string.
+func (v *VM) execMacro(ctx context.Context, bc *compiler.Bytecode, sc *scope.Scope) (string, error) {
+	if v.cdepth >= len(v.captures) {
+		return "", &runtimeErr{msg: "macro call nesting too deep (max 8)"}
+	}
+	v.captures[v.cdepth].buf.Reset()
+	v.captures[v.cdepth].varIdx = -1
+	v.cdepth++
+
+	savedSC := v.sc
+	v.sc = sc
+
+	_, err := v.run(ctx, bc)
+
+	v.sc = savedSC
+	v.cdepth--
+	if err != nil {
+		return "", err
+	}
+	return v.captures[v.cdepth].buf.String(), nil
 }
 
 // makeLoopState converts a Value into a loopState.

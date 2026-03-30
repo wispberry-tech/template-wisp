@@ -37,3 +37,10 @@ func (s *Scope) SetParent(p *Scope) {
 func (s *Scope) Parent() *Scope {
 	return s.parent
 }
+
+// ForEach calls fn for each key/value pair in this scope's own bindings (not parent).
+func (s *Scope) ForEach(fn func(key string, val any)) {
+	for k, v := range s.vars {
+		fn(k, v)
+	}
+}

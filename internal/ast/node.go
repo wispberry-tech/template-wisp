@@ -231,3 +231,78 @@ type FuncCallNode struct {
 }
 
 func (*FuncCallNode) groveNode() {}
+
+// NamedArgNode is a key=value argument in a macro call: name="Alice".
+type NamedArgNode struct {
+	Key   string
+	Value Node
+	Line  int
+}
+
+func (*NamedArgNode) groveNode() {}
+
+// MacroParam is a single parameter in a macro definition.
+type MacroParam struct {
+	Name    string
+	Default Node // nil = required parameter; non-nil = default expression
+}
+
+// MacroNode is {% macro name(p1, p2="default") %}...{% endmacro %}.
+type MacroNode struct {
+	Name   string
+	Params []MacroParam
+	Body   []Node
+	Line   int
+}
+
+func (*MacroNode) groveNode() {}
+
+// MacroCallExpr is a macro call expression: name(args...) or ns.name(args...).
+// Callee is an Identifier or AttributeAccess.
+type MacroCallExpr struct {
+	Callee    Node
+	PosArgs   []Node
+	NamedArgs []NamedArgNode
+	Line      int
+}
+
+func (*MacroCallExpr) groveNode() {}
+
+// CallNode is {% call macro(args) %}body{% endcall %} — call with a caller body.
+type CallNode struct {
+	Callee    Node           // the macro being called (Identifier or AttributeAccess)
+	PosArgs   []Node
+	NamedArgs []NamedArgNode
+	Body      []Node         // the caller() body
+	Line      int
+}
+
+func (*CallNode) groveNode() {}
+
+// IncludeNode is {% include "name" [with k=v, ...] [isolated] %}.
+type IncludeNode struct {
+	Name     string         // template name (string literal)
+	WithVars []NamedArgNode // extra variables (empty = no with clause)
+	Isolated bool
+	Line     int
+}
+
+func (*IncludeNode) groveNode() {}
+
+// RenderNode is {% render "name" [with k=v, ...] %} — always isolated.
+type RenderNode struct {
+	Name     string
+	WithVars []NamedArgNode
+	Line     int
+}
+
+func (*RenderNode) groveNode() {}
+
+// ImportNode is {% import "name" as alias %}.
+type ImportNode struct {
+	Name  string // template name
+	Alias string // namespace identifier
+	Line  int
+}
+
+func (*ImportNode) groveNode() {}

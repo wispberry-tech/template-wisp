@@ -53,7 +53,7 @@ func TestFilter_Replace(t *testing.T) {
 
 func TestFilter_Replace_Count(t *testing.T) {
 	// replace(old, new, count=1) replaces only first occurrence
-	require.Equal(t, "aXa", renderFilter(t, `{{ s | replace("a", "X", 1) }}`, grove.Data{"s": "aaa"}))
+	require.Equal(t, "Xaa", renderFilter(t, `{{ s | replace("a", "X", 1) }}`, grove.Data{"s": "aaa"}))
 }
 
 func TestFilter_Truncate(t *testing.T) {
