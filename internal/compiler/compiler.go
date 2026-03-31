@@ -16,36 +16,44 @@ func Compile(prog *ast.Program) (*Bytecode, error) {
 	}
 	c.emit(OP_HALT, 0, 0, 0)
 	return &Bytecode{
-		Instrs:  c.instrs,
-		Consts:  c.consts,
-		Names:   c.names,
-		Macros:  c.macros,
-		Blocks:  c.blocks,
-		Extends: c.extends,
+		Instrs:     c.instrs,
+		Consts:     c.consts,
+		Names:      c.names,
+		Macros:     c.macros,
+		Blocks:     c.blocks,
+		Extends:    c.extends,
+		Props:      c.props,
+		Components: c.components,
 	}, nil
 }
 
 type cmp struct {
-	instrs  []Instruction
-	consts  []any
-	names   []string
-	nameIdx map[string]int
-	macros  []MacroDef
-	blocks  []BlockDef
-	extends string
+	instrs     []Instruction
+	consts     []any
+	names      []string
+	nameIdx    map[string]int
+	macros     []MacroDef
+	blocks     []BlockDef
+	extends    string
+	props      []MacroParam
+	components []ComponentDef
 }
 
 func (c *cmp) compileProgram(prog *ast.Program) error {
-	// Check for extends — must be first node (ignoring leading whitespace/raw text)
+	// Check for extends — must be first node (ignoring leading whitespace/raw text and props)
 	extendsIdx := -1
+scanLoop:
 	for i, node := range prog.Body {
 		if _, ok := node.(*ast.ExtendsNode); ok {
 			extendsIdx = i
 			break
 		}
-		// Any output-producing node before extends is an error (TextNode is the only allowed one)
-		if _, ok := node.(*ast.TextNode); !ok {
-			break
+		// TextNode and PropsNode are allowed before extends; anything else stops the scan
+		switch node.(type) {
+		case *ast.TextNode, *ast.PropsNode:
+			// continue scanning
+		default:
+			break scanLoop
 		}
 	}
 	if extendsIdx >= 0 {
@@ -58,9 +66,19 @@ func (c *cmp) compileExtendsTemplate(prog *ast.Program, extendsIdx int) error {
 	extendsNode := prog.Body[extendsIdx].(*ast.ExtendsNode)
 	c.extends = extendsNode.Name
 
-	// Validate: nothing output-producing before extends
+	// Validate: nothing output-producing before extends; allow PropsNode
 	for _, node := range prog.Body[:extendsIdx] {
-		if raw, ok := node.(*ast.TextNode); ok && strings.TrimSpace(raw.Value) != "" {
+		switch n := node.(type) {
+		case *ast.TextNode:
+			if strings.TrimSpace(n.Value) != "" {
+				return fmt.Errorf("compiler: content before extends at line %d", extendsNode.Line)
+			}
+		case *ast.PropsNode:
+			// Props declaration is allowed before extends — compile it now
+			if err := c.compileNode(n); err != nil {
+				return err
+			}
+		default:
 			return fmt.Errorf("compiler: content before extends at line %d", extendsNode.Line)
 		}
 	}
@@ -178,6 +196,34 @@ func (c *cmp) compileNode(node ast.Node) error {
 	case *ast.ExtendsNode:
 		// Should not reach here — handled by compileProgram
 		return fmt.Errorf("compiler: unexpected extends node in compileNode (should be handled by compileProgram)")
+
+	case *ast.PropsNode:
+		for _, p := range n.Params {
+			mp := MacroParam{Name: p.Name}
+			if p.Default != nil {
+				mp.Default = constValueOf(p.Default)
+			}
+			c.props = append(c.props, mp)
+		}
+		c.emit(OP_PROPS_INIT, 0, 0, 0)
+
+	case *ast.SlotNode:
+		if len(n.Default) == 0 {
+			c.emit(OP_SLOT, uint16(c.addName(n.Name)), 0xFFFF, 0)
+		} else {
+			sub := &cmp{nameIdx: make(map[string]int)}
+			if err := sub.compileBody(n.Default); err != nil {
+				return err
+			}
+			sub.emit(OP_HALT, 0, 0, 0)
+			defaultBC := subBytecode(sub)
+			c.blocks = append(c.blocks, BlockDef{Name: "__slot__:" + n.Name, Body: defaultBC})
+			defaultIdx := len(c.blocks) - 1
+			c.emit(OP_SLOT, uint16(c.addName(n.Name)), uint16(defaultIdx), 0)
+		}
+
+	case *ast.ComponentNode:
+		return c.compileComponent(n)
 
 	default:
 		return fmt.Errorf("compiler: unknown node type %T", node)
@@ -569,5 +615,58 @@ func (c *cmp) compileRender(n *ast.RenderNode) error {
 // compileImport compiles {% import "name" as alias %}.
 func (c *cmp) compileImport(n *ast.ImportNode) error {
 	c.emit(OP_IMPORT, uint16(c.addName(n.Name)), uint16(c.addName(n.Alias)), 0)
+	return nil
+}
+
+// ─── Plan 6: Component compiler ───────────────────────────────────────────────
+
+// subBytecode creates a Bytecode from a sub-compiler's output.
+func subBytecode(sub *cmp) *Bytecode {
+	return &Bytecode{
+		Instrs:     sub.instrs,
+		Consts:     sub.consts,
+		Names:      sub.names,
+		Macros:     sub.macros,
+		Components: sub.components,
+	}
+}
+
+// compileComponent compiles {% component "name" k=v %}...{% endcomponent %}.
+func (c *cmp) compileComponent(n *ast.ComponentNode) error {
+	// Compile named fill bodies; index 0 is always the default fill (Name="") if non-empty.
+	// If DefaultFill is empty, we don't add a default fill entry — OP_SLOT will fall through
+	// to the slot's own default content.
+	var fills []FillDef
+	if len(n.DefaultFill) > 0 {
+		defaultSub := &cmp{nameIdx: make(map[string]int)}
+		if err := defaultSub.compileBody(n.DefaultFill); err != nil {
+			return err
+		}
+		defaultSub.emit(OP_HALT, 0, 0, 0)
+		fills = append(fills, FillDef{Name: "", Body: subBytecode(defaultSub)})
+	}
+
+	for _, fill := range n.Fills {
+		sub := &cmp{nameIdx: make(map[string]int)}
+		if err := sub.compileBody(fill.Body); err != nil {
+			return err
+		}
+		sub.emit(OP_HALT, 0, 0, 0)
+		fills = append(fills, FillDef{Name: fill.Name, Body: subBytecode(sub)})
+	}
+
+	def := ComponentDef{Name: n.Name, Fills: fills}
+	compIdx := len(c.components)
+	c.components = append(c.components, def)
+
+	// Push prop key-value pairs onto stack (key first, then value)
+	for _, prop := range n.Props {
+		c.emitPushConst(prop.Key)
+		if err := c.compileExpr(prop.Value); err != nil {
+			return err
+		}
+	}
+
+	c.emit(OP_COMPONENT, uint16(compIdx), uint16(len(n.Props)), 0)
 	return nil
 }

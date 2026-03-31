@@ -195,6 +195,22 @@ func (p *parser) parseTag() (ast.Node, error) {
 		}
 		return p.parseImport(tagStart)
 
+	case "component":
+		if p.inline {
+			return nil, &groverrors.ParseError{
+				Line:    tagStart.Line,
+				Column:  tagStart.Col,
+				Message: "component not allowed in inline templates",
+			}
+		}
+		return p.parseComponent(tagStart)
+
+	case "slot":
+		return p.parseSlot(tagStart)
+
+	case "props":
+		return p.parseProps(tagStart)
+
 	default:
 		return p.consumeTagRemainder(name, tagStart)
 	}
@@ -999,4 +1015,160 @@ func (p *parser) parseBlock(tagStart lexer.Token) (*ast.BlockNode, error) {
 		return nil, err
 	}
 	return &ast.BlockNode{Name: nameTok.Value, Body: body, Line: tagStart.Line}, nil
+}
+
+// ─── Plan 6: Component + Slots parser methods ─────────────────────────────────
+
+// parsePropsParams parses a props parameter list: name, name2="default", ...
+// Like parseMacroParams but no surrounding parens; loops until TK_TAG_END.
+func (p *parser) parsePropsParams() ([]ast.MacroParam, error) {
+	var params []ast.MacroParam
+	for p.peek().Kind != lexer.TK_TAG_END && !p.atEOF() {
+		nameTok := p.advance()
+		if nameTok.Kind != lexer.TK_IDENT {
+			return nil, p.errorf(nameTok.Line, nameTok.Col, "expected parameter name in props declaration")
+		}
+		param := ast.MacroParam{Name: nameTok.Value}
+		if p.peek().Kind == lexer.TK_ASSIGN {
+			p.advance() // consume =
+			def, err := p.parseExpr(0)
+			if err != nil {
+				return nil, err
+			}
+			param.Default = def
+		}
+		params = append(params, param)
+		if p.peek().Kind == lexer.TK_COMMA {
+			p.advance()
+		}
+	}
+	return params, nil
+}
+
+// parseProps parses {% props name, name2="default", ... %}.
+func (p *parser) parseProps(tagStart lexer.Token) (*ast.PropsNode, error) {
+	p.advance() // consume "props"
+	params, err := p.parsePropsParams()
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	return &ast.PropsNode{Params: params, Line: tagStart.Line}, nil
+}
+
+// parseSlot parses {% slot ["name"] %}...{% endslot %}.
+func (p *parser) parseSlot(tagStart lexer.Token) (*ast.SlotNode, error) {
+	p.advance() // consume "slot"
+	name := ""
+	if p.peek().Kind == lexer.TK_STRING {
+		name = p.advance().Value
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	body, err := p.parseBody("endslot")
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTag("endslot"); err != nil {
+		return nil, err
+	}
+	return &ast.SlotNode{Name: name, Default: body, Line: tagStart.Line}, nil
+}
+
+// parseComponent parses {% component "name" k=v, ... %}...{% endcomponent %}.
+// The body is scanned to separate {% fill %} blocks from default-slot content.
+func (p *parser) parseComponent(tagStart lexer.Token) (*ast.ComponentNode, error) {
+	p.advance() // consume "component"
+	nameTok := p.advance()
+	if nameTok.Kind != lexer.TK_STRING {
+		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected quoted template name after component")
+	}
+
+	// Parse props: key=val key2=val2 (until TAG_END)
+	var props []ast.NamedArgNode
+	for p.peek().Kind != lexer.TK_TAG_END && !p.atEOF() {
+		keyTok := p.advance()
+		if keyTok.Kind != lexer.TK_IDENT {
+			return nil, p.errorf(keyTok.Line, keyTok.Col, "expected prop name in component tag")
+		}
+		if p.peek().Kind != lexer.TK_ASSIGN {
+			return nil, p.errorf(p.peek().Line, p.peek().Col, "expected = after prop name")
+		}
+		p.advance() // consume =
+		val, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		props = append(props, ast.NamedArgNode{Key: keyTok.Value, Value: val, Line: keyTok.Line})
+		if p.peek().Kind == lexer.TK_COMMA {
+			p.advance()
+		}
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+
+	// Parse body: separate {% fill %} from default-slot content
+	node := &ast.ComponentNode{Name: nameTok.Value, Props: props, Line: tagStart.Line}
+	if err := p.parseComponentBody(node); err != nil {
+		return nil, err
+	}
+	return node, nil
+}
+
+// parseComponentBody parses until {% endcomponent %}, routing {% fill %} blocks
+// into node.Fills and everything else into node.DefaultFill.
+func (p *parser) parseComponentBody(node *ast.ComponentNode) error {
+	for !p.atEOF() {
+		if p.peek().Kind == lexer.TK_TAG_START {
+			tagName, ok := p.peekTagName()
+			if ok {
+				switch tagName {
+				case "endcomponent":
+					return p.expectTag("endcomponent")
+				case "fill":
+					fill, err := p.parseFill()
+					if err != nil {
+						return err
+					}
+					node.Fills = append(node.Fills, *fill)
+					continue
+				}
+			}
+		}
+		n, err := p.parseNode()
+		if err != nil {
+			return err
+		}
+		if n != nil {
+			node.DefaultFill = append(node.DefaultFill, n)
+		}
+	}
+	return p.errorf(p.peek().Line, p.peek().Col, "unclosed component block — expected endcomponent")
+}
+
+// parseFill parses {% fill "name" %}...{% endfill %}.
+// Called when positioned AT TK_TAG_START.
+func (p *parser) parseFill() (*ast.FillNode, error) {
+	tagStart := p.peek()
+	p.advance() // consume {%
+	p.advance() // consume "fill"
+	nameTok := p.advance()
+	if nameTok.Kind != lexer.TK_STRING {
+		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected quoted slot name after fill")
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	body, err := p.parseBody("endfill")
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTag("endfill"); err != nil {
+		return nil, err
+	}
+	return &ast.FillNode{Name: nameTok.Value, Body: body, Line: tagStart.Line}, nil
 }

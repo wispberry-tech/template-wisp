@@ -34,6 +34,13 @@ type blockChainFrame struct {
 	bodies []*compiler.Bytecode // full super-chain for this block
 }
 
+// componentFrame holds state for an active component call.
+type componentFrame struct {
+	fills       []compiler.FillDef // fill bodies indexed by search
+	callerScope *scope.Scope       // caller's scope — used for fill rendering
+	passedProps map[string]any     // props passed at call site
+}
+
 // VM is a stack-based bytecode executor. Instances are pooled; do not hold references.
 type VM struct {
 	stack      [256]Value
@@ -47,6 +54,8 @@ type VM struct {
 	cdepth     int // current capture depth
 	blockSlots map[string][]*compiler.Bytecode // per-render block override table
 	blockChain []blockChainFrame               // current block execution context for super()
+	compStack  [16]componentFrame
+	csdepth    int // current component stack depth
 }
 
 var vmPool = sync.Pool{
@@ -80,6 +89,7 @@ func Execute(ctx context.Context, bc *compiler.Bytecode, data map[string]any, en
 		if v.blockChain != nil {
 			v.blockChain = v.blockChain[:0]
 		}
+		v.csdepth = 0
 		vmPool.Put(v)
 	}()
 	v.eng = eng
@@ -649,6 +659,131 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 				return "", err
 			}
 			v.push(SafeHTMLVal(superResult))
+
+		// ─── Plan 6 opcodes ───────────────────────────────────────────────────
+
+		case compiler.OP_COMPONENT:
+			compDef := bc.Components[instr.A]
+			propCount := int(instr.B)
+
+			// Pop prop key-value pairs (pushed key-first, so pop in reverse)
+			props := make(map[string]any, propCount)
+			for i := propCount - 1; i >= 0; i-- {
+				val := v.pop()
+				key := v.pop()
+				props[key.String()] = val
+			}
+
+			// Load component template
+			compBC, err := v.eng.LoadTemplate(compDef.Name)
+			if err != nil {
+				return "", &runtimeErr{msg: fmt.Sprintf("component %q: %v", compDef.Name, err)}
+			}
+
+			// Save caller scope; push component frame
+			callerScope := v.sc
+			if v.csdepth >= len(v.compStack) {
+				return "", &runtimeErr{msg: "component nesting too deep (max 16)"}
+			}
+			v.compStack[v.csdepth] = componentFrame{
+				fills:       compDef.Fills,
+				callerScope: callerScope,
+				passedProps: props,
+			}
+			v.csdepth++
+
+			// Set up isolated component scope: globals → component scope
+			globalSc := scope.New(nil)
+			for k, val := range v.eng.GlobalData() {
+				globalSc.Set(k, val)
+			}
+			v.sc = scope.New(globalSc)
+
+			// If no {% props %} declaration (permissive mode), bind all props now
+			if compBC.Props == nil {
+				for k, val := range props {
+					v.sc.Set(k, val)
+				}
+			}
+
+			_, err = v.run(ctx, compBC)
+			v.csdepth--
+			v.sc = callerScope
+			if err != nil {
+				return "", err
+			}
+
+		case compiler.OP_PROPS_INIT:
+			if v.csdepth == 0 {
+				return "", &runtimeErr{msg: "props declaration outside component context"}
+			}
+			frame := &v.compStack[v.csdepth-1]
+			passed := frame.passedProps
+			declared := bc.Props
+
+			// Build declared set for unknown-prop check
+			declaredSet := make(map[string]bool, len(declared))
+			for _, p := range declared {
+				declaredSet[p.Name] = true
+			}
+			// Check for unknown props
+			for k := range passed {
+				if !declaredSet[k] {
+					return "", &runtimeErr{msg: fmt.Sprintf("component: unknown prop %q", k)}
+				}
+			}
+			// Bind props: passed value or default; error if required and missing
+			for _, p := range declared {
+				if val, ok := passed[p.Name]; ok {
+					v.sc.Set(p.Name, FromAny(val))
+				} else if p.Default != nil {
+					v.sc.Set(p.Name, fromConst(p.Default))
+				} else {
+					return "", &runtimeErr{msg: fmt.Sprintf("component: missing required prop %q", p.Name)}
+				}
+			}
+
+		case compiler.OP_SLOT:
+			slotName := bc.Names[instr.A]
+			defaultBlockIdx := int(instr.B)
+
+			if v.csdepth == 0 {
+				// {% slot %} used outside a component — render default content only
+				if defaultBlockIdx != 0xFFFF {
+					if _, err := v.run(ctx, bc.Blocks[defaultBlockIdx].Body); err != nil {
+						return "", err
+					}
+				}
+				break
+			}
+
+			frame := &v.compStack[v.csdepth-1]
+
+			// Find matching fill by name
+			var fillBody *compiler.Bytecode
+			for i := range frame.fills {
+				if frame.fills[i].Name == slotName {
+					fillBody = frame.fills[i].Body
+					break
+				}
+			}
+
+			if fillBody != nil {
+				// Render fill in caller scope (lazy render)
+				savedSC := v.sc
+				v.sc = scope.New(frame.callerScope)
+				_, err := v.run(ctx, fillBody)
+				v.sc = savedSC
+				if err != nil {
+					return "", err
+				}
+			} else if defaultBlockIdx != 0xFFFF {
+				// No fill provided — render slot default content
+				if _, err := v.run(ctx, bc.Blocks[defaultBlockIdx].Body); err != nil {
+					return "", err
+				}
+			}
+			// else: empty slot with no fill and no default — render nothing
 
 		default:
 			return "", fmt.Errorf("vm: unknown opcode %d at ip=%d", instr.Op, ip-1)

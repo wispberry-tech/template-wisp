@@ -325,3 +325,41 @@ type BlockNode struct {
 }
 
 func (*BlockNode) groveNode() {}
+
+// PropsNode is {% props name, name2="default", ... %} — declares accepted props.
+// Must appear at the top of a component template. Reuses MacroParam for params.
+type PropsNode struct {
+	Params []MacroParam
+	Line   int
+}
+
+func (*PropsNode) groveNode() {}
+
+// FillNode is {% fill "name" %}...{% endfill %} inside a component call body.
+// FillNode is NOT directly part of the template AST — it is consumed by the parser
+// when parsing a ComponentNode and stored in ComponentNode.Fills.
+type FillNode struct {
+	Name string
+	Body []Node
+	Line int
+}
+
+// ComponentNode is {% component "name" k=v, ... %}...{% endcomponent %}.
+type ComponentNode struct {
+	Name        string         // template name (string literal)
+	Props       []NamedArgNode // passed props (key=value pairs)
+	DefaultFill []Node         // body content outside fill blocks → fed to {% slot %}
+	Fills       []FillNode     // named {% fill %}...{% endfill %} blocks
+	Line        int
+}
+
+func (*ComponentNode) groveNode() {}
+
+// SlotNode is {% slot ["name"] %}...{% endslot %} inside a component template.
+type SlotNode struct {
+	Name    string // "" = default slot
+	Default []Node // fallback content rendered when no matching fill
+	Line    int
+}
+
+func (*SlotNode) groveNode() {}

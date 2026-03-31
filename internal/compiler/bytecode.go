@@ -75,6 +75,20 @@ const (
 	OP_BLOCK_RENDER
 	// OP_SUPER — render one level up the current block's super-chain.
 	OP_SUPER
+
+	// ─── Plan 6 opcodes ────────────────────────────────────────────────────────
+	// OP_COMPONENT — A=comp_idx B=prop_pair_count
+	// Stack: B pairs of (key Value, value Value) pushed before this op (key first).
+	// Pops B*2 values, loads component template, validates props, renders with fill table.
+	OP_COMPONENT
+	// OP_SLOT — A=name_idx B=default_block_idx (index into bc.Blocks for fallback)
+	// Checks v.compStack.top().fills for a matching name. If found, executes fill body
+	// in caller scope. If not found, executes bc.Blocks[B] (the default content).
+	// B=0xFFFF means no default (empty slot).
+	OP_SLOT
+	// OP_PROPS_INIT — no operands; reads bc.Props vs compStack.top().passedProps;
+	// validates required/unknown props and binds them into the current scope.
+	OP_PROPS_INIT
 )
 
 // MacroParam is a single parameter in a compiled macro.
@@ -97,15 +111,31 @@ type BlockDef struct {
 	Body *Bytecode
 }
 
+// FillDef is a compiled fill body associated with a named slot.
+// Name="" is the default (unnamed) slot fill.
+type FillDef struct {
+	Name string
+	Body *Bytecode
+}
+
+// ComponentDef holds the compiled fill bodies for a single {% component %} call site.
+// Fills[0] is always the default fill (Name=""); named fills start at index 1.
+type ComponentDef struct {
+	Name  string    // template name
+	Fills []FillDef // compiled fill bodies
+}
+
 // Bytecode is the compiled output for a single template.
 // It is immutable after compilation and safe for concurrent use.
 type Bytecode struct {
-	Instrs  []Instruction
-	Consts  []any      // constant pool: string | int64 | float64 | bool
-	Names   []string   // name pool: variable names, attribute names, filter names
-	Macros  []MacroDef // compiled inline macros (referenced by OP_MACRO_DEF)
-	Blocks  []BlockDef // compiled block bodies (parent defaults + child overrides)
-	Extends string     // non-empty if this template uses {% extends %}
+	Instrs     []Instruction
+	Consts     []any           // constant pool: string | int64 | float64 | bool
+	Names      []string        // name pool: variable names, attribute names, filter names
+	Macros     []MacroDef      // compiled inline macros (referenced by OP_MACRO_DEF)
+	Blocks     []BlockDef      // compiled block bodies (parent defaults + child overrides)
+	Extends    string          // non-empty if this template uses {% extends %}
+	Props      []MacroParam    // from {% props %} declaration; nil = no declaration (permissive)
+	Components []ComponentDef  // one entry per {% component %} call in this template
 }
 
 // BlockIndex returns a map from block name to index in Blocks.
