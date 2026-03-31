@@ -306,3 +306,22 @@ type ImportNode struct {
 }
 
 func (*ImportNode) groveNode() {}
+
+// ExtendsNode is {% extends "name" %} — must be the first non-whitespace node.
+type ExtendsNode struct {
+	Name string
+	Line int
+}
+
+func (*ExtendsNode) groveNode() {}
+
+// BlockNode is {% block name %}...{% endblock %}.
+// In an extending template, Block nodes define overrides.
+// In a base template, Block nodes define named slots with default content.
+type BlockNode struct {
+	Name string
+	Body []Node
+	Line int
+}
+
+func (*BlockNode) groveNode() {}

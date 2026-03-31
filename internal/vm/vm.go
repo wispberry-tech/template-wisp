@@ -27,17 +27,26 @@ type captureFrame struct {
 	varIdx int // name index for the capture variable
 }
 
+// blockChainFrame tracks the current block execution context for super().
+type blockChainFrame struct {
+	name   string
+	depth  int                  // current execution depth within the chain (0 = deepest child)
+	bodies []*compiler.Bytecode // full super-chain for this block
+}
+
 // VM is a stack-based bytecode executor. Instances are pooled; do not hold references.
 type VM struct {
-	stack    [256]Value
-	sp       int
-	eng      EngineIface
-	sc       *scope.Scope
-	out      strings.Builder
-	loops    [32]loopState
-	ldepth   int // current loop depth (0 = not in loop)
-	captures [8]captureFrame
-	cdepth   int // current capture depth
+	stack      [256]Value
+	sp         int
+	eng        EngineIface
+	sc         *scope.Scope
+	out        strings.Builder
+	loops      [32]loopState
+	ldepth     int // current loop depth (0 = not in loop)
+	captures   [8]captureFrame
+	cdepth     int // current capture depth
+	blockSlots map[string][]*compiler.Bytecode // per-render block override table
+	blockChain []blockChainFrame               // current block execution context for super()
 }
 
 var vmPool = sync.Pool{
@@ -67,6 +76,10 @@ func Execute(ctx context.Context, bc *compiler.Bytecode, data map[string]any, en
 		for i := range v.captures {
 			v.captures[i].buf.Reset()
 		}
+		v.blockSlots = nil
+		if v.blockChain != nil {
+			v.blockChain = v.blockChain[:0]
+		}
 		vmPool.Put(v)
 	}()
 	v.eng = eng
@@ -80,6 +93,15 @@ func Execute(ctx context.Context, bc *compiler.Bytecode, data map[string]any, en
 		renderSc.Set(k, val)
 	}
 	v.sc = scope.New(renderSc)
+
+	// If this template extends another, build initial block slot table from child's Blocks
+	if bc.Extends != "" {
+		v.blockSlots = make(map[string][]*compiler.Bytecode)
+		for i := range bc.Blocks {
+			b := &bc.Blocks[i]
+			v.blockSlots[b.Name] = []*compiler.Bytecode{b.Body}
+		}
+	}
 
 	return v.run(ctx, bc)
 }
@@ -554,11 +576,104 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			})
 			v.sc.Set(alias, FromAny(macroMap))
 
+		// ─── Plan 5 opcodes ───────────────────────────────────────────────────
+
+		case compiler.OP_EXTENDS:
+			parentName := bc.Names[instr.A]
+			parentBC, err := v.eng.LoadTemplate(parentName)
+			if err != nil {
+				return "", &runtimeErr{msg: fmt.Sprintf("extends %q: %v", parentName, err)}
+			}
+
+			// Merge parent's block defaults into blockSlots (child entries take priority — don't overwrite)
+			if v.blockSlots == nil {
+				v.blockSlots = make(map[string][]*compiler.Bytecode)
+			}
+			for i := range parentBC.Blocks {
+				b := &parentBC.Blocks[i]
+				// Append parent's default as the last (lowest priority) entry in the chain
+				v.blockSlots[b.Name] = append(v.blockSlots[b.Name], b.Body)
+			}
+
+			// Execute the parent's main instruction stream (it will hit OP_BLOCK_RENDER for each slot)
+			if _, err := v.run(ctx, parentBC); err != nil {
+				return "", err
+			}
+			// After parent executes, we're done — return to skip remaining instructions in child
+			return v.out.String(), nil
+
+		case compiler.OP_BLOCK_RENDER:
+			blockName := bc.Names[instr.A]
+			defaultBlockIdx := int(instr.B)
+
+			// Determine what bodies to execute: override chain, or just parent default
+			var bodies []*compiler.Bytecode
+			if v.blockSlots != nil {
+				if chain, ok := v.blockSlots[blockName]; ok && len(chain) > 0 {
+					bodies = chain
+				}
+			}
+			if len(bodies) == 0 {
+				// No override — use this template's default block body
+				bodies = []*compiler.Bytecode{bc.Blocks[defaultBlockIdx].Body}
+			}
+
+			// Push block chain frame for super() support
+			frame := blockChainFrame{name: blockName, depth: 0, bodies: bodies}
+			v.blockChain = append(v.blockChain, frame)
+
+			_, err := v.run(ctx, bodies[0])
+
+			v.blockChain = v.blockChain[:len(v.blockChain)-1]
+			if err != nil {
+				return "", err
+			}
+
+		case compiler.OP_SUPER:
+			if len(v.blockChain) == 0 {
+				return "", &runtimeErr{msg: "super() called outside a block"}
+			}
+			frame := &v.blockChain[len(v.blockChain)-1]
+			nextDepth := frame.depth + 1
+			if nextDepth >= len(frame.bodies) {
+				// No more parents — super() at the root, push empty string
+				v.push(SafeHTMLVal(""))
+				break
+			}
+			prevDepth := frame.depth
+			frame.depth = nextDepth
+			// Capture output of the parent block body into a SafeHTML value
+			superResult, err := v.execBlockCapture(ctx, frame.bodies[nextDepth])
+			frame.depth = prevDepth
+			if err != nil {
+				return "", err
+			}
+			v.push(SafeHTMLVal(superResult))
+
 		default:
 			return "", fmt.Errorf("vm: unknown opcode %d at ip=%d", instr.Op, ip-1)
 		}
 	}
 	return v.out.String(), nil
+}
+
+// execBlockCapture runs a block body bytecode in the current scope, capturing output to a string.
+// Used by OP_SUPER to capture the parent block's rendered content as a value.
+func (v *VM) execBlockCapture(ctx context.Context, bc *compiler.Bytecode) (string, error) {
+	if v.cdepth >= len(v.captures) {
+		return "", &runtimeErr{msg: "block super() nesting too deep (max 8)"}
+	}
+	v.captures[v.cdepth].buf.Reset()
+	v.captures[v.cdepth].varIdx = -1
+	v.cdepth++
+
+	_, err := v.run(ctx, bc)
+
+	v.cdepth--
+	if err != nil {
+		return "", err
+	}
+	return v.captures[v.cdepth].buf.String(), nil
 }
 
 // execMacro runs bc in the given scope, capturing output to a string.

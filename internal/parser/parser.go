@@ -150,14 +150,10 @@ func (p *parser) parseTag() (ast.Node, error) {
 		return p.consumeUntilEndraw(tagStart)
 
 	case "extends":
-		if p.inline {
-			return nil, &groverrors.ParseError{
-				Line:    nameTok.Line,
-				Column:  nameTok.Col,
-				Message: "extends not allowed in inline templates",
-			}
-		}
-		return p.consumeTagRemainder(name, tagStart)
+		return p.parseExtends(tagStart)
+
+	case "block":
+		return p.parseBlock(tagStart)
 
 	case "if":
 		return p.parseIf(tagStart)
@@ -500,6 +496,11 @@ func (p *parser) parseExpr(minPrec int) (ast.Node, error) {
 						return nil, p.errorf(tk.Line, tk.Col, "caller() takes no arguments")
 					}
 					left = &ast.FuncCallNode{Name: "caller", Args: nil, Line: ident.Line}
+				case "super":
+					if len(posArgs)+len(namedArgs) > 0 {
+						return nil, p.errorf(tk.Line, tk.Col, "super() takes no arguments")
+					}
+					left = &ast.FuncCallNode{Name: "super", Args: nil, Line: ident.Line}
 				default:
 					left = &ast.MacroCallExpr{Callee: left, PosArgs: posArgs, NamedArgs: namedArgs, Line: ident.Line}
 				}
@@ -525,14 +526,17 @@ func (p *parser) parseUnary() (ast.Node, error) {
 	switch tk.Kind {
 	case lexer.TK_NOT:
 		p.advance()
-		operand, err := p.parseUnary()
+		// not has precedence 30 (below comparisons at 40, above and/or) so
+		// parse the operand at prec=30 to allow postfix operators like .attr and [idx]
+		operand, err := p.parseExpr(30)
 		if err != nil {
 			return nil, err
 		}
 		return &ast.UnaryExpr{Op: "not", Operand: operand, Line: tk.Line}, nil
 	case lexer.TK_MINUS:
 		p.advance()
-		operand, err := p.parseUnary()
+		// unary minus binds tighter than binary ops; use prec=70 (same as * / %)
+		operand, err := p.parseExpr(70)
 		if err != nil {
 			return nil, err
 		}
@@ -952,4 +956,47 @@ func (p *parser) parseImport(tagStart lexer.Token) (*ast.ImportNode, error) {
 		return nil, err
 	}
 	return &ast.ImportNode{Name: nameTok.Value, Alias: aliasTok.Value, Line: tagStart.Line}, nil
+}
+
+// ─── Plan 5: Layout inheritance parser methods ────────────────────────────────
+
+// parseExtends parses {% extends "name" %}.
+// Inline templates may not use extends.
+func (p *parser) parseExtends(tagStart lexer.Token) (*ast.ExtendsNode, error) {
+	if p.inline {
+		return nil, &groverrors.ParseError{
+			Line:    tagStart.Line,
+			Column:  tagStart.Col,
+			Message: "extends not allowed in inline templates",
+		}
+	}
+	p.advance() // consume "extends"
+	nameTok := p.advance()
+	if nameTok.Kind != lexer.TK_STRING {
+		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected quoted template name after extends")
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	return &ast.ExtendsNode{Name: nameTok.Value, Line: tagStart.Line}, nil
+}
+
+// parseBlock parses {% block name %}...{% endblock %}.
+func (p *parser) parseBlock(tagStart lexer.Token) (*ast.BlockNode, error) {
+	p.advance() // consume "block"
+	nameTok := p.advance()
+	if nameTok.Kind != lexer.TK_IDENT {
+		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected block name after block")
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	body, err := p.parseBody("endblock")
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectTag("endblock"); err != nil {
+		return nil, err
+	}
+	return &ast.BlockNode{Name: nameTok.Value, Body: body, Line: tagStart.Line}, nil
 }

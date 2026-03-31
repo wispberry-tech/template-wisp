@@ -3,6 +3,7 @@ package compiler
 
 import (
 	"fmt"
+	"strings"
 
 	"grove/internal/ast"
 )
@@ -14,7 +15,14 @@ func Compile(prog *ast.Program) (*Bytecode, error) {
 		return nil, err
 	}
 	c.emit(OP_HALT, 0, 0, 0)
-	return &Bytecode{Instrs: c.instrs, Consts: c.consts, Names: c.names, Macros: c.macros}, nil
+	return &Bytecode{
+		Instrs:  c.instrs,
+		Consts:  c.consts,
+		Names:   c.names,
+		Macros:  c.macros,
+		Blocks:  c.blocks,
+		Extends: c.extends,
+	}, nil
 }
 
 type cmp struct {
@@ -23,14 +31,66 @@ type cmp struct {
 	names   []string
 	nameIdx map[string]int
 	macros  []MacroDef
+	blocks  []BlockDef
+	extends string
 }
 
 func (c *cmp) compileProgram(prog *ast.Program) error {
-	for _, node := range prog.Body {
-		if err := c.compileNode(node); err != nil {
-			return err
+	// Check for extends — must be first node (ignoring leading whitespace/raw text)
+	extendsIdx := -1
+	for i, node := range prog.Body {
+		if _, ok := node.(*ast.ExtendsNode); ok {
+			extendsIdx = i
+			break
+		}
+		// Any output-producing node before extends is an error (TextNode is the only allowed one)
+		if _, ok := node.(*ast.TextNode); !ok {
+			break
 		}
 	}
+	if extendsIdx >= 0 {
+		return c.compileExtendsTemplate(prog, extendsIdx)
+	}
+	return c.compileBody(prog.Body)
+}
+
+func (c *cmp) compileExtendsTemplate(prog *ast.Program, extendsIdx int) error {
+	extendsNode := prog.Body[extendsIdx].(*ast.ExtendsNode)
+	c.extends = extendsNode.Name
+
+	// Validate: nothing output-producing before extends
+	for _, node := range prog.Body[:extendsIdx] {
+		if raw, ok := node.(*ast.TextNode); ok && strings.TrimSpace(raw.Value) != "" {
+			return fmt.Errorf("compiler: content before extends at line %d", extendsNode.Line)
+		}
+	}
+
+	// Compile only block definitions from the remaining nodes
+	for _, node := range prog.Body[extendsIdx+1:] {
+		switch n := node.(type) {
+		case *ast.BlockNode:
+			if err := c.compileBlockDef(n); err != nil {
+				return err
+			}
+		case *ast.TextNode:
+			// whitespace between blocks — ignore
+		default:
+			return fmt.Errorf("compiler: only block definitions allowed in extending template (line %d)", extendsNode.Line)
+		}
+	}
+
+	c.emit(OP_EXTENDS, uint16(c.addName(extendsNode.Name)), 0, 0)
+	return nil
+}
+
+func (c *cmp) compileBlockDef(n *ast.BlockNode) error {
+	sub := &cmp{nameIdx: make(map[string]int)}
+	if err := sub.compileBody(n.Body); err != nil {
+		return err
+	}
+	sub.emit(OP_HALT, 0, 0, 0)
+	bodyBC := &Bytecode{Instrs: sub.instrs, Consts: sub.consts, Names: sub.names, Macros: sub.macros}
+	c.blocks = append(c.blocks, BlockDef{Name: n.Name, Body: bodyBC})
 	return nil
 }
 
@@ -106,6 +166,18 @@ func (c *cmp) compileNode(node ast.Node) error {
 
 	case *ast.ImportNode:
 		return c.compileImport(n)
+
+	case *ast.BlockNode:
+		// Base template: compile default body into Blocks, emit OP_BLOCK_RENDER
+		if err := c.compileBlockDef(n); err != nil {
+			return err
+		}
+		blockIdx := len(c.blocks) - 1
+		c.emit(OP_BLOCK_RENDER, uint16(c.addName(n.Name)), uint16(blockIdx), 0)
+
+	case *ast.ExtendsNode:
+		// Should not reach here — handled by compileProgram
+		return fmt.Errorf("compiler: unexpected extends node in compileNode (should be handled by compileProgram)")
 
 	default:
 		return fmt.Errorf("compiler: unknown node type %T", node)
@@ -336,6 +408,8 @@ func (c *cmp) compileExpr(node ast.Node) error {
 			c.emit(OP_CALL_RANGE, uint16(len(n.Args)), 0, 0)
 		case "caller":
 			c.emit(OP_CALL_CALLER, 0, 0, 0)
+		case "super":
+			c.emit(OP_SUPER, 0, 0, 0)
 		default:
 			return fmt.Errorf("compiler: unknown function %q", n.Name)
 		}

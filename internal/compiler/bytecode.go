@@ -64,6 +64,17 @@ const (
 	OP_INCLUDE         // A=name_idx Flags: bit0=isolated; B=with_pair_count
 	OP_RENDER          // A=name_idx B=with_pair_count; always isolated
 	OP_IMPORT          // A=name_idx B=alias_idx
+
+	// ─── Plan 5 opcodes ────────────────────────────────────────────────────────
+	// OP_EXTENDS — A=name_idx: load parent template, merge block slots, execute parent.
+	// This is the ONLY instruction emitted for the main body of an extending template.
+	OP_EXTENDS
+	// OP_BLOCK_RENDER — A=name_idx B=block_idx: render a block slot.
+	// Checks VM's live blockSlots map; if override present, execute override chain.
+	// Otherwise execute Bytecode.Blocks[B].Body (the parent default).
+	OP_BLOCK_RENDER
+	// OP_SUPER — render one level up the current block's super-chain.
+	OP_SUPER
 )
 
 // MacroParam is a single parameter in a compiled macro.
@@ -80,11 +91,28 @@ type MacroDef struct {
 	Body   *Bytecode
 }
 
+// BlockDef is a compiled block body — used for both parent defaults and child overrides.
+type BlockDef struct {
+	Name string
+	Body *Bytecode
+}
+
 // Bytecode is the compiled output for a single template.
 // It is immutable after compilation and safe for concurrent use.
 type Bytecode struct {
-	Instrs []Instruction
-	Consts []any      // constant pool: string | int64 | float64 | bool
-	Names  []string   // name pool: variable names, attribute names, filter names
-	Macros []MacroDef // compiled inline macros (referenced by OP_MACRO_DEF)
+	Instrs  []Instruction
+	Consts  []any      // constant pool: string | int64 | float64 | bool
+	Names   []string   // name pool: variable names, attribute names, filter names
+	Macros  []MacroDef // compiled inline macros (referenced by OP_MACRO_DEF)
+	Blocks  []BlockDef // compiled block bodies (parent defaults + child overrides)
+	Extends string     // non-empty if this template uses {% extends %}
+}
+
+// BlockIndex returns a map from block name to index in Blocks.
+func (bc *Bytecode) BlockIndex() map[string]int {
+	m := make(map[string]int, len(bc.Blocks))
+	for i, b := range bc.Blocks {
+		m[b.Name] = i
+	}
+	return m
 }
