@@ -29,7 +29,7 @@ Create a comparison table or matrix highlighting:
 - Maintainability and ecosystem
 
 **Step 3 – Proposed Architecture (“Our Engine”)**
-Design **our new template engine**. Call it **Grove** (or suggest a better name if you prefer).
+Design **our new template engine**. Call it **Wispy** (or suggest a better name if you prefer).
 Create a comprehensive technical specification that intelligently combines the strongest ideas from the three engines while fixing their weaknesses. The spec must include the following sections:
 
 1. **Goals & Design Principles**
@@ -82,7 +82,7 @@ Begin your response with the research summaries and proceed step by step through
 
   Before I dive into the research and spec, one key clarifying question:
 
-  Is Grove intended to be a next-generation evolution of template-wisp itself — meaning the spec should inform future development of this repo — or is it a separate standalone design exercise to explore what a
+  Is Wispy intended to be a next-generation evolution of template-wisp itself — meaning the spec should inform future development of this repo — or is it a separate standalone design exercise to explore what a
    best-in-class Go template engine would look like, without being constrained by template-wisp's existing architecture?
 
   This matters because:
@@ -94,7 +94,7 @@ Begin your response with the research summaries and proceed step by step through
 ❯ clean slate
 
 ❯ /rename
-  ⎿  Session renamed to: grove-template-engine-spec
+  ⎿  Session renamed to: wispy-template-engine-spec
 
 ● Got it — clean slate. One more question before I propose approaches:
 
@@ -165,7 +165,7 @@ Begin your response with the research summaries and proceed step by step through
 
 ● Section 1: Core Components & Data Flow
 
-  Here's the proposed pipeline for Grove:
+  Here's the proposed pipeline for Wispy:
 
   Template Source
         │
@@ -515,34 +515,34 @@ scoped data.
   Functional options pattern — idiomatic Go, easy to extend without breaking changes:
 
   // Minimal
-  eng := grove.New()
+  eng := wispy.New()
 
   // Configured
-  eng := grove.New(
-      grove.WithFileSystem(os.DirFS("templates/")),
-      grove.WithAutoEscape(true),              // default: true
-      grove.WithHotReload(true),               // default: false in prod
-      grove.WithGlobal("siteName", "Acme"),
-      grove.WithGlobal("version", "2.1.0"),
-      grove.WithMaxStackDepth(512),            // default: 256
+  eng := wispy.New(
+      wispy.WithFileSystem(os.DirFS("templates/")),
+      wispy.WithAutoEscape(true),              // default: true
+      wispy.WithHotReload(true),               // default: false in prod
+      wispy.WithGlobal("siteName", "Acme"),
+      wispy.WithGlobal("version", "2.1.0"),
+      wispy.WithMaxStackDepth(512),            // default: 256
   )
 
   ---
   Rendering
 
   // Render to string
-  html, err := eng.RenderString("hello.html", grove.Ctx{
+  html, err := eng.RenderString("hello.html", wispy.Ctx{
       "user": user,
       "items": items,
   })
 
   // Render to writer (zero-copy for HTTP)
-  err := eng.Render(w, "hello.html", grove.Ctx{
+  err := eng.Render(w, "hello.html", wispy.Ctx{
       "user": user,
   })
 
   // Render a template literal (no file lookup)
-  html, err := eng.RenderTemplate(`Hello {{ name }}!`, grove.Ctx{
+  html, err := eng.RenderTemplate(`Hello {{ name }}!`, wispy.Ctx{
       "name": "World",
   })
 
@@ -550,19 +550,19 @@ scoped data.
   Filter Registration
 
   // Simple filter — one value in, one value out
-  eng.RegisterFilter("money", func(v grove.Value, args []grove.Value) (grove.Value, error) {
+  eng.RegisterFilter("money", func(v wispy.Value, args []wispy.Value) (wispy.Value, error) {
       f, err := v.Float()
       if err != nil {
-          return grove.Nil, err
+          return wispy.Nil, err
       }
-      return grove.StringValue(fmt.Sprintf("$%.2f", f)), nil
+      return wispy.StringValue(fmt.Sprintf("$%.2f", f)), nil
   })
 
   // Filter with arguments
   // {{ price | money("EUR", 2) }}
-  eng.RegisterFilter("money", func(v grove.Value, args []grove.Value) (grove.Value, error) {
-      currency := grove.ArgString(args, 0, "USD")
-      decimals := grove.ArgInt(args, 1, 2)
+  eng.RegisterFilter("money", func(v wispy.Value, args []wispy.Value) (wispy.Value, error) {
+      currency := wispy.ArgString(args, 0, "USD")
+      decimals := wispy.ArgInt(args, 1, 2)
       // ...
   })
 
@@ -570,7 +570,7 @@ scoped data.
   Tag Registration
 
   // {% cache 300 "key" %}...{% endcache %}
-  eng.RegisterTag("cache", grove.TagFunc(func(ctx *grove.TagContext) error {
+  eng.RegisterTag("cache", wispy.TagFunc(func(ctx *wispy.TagContext) error {
       ttl, _  := ctx.ArgInt(0)
       key, _  := ctx.ArgString(1)
 
@@ -594,7 +594,7 @@ scoped data.
   eng.SetGlobal("featureFlags", map[string]bool{"darkMode": true})
 
   // Typed global context struct (recommended for large apps)
-  eng.SetGlobals(grove.Ctx{
+  eng.SetGlobals(wispy.Ctx{
       "site":    siteConfig,
       "helpers": templateHelpers,
   })
@@ -603,17 +603,17 @@ scoped data.
   Template Stores
 
   // File system (default)
-  eng := grove.New(grove.WithFileSystem(os.DirFS("templates/")))
+  eng := wispy.New(wispy.WithFileSystem(os.DirFS("templates/")))
 
   // Embedded (go:embed — great for single-binary deploys)
   //go:embed templates
   var tmplFS embed.FS
-  eng := grove.New(grove.WithFileSystem(tmplFS))
+  eng := wispy.New(wispy.WithFileSystem(tmplFS))
 
   // In-memory (testing, dynamic templates)
-  store := grove.NewMemoryStore()
+  store := wispy.NewMemoryStore()
   store.Set("hello.html", `Hello {{ name }}!`)
-  eng := grove.New(grove.WithStore(store))
+  eng := wispy.New(wispy.WithStore(store))
 
   // Custom store — implement the interface
   type Store interface {
@@ -625,7 +625,7 @@ scoped data.
   Error Types
 
   // Errors carry source location for useful messages
-  var err *grove.TemplateError
+  var err *wispy.TemplateError
   if errors.As(renderErr, &err) {
       fmt.Println(err.Template)   // "layouts/base.html"
       fmt.Println(err.Line)       // 42
@@ -634,20 +634,20 @@ scoped data.
   }
 
   // Parse errors vs runtime errors are distinct types
-  var parseErr *grove.ParseError
-  var runtimeErr *grove.RuntimeError
+  var parseErr *wispy.ParseError
+  var runtimeErr *wispy.RuntimeError
 
   ---
   http.Handler Integration
 
   // Drop-in handler — renders template matching the request path
-  mux.Handle("/", eng.Handler("pages/index.html", func(r *http.Request) grove.Ctx {
-      return grove.Ctx{"user": sessionUser(r)}
+  mux.Handle("/", eng.Handler("pages/index.html", func(r *http.Request) wispy.Ctx {
+      return wispy.Ctx{"user": sessionUser(r)}
   }))
 
   // Or use directly in any handler
   func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-      h.eng.Render(w, "page.html", grove.Ctx{"req": r})
+      h.eng.Render(w, "page.html", wispy.Ctx{"req": r})
   }
 
   ---
@@ -677,8 +677,8 @@ scoped data.
 
   For user-submitted templates (SaaS builders, email editors, etc.) — restricts what the VM can do:
 
-  eng := grove.New(
-      grove.WithSandbox(grove.SandboxConfig{
+  eng := wispy.New(
+      wispy.WithSandbox(wispy.SandboxConfig{
           MaxRenderTime:   100 * time.Millisecond,
           MaxOutputBytes:  512 * 1024,    // 512KB
           MaxLoopIter:     10_000,
@@ -707,10 +707,10 @@ scoped data.
 
   Variable resolution uses a resolver interface, not reflect on arbitrary structs. Go types must opt in:
 
-  // Implement grove.Resolvable to expose fields to templates
+  // Implement wispy.Resolvable to expose fields to templates
   type User struct { Name string; Email string }
 
-  func (u User) GroveFields() map[string]any {
+  func (u User) WispyFields() map[string]any {
       return map[string]any{
           "name":  u.Name,
           "email": u.Email,
@@ -718,8 +718,8 @@ scoped data.
       }
   }
 
-  // OR use grove.Ctx directly — no reflection needed
-  eng.Render(w, "page.html", grove.Ctx{"user": grove.Ctx{
+  // OR use wispy.Ctx directly — no reflection needed
+  eng.Render(w, "page.html", wispy.Ctx{"user": wispy.Ctx{
       "name": user.Name,
   }})
 
@@ -729,14 +729,14 @@ scoped data.
   Content Security
 
   // Configure trusted output contexts — prevents CSS/JS injection via filter outputs
-  eng := grove.New(
-      grove.WithOutputContext(grove.ContextHTML),   // default
-      grove.WithOutputContext(grove.ContextText),   // plain text, no escaping
+  eng := wispy.New(
+      wispy.WithOutputContext(wispy.ContextHTML),   // default
+      wispy.WithOutputContext(wispy.ContextText),   // plain text, no escaping
   )
 
   // Filters can declare their output context
-  eng.RegisterFilter("markdownToHTML", grove.FilterFunc(...),
-      grove.FilterOutputsHTML(),   // return value treated as SafeHTML
+  eng.RegisterFilter("markdownToHTML", wispy.FilterFunc(...),
+      wispy.FilterOutputsHTML(),   // return value treated as SafeHTML
   )
 
   ---
@@ -779,7 +779,7 @@ should be inport in the head of the document... and not at the point where the t
 
   Usage in an HTTP handler:
 
-  result, err := eng.Render("page.html", grove.Ctx{"user": user})
+  result, err := eng.Render("page.html", wispy.Ctx{"user": user})
 
   // Inject collected assets into your base layout separately
   // OR use the built-in injection helper:
@@ -867,21 +867,21 @@ should be inport in the head of the document... and not at the point where the t
   Custom Filters
 
   // Stateless filter — most common case
-  eng.RegisterFilter("timeago", func(v grove.Value, args []grove.Value) (grove.Value, error) {
+  eng.RegisterFilter("timeago", func(v wispy.Value, args []wispy.Value) (wispy.Value, error) {
       t, err := v.Time()
       if err != nil {
-          return grove.Nil, err
+          return wispy.Nil, err
       }
-      return grove.StringValue(humanize.Time(t)), nil
+      return wispy.StringValue(humanize.Time(t)), nil
   })
 
   // Filter that returns trusted HTML
-  eng.RegisterFilter("markdown", grove.FilterFunc(
-      func(v grove.Value, args []grove.Value) (grove.Value, error) {
+  eng.RegisterFilter("markdown", wispy.FilterFunc(
+      func(v wispy.Value, args []wispy.Value) (wispy.Value, error) {
           html := goldmark.Convert([]byte(v.String()))
-          return grove.SafeHTMLValue(string(html)), nil  // skips auto-escape
+          return wispy.SafeHTMLValue(string(html)), nil  // skips auto-escape
       },
-      grove.FilterOutputsHTML(),
+      wispy.FilterOutputsHTML(),
   ))
 
   ---
@@ -889,7 +889,7 @@ should be inport in the head of the document... and not at the point where the t
 
   // {% feature "dark-mode" %}...{% endfeature %}
   // Renders body only if feature flag is enabled
-  eng.RegisterTag("feature", grove.TagFunc(func(ctx *grove.TagContext) error {
+  eng.RegisterTag("feature", wispy.TagFunc(func(ctx *wispy.TagContext) error {
       flag, err := ctx.ArgString(0)
       if err != nil {
           return err
@@ -914,7 +914,7 @@ should be inport in the head of the document... and not at the point where the t
       internal *db.Row   // never exposed
   }
 
-  func (p Product) GroveResolve(key string) (any, bool) {
+  func (p Product) WispyResolve(key string) (any, bool) {
       switch key {
       case "id":    return p.ID, true
       case "name":  return p.Name, true
@@ -923,7 +923,7 @@ should be inport in the head of the document... and not at the point where the t
       return nil, false
   }
 
-  grove.Ctx (plain map[string]any) implements Resolvable automatically — no boilerplate for simple cases.
+  wispy.Ctx (plain map[string]any) implements Resolvable automatically — no boilerplate for simple cases.
 
   ---
   Filter Packages
@@ -931,16 +931,16 @@ should be inport in the head of the document... and not at the point where the t
   Bundle related filters as installable packages:
 
   // Third-party filter bundle
-  import "github.com/someone/grove-humanize"
+  import "github.com/someone/wispy-humanize"
 
-  eng := grove.New(
-      grove.WithFilters(humanize.Filters()),   // registers: timeago, filesize, ordinal, ...
-      grove.WithFilters(myapp.Filters()),
+  eng := wispy.New(
+      wispy.WithFilters(humanize.Filters()),   // registers: timeago, filesize, ordinal, ...
+      wispy.WithFilters(myapp.Filters()),
   )
 
   // Define a filter package
-  func Filters() grove.FilterSet {
-      return grove.FilterSet{
+  func Filters() wispy.FilterSet {
+      return wispy.FilterSet{
           "timeago":  timeagoFilter,
           "filesize": filesizeFilter,
           "ordinal":  ordinalFilter,
@@ -951,9 +951,9 @@ should be inport in the head of the document... and not at the point where the t
   Tag Packages
 
   // Same pattern for tags
-  eng := grove.New(
-      grove.WithTags(cache.Tags(redisClient)),   // {% cache %}, {% nocache %}
-      grove.WithTags(i18n.Tags(translator)),      // {% trans %}, {% blocktrans %}
+  eng := wispy.New(
+      wispy.WithTags(cache.Tags(redisClient)),   // {% cache %}, {% nocache %}
+      wispy.WithTags(i18n.Tags(translator)),      // {% trans %}, {% blocktrans %}
   )
 
   ---
@@ -974,14 +974,14 @@ should be inport in the head of the document... and not at the point where the t
       return t, err
   }
 
-  eng := grove.New(grove.WithStore(&DBStore{db}))
+  eng := wispy.New(wispy.WithStore(&DBStore{db}))
 
   ---
   Middleware / Render Hooks
 
   // Intercept every render — useful for logging, tracing, caching
-  eng.OnRender(func(next grove.RenderFunc) grove.RenderFunc {
-      return func(name string, ctx grove.Ctx) (grove.RenderResult, error) {
+  eng.OnRender(func(next wispy.RenderFunc) wispy.RenderFunc {
+      return func(name string, ctx wispy.Ctx) (wispy.RenderResult, error) {
           start := time.Now()
           result, err := next(name, ctx)
           metrics.RecordRender(name, time.Since(start))
@@ -1010,7 +1010,7 @@ should be inport in the head of the document... and not at the point where the t
 
   Plus the additions: RenderResult, asset hoisting, component slots, metadata hoisting.
 
-  Ready to write the full spec doc to docs/superpowers/specs/2026-03-28-grove-template-engine-design.md? This will include all sections above plus the TDD reference test suite from your original brief.
+  Ready to write the full spec doc to docs/superpowers/specs/2026-03-28-wispy-template-engine-design.md? This will include all sections above plus the TDD reference test suite from your original brief.
 
 ❯ looks good let's write the spec to the project root though not under superpowers/specs i've create a new spec folder in the repo.
 

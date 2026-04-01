@@ -1,4 +1,4 @@
-# Grove Template Engine — Technical Specification
+# Wispy Template Engine — Technical Specification
 
 **Date:** 2026-03-28
 **Status:** Draft v1.0
@@ -10,7 +10,7 @@
 
 1. [Research Summaries](#1-research-summaries)
 2. [Comparative Analysis](#2-comparative-analysis)
-3. [Proposed Architecture: Grove](#3-proposed-architecture-grove)
+3. [Proposed Architecture: Wispy](#3-proposed-architecture-wispy)
    - 3.1 Goals & Design Principles
    - 3.2 Target Use Cases
    - 3.3 Templating Language & Syntax
@@ -247,7 +247,7 @@ Go applications needing Shopify Liquid compatibility, Jekyll-ported static sites
 
 ## 2. Comparative Analysis
 
-| Dimension | pongo2 | quicktemplate | osteele/liquid | **Grove (proposed)** |
+| Dimension | pongo2 | quicktemplate | osteele/liquid | **Wispy (proposed)** |
 |---|---|---|---|---|
 | **Syntax familiarity** | Django/Jinja2 ★★★★★ | Go developers ★★★★☆ | Shopify Liquid ★★★★☆ | Jinja2 + Go idioms ★★★★★ |
 | **Expression richness** | Medium (no ternary) | Full Go | Liquid-standard | Rich (ternary, inline if) |
@@ -269,11 +269,11 @@ Go applications needing Shopify Liquid compatibility, Jekyll-ported static sites
 | **Build step required** | ✗ | ✓ (qtc) | ✗ | **✗** |
 | **Error locations** | ✓ (line/col) | Compile-time | ✓ (SourceError) | **✓ (TemplateError)** |
 
-**Key insight:** None of the three engines have `RenderResult` metadata hoisting, asset deduplication, or component slots — these are web-application primitives that all three engines leave to the user to solve ad-hoc. Grove makes them first-class.
+**Key insight:** None of the three engines have `RenderResult` metadata hoisting, asset deduplication, or component slots — these are web-application primitives that all three engines leave to the user to solve ad-hoc. Wispy makes them first-class.
 
 ---
 
-## 3. Proposed Architecture: Grove
+## 3. Proposed Architecture: Wispy
 
 ### 3.1 Goals & Design Principles
 
@@ -289,7 +289,7 @@ Go applications needing Shopify Liquid compatibility, Jekyll-ported static sites
 
 - **Parse once, render many** — bytecode is immutable and shared across goroutines; only `VM` frames are per-render.
 - **Zero surprise defaults** — auto-escape on, strict undefined variable errors (configurable), sandbox off by default.
-- **Explicit over implicit** — trust is explicit (`| safe`), scope is explicit (`isolated`), exposure is explicit (`GroveResolve`).
+- **Explicit over implicit** — trust is explicit (`| safe`), scope is explicit (`isolated`), exposure is explicit (`WispyResolve`).
 - **Composition over inheritance** — components with slots are preferred over deep inheritance chains.
 - **Render side-effects are first-class** — assets, metadata, and custom hoisted data flow through `RenderResult`, not ad-hoc pointer tricks.
 - **Zero external dependencies** — one `go get`, no surprises.
@@ -342,7 +342,7 @@ Whitespace control via `-`:
 {{ user.address.city }}
 ```
 
-Attribute resolution order: `Resolvable.GroveResolve()` → map key → struct field (by `grove` tag, then name). Returns nil (not error) for missing keys by default; strict mode errors.
+Attribute resolution order: `Resolvable.WispyResolve()` → map key → struct field (by `wispy` tag, then name). Returns nil (not error) for missing keys by default; strict mode errors.
 
 #### Expressions
 
@@ -501,7 +501,7 @@ Operator precedence (high to low): `not` → `*/%` → `+-~` → `<><=>=` → `=
 | `loop.depth` | 1 for outer, 2 for first nested, etc. |
 | `loop.parent` | Parent loop's `loop` object |
 
-> **Map iteration:** When iterating over a Go `map`, Grove **sorts keys lexicographically** before iterating to guarantee deterministic output. `loop.length` equals `len(map)`. Slice/array iteration preserves insertion order. The two-variable form (`for k, v in map`) is **only** valid on maps; using it on a slice is a `ParseError`. On a slice, use the two-variable form with a list (`for i, item in list`) where `i` is the 0-based integer index.
+> **Map iteration:** When iterating over a Go `map`, Wispy **sorts keys lexicographically** before iterating to guarantee deterministic output. `loop.length` equals `len(map)`. Slice/array iteration preserves insertion order. The two-variable form (`for k, v in map`) is **only** valid on maps; using it on a slice is a `ParseError`. On a slice, use the two-variable form with a list (`for i, item in list`) where `i` is the 0-based integer index.
 
 #### Assignment & Scoping
 
@@ -702,8 +702,8 @@ The fix is always the same: centralize the canonical declaration in a base layou
 
 ```html
 {# Hoisted to RenderResult.Meta — accessible after render #}
-{% hoist "title" %}My Page — Grove Site{% endhoist %}
-{% hoist "description" %}A page about Grove.{% endhoist %}
+{% hoist "title" %}My Page — Wispy Site{% endhoist %}
+{% hoist "description" %}A page about Wispy.{% endhoist %}
 {% hoist "og:image" %}/img/hero.jpg{% endhoist %}
 ```
 
@@ -775,22 +775,22 @@ Content-hash (not mtime) as the cache key ensures correctness across atomic writ
 The cache is an **LRU** (least-recently-used) with a configurable maximum. Default: **500 entries**.
 
 ```go
-eng := grove.New(
-    grove.WithCacheSize(1000),  // raise limit for large template trees
-    grove.WithCacheSize(0),     // disable cache entirely — recompile every render (dev/test only)
+eng := wispy.New(
+    wispy.WithCacheSize(1000),  // raise limit for large template trees
+    wispy.WithCacheSize(0),     // disable cache entirely — recompile every render (dev/test only)
 )
 
 eng.ClearCache()                // evict all entries manually (e.g. after bulk template import)
-eng.CacheStats()                // returns grove.CacheStats{Len, Hits, Misses, Evictions}
+eng.CacheStats()                // returns wispy.CacheStats{Len, Hits, Misses, Evictions}
 ```
 
 Eviction is O(1) via a doubly-linked list + hash map. When the cache is full, the least-recently-used entry is dropped. Multi-tenant deployments rendering thousands of distinct user templates should set `WithCacheSize` to cover the expected working set, or accept that cold-start compile cost applies to evicted entries.
 
-> **Hot-reload interaction:** When hot-reload is enabled and a template's mtime changes, Grove re-reads, re-hashes, and re-compiles the template. The new bytecode gets a new content-hash key; the old key is left in the LRU and will be evicted normally. There is no explicit invalidation of the old entry on update — it becomes unreachable immediately (no new render will request the old hash) and is garbage-collected by the LRU when the cache fills.
+> **Hot-reload interaction:** When hot-reload is enabled and a template's mtime changes, Wispy re-reads, re-hashes, and re-compiles the template. The new bytecode gets a new content-hash key; the old key is left in the LRU and will be evicted normally. There is no explicit invalidation of the old entry on update — it becomes unreachable immediately (no new render will request the old hash) and is garbage-collected by the LRU when the cache fills.
 
 #### Why Bytecode VM over Tree-Walking
 
-| Factor | Tree-walk (pongo2/liquid) | Bytecode VM (Grove) |
+| Factor | Tree-walk (pongo2/liquid) | Bytecode VM (Wispy) |
 |---|---|---|
 | Per-node overhead | Virtual dispatch per node | Tight switch loop, branch-predictor-friendly |
 | Memory layout | Pointer-heavy AST nodes | Flat `[]Instruction` — cache-line friendly |
@@ -803,8 +803,8 @@ Eviction is O(1) via a doubly-linked list + hash map. When the cache is full, th
 ### 3.5 Core Architecture
 
 ```
-grove/
-├── pkg/grove/          ← Public API (engine.go, result.go, value.go, context.go)
+wispy/
+├── pkg/wispy/          ← Public API (engine.go, result.go, value.go, context.go)
 ├── internal/
 │   ├── lexer/          ← State-machine tokenizer
 │   ├── parser/         ← Recursive-descent parser → AST
@@ -816,13 +816,13 @@ grove/
 │   ├── tags/           ← Built-in tag implementations
 │   ├── store/          ← MemoryStore, FileSystemStore, interfaces
 │   └── coerce/         ← Type coercion (Value ↔ Go types)
-└── cmd/grovec/         ← Optional CLI: validate, disassemble bytecode
+└── cmd/wispyc/         ← Optional CLI: validate, disassemble bytecode
 ```
 
 #### Key Types
 
 ```go
-// Public API types (pkg/grove/)
+// Public API types (pkg/wispy/)
 
 type Engine struct { /* ... */ }
 type RenderResult struct {
@@ -842,7 +842,7 @@ type Asset struct {
 }
 type Data map[string]any      // template data passed to Render
 
-// Value type (internal/vm/ but exposed via pkg/grove/)
+// Value type (internal/vm/ but exposed via pkg/wispy/)
 type Value struct {
     typ  ValueType  // Nil, Bool, Int, Float, String, SafeHTML, List, Map
     ival int64
@@ -853,7 +853,7 @@ type Value struct {
 
 // Resolvable — types opt in to template visibility
 type Resolvable interface {
-    GroveResolve(key string) (any, bool)
+    WispyResolve(key string) (any, bool)
 }
 ```
 
@@ -981,8 +981,8 @@ The VM `OUTPUT` opcode checks `Value.typ`. `TypeSafeHTML` bypasses the HTML esca
 #### Sandbox Mode
 
 ```go
-eng := grove.New(
-    grove.WithSandbox(grove.SandboxConfig{
+eng := wispy.New(
+    wispy.WithSandbox(wispy.SandboxConfig{
         MaxRenderTime:   100 * time.Millisecond,
         MaxOutputBytes:  512 * 1024,
         MaxLoopIter:     10_000,
@@ -1000,7 +1000,7 @@ Sandbox enforcement has two tiers:
 - **Compile-time:** `AllowedFilters` and `AllowedTags` are checked by the compiler. Using a banned filter or tag emits a `ParseError` before any execution begins.
 - **Runtime (VM loop):** `MaxLoopIter`, `MaxOutputBytes`, `MaxRenderTime`, and `MaxCallDepth` are checked at runtime — `MaxLoopIter` per `ITER_NEXT` opcode, `MaxRenderTime` per N instructions, output bytes per `OUTPUT` opcode. No template trick can bypass them.
 
-> **Security assumption — trusted filter/tag registry:** The sandbox controls what *templates* can do; it does **not** sandbox registered Go filters and tags. A custom filter has full Go access — it can read environment variables, make network calls, or query a database. When operating in sandbox mode, `AllowedFilters` and `AllowedTags` must enumerate **only** filters and tags that are themselves safe for untrusted input. Never register application-internal filters (auth token generation, database writes, etc.) on an engine that evaluates untrusted templates. A separate `grove.Engine` instance with a minimal filter/tag set is the recommended pattern for user-facing template sandboxes.
+> **Security assumption — trusted filter/tag registry:** The sandbox controls what *templates* can do; it does **not** sandbox registered Go filters and tags. A custom filter has full Go access — it can read environment variables, make network calls, or query a database. When operating in sandbox mode, `AllowedFilters` and `AllowedTags` must enumerate **only** filters and tags that are themselves safe for untrusted input. Never register application-internal filters (auth token generation, database writes, etc.) on an engine that evaluates untrusted templates. A separate `wispy.Engine` instance with a minimal filter/tag set is the recommended pattern for user-facing template sandboxes.
 
 #### Variable Isolation Levels
 
@@ -1020,7 +1020,7 @@ Sandbox enforcement has two tiers:
 {% include "/abs/path.html" %}    → ParseError: template name must be relative
 ```
 
-Grove provides `grove.SafeTemplateName(name) error` as a public utility for custom store implementations to apply the same validation. Custom stores that do **not** use the local filesystem (e.g. database stores) should apply equivalent namespace isolation — for example, scoping names to a tenant prefix.
+Wispy provides `wispy.SafeTemplateName(name) error` as a public utility for custom store implementations to apply the same validation. Custom stores that do **not** use the local filesystem (e.g. database stores) should apply equivalent namespace isolation — for example, scoping names to a tenant prefix.
 
 #### Resolvable — Explicit Field Exposure
 
@@ -1033,7 +1033,7 @@ type User struct {
     AuthToken    string        // exported but deliberately hidden
 }
 
-func (u User) GroveResolve(key string) (any, bool) {
+func (u User) WispyResolve(key string) (any, bool) {
     switch key {
     case "id":    return u.ID, true
     case "name":  return u.Name, true
@@ -1044,7 +1044,7 @@ func (u User) GroveResolve(key string) (any, bool) {
 }
 ```
 
-Grove does **not** walk struct fields via `reflect` on arbitrary types. Only types implementing `Resolvable` (or passed as `grove.Data`) are accessible in templates.
+Wispy does **not** walk struct fields via `reflect` on arbitrary types. Only types implementing `Resolvable` (or passed as `wispy.Data`) are accessible in templates.
 
 ---
 
@@ -1054,37 +1054,37 @@ Grove does **not** walk struct fields via `reflect` on arbitrary types. Only typ
 
 ```go
 // Single filter
-eng.RegisterFilter("timeago", func(v grove.Value, args []grove.Value) (grove.Value, error) {
+eng.RegisterFilter("timeago", func(v wispy.Value, args []wispy.Value) (wispy.Value, error) {
     t, err := v.Time()
-    if err != nil { return grove.Nil, err }
-    return grove.StringValue(humanize.Time(t)), nil
+    if err != nil { return wispy.Nil, err }
+    return wispy.StringValue(humanize.Time(t)), nil
 })
 
 // Filter that returns trusted HTML
-eng.RegisterFilter("markdown", grove.FilterFunc(
-    func(v grove.Value, args []grove.Value) (grove.Value, error) {
+eng.RegisterFilter("markdown", wispy.FilterFunc(
+    func(v wispy.Value, args []wispy.Value) (wispy.Value, error) {
         html := renderMarkdown(v.String())
-        return grove.SafeHTMLValue(html), nil
+        return wispy.SafeHTMLValue(html), nil
     },
-    grove.FilterOutputsHTML(),
+    wispy.FilterOutputsHTML(),
 ))
 
 // Filter package — bundle of related filters
-eng.RegisterFilters(grove.FilterSet{
+eng.RegisterFilters(wispy.FilterSet{
     "money":    moneyFilter,
     "ordinal":  ordinalFilter,
     "filesize": filesizeFilter,
 })
 
 // Third-party filter package
-eng.RegisterFilters(humanize.GroveFilters())
+eng.RegisterFilters(humanize.WispyFilters())
 ```
 
 #### Tag Registration
 
 ```go
 // Block tag with body
-eng.RegisterTag("feature", grove.TagFunc(func(ctx *grove.TagContext) error {
+eng.RegisterTag("feature", wispy.TagFunc(func(ctx *wispy.TagContext) error {
     flag, err := ctx.ArgString(0)
     if err != nil { return err }
 
@@ -1096,7 +1096,7 @@ eng.RegisterTag("feature", grove.TagFunc(func(ctx *grove.TagContext) error {
 }))
 
 // Tag that contributes to RenderResult
-eng.RegisterTag("breadcrumb", grove.TagFunc(func(ctx *grove.TagContext) error {
+eng.RegisterTag("breadcrumb", wispy.TagFunc(func(ctx *wispy.TagContext) error {
     label, _ := ctx.ArgString(0)
     url, _ := ctx.ArgString(1)
     ctx.HoistMeta("breadcrumbs", append(
@@ -1112,7 +1112,7 @@ eng.RegisterTag("breadcrumb", grove.TagFunc(func(ctx *grove.TagContext) error {
 ```go
 type Product struct { ID int; Name string; price float64 }
 
-func (p Product) GroveResolve(key string) (any, bool) {
+func (p Product) WispyResolve(key string) (any, bool) {
     switch key {
     case "id":    return p.ID, true
     case "name":  return p.Name, true
@@ -1135,14 +1135,14 @@ type DBStore struct{ db *sql.DB }
 func (s *DBStore) Load(name string) ([]byte, error) { /* ... */ }
 func (s *DBStore) Mtime(name string) (time.Time, error) { /* ... */ }
 
-eng := grove.New(grove.WithStore(&DBStore{db}))
+eng := wispy.New(wispy.WithStore(&DBStore{db}))
 ```
 
 #### Render Middleware
 
 ```go
-eng.OnRender(func(next grove.RenderFunc) grove.RenderFunc {
-    return func(name string, ctx grove.Data) (grove.RenderResult, error) {
+eng.OnRender(func(next wispy.RenderFunc) wispy.RenderFunc {
+    return func(name string, ctx wispy.Data) (wispy.RenderResult, error) {
         start := time.Now()
         result, err := next(name, ctx)
         metrics.RecordRender(name, time.Since(start), err)
@@ -1158,22 +1158,22 @@ eng.OnRender(func(next grove.RenderFunc) grove.RenderFunc {
 #### Engine Creation
 
 ```go
-eng := grove.New()
+eng := wispy.New()
 
-eng := grove.New(
-    grove.WithFileSystem(os.DirFS("templates/")),
-    grove.WithAutoEscape(true),               // default: true
-    grove.WithHotReload(true),                // default: false
-    grove.WithStrictVariables(true),          // default: false (nil for missing)
-    grove.WithGlobal("siteName", "Acme"),
-    grove.WithGlobals(grove.Data{
+eng := wispy.New(
+    wispy.WithFileSystem(os.DirFS("templates/")),
+    wispy.WithAutoEscape(true),               // default: true
+    wispy.WithHotReload(true),                // default: false
+    wispy.WithStrictVariables(true),          // default: false (nil for missing)
+    wispy.WithGlobal("siteName", "Acme"),
+    wispy.WithGlobals(wispy.Data{
         "site":    siteConfig,
         "helpers": helperFuncs,
     }),
-    grove.WithFilters(myapp.Filters()),
-    grove.WithTags(cache.Tags(redisClient)),
-    grove.WithSandbox(grove.DefaultSandboxConfig()),
-    grove.WithMaxStackDepth(512),
+    wispy.WithFilters(myapp.Filters()),
+    wispy.WithTags(cache.Tags(redisClient)),
+    wispy.WithSandbox(wispy.DefaultSandboxConfig()),
+    wispy.WithMaxStackDepth(512),
 )
 ```
 
@@ -1183,7 +1183,7 @@ All `Render*` methods accept a `context.Context` as the first argument for cance
 
 ```go
 // Render to RenderResult (body + assets + meta)
-result, err := eng.Render(ctx, "page.html", grove.Data{
+result, err := eng.Render(ctx, "page.html", wispy.Data{
     "user":  user,
     "items": items,
 })
@@ -1196,13 +1196,13 @@ result.Meta["title"]           // any — hoisted metadata
 fullHTML := result.InjectAssets()
 
 // Render directly to writer (zero-copy HTTP path; cannot collect assets for injection)
-err := eng.RenderTo(ctx, w, "page.html", grove.Data{"user": user})
+err := eng.RenderTo(ctx, w, "page.html", wispy.Data{"user": user})
 
 // Render an inline template string.
 // The template has no name and no store association:
 // {% extends %}, {% import %}, and {% include %} are parse errors in inline templates.
 // Use eng.Render() with a MemoryStore for composition in tests.
-result, err := eng.RenderTemplate(ctx, `Hello {{ name }}!`, grove.Data{"name": "World"})
+result, err := eng.RenderTemplate(ctx, `Hello {{ name }}!`, wispy.Data{"name": "World"})
 ```
 
 #### HTTP Integration
@@ -1210,7 +1210,7 @@ result, err := eng.RenderTemplate(ctx, `Hello {{ name }}!`, grove.Data{"name": "
 ```go
 // Direct handler use — r.Context() propagates cancellation into the render
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-    result, err := h.eng.Render(r.Context(), "page.html", grove.Data{"req": r})
+    result, err := h.eng.Render(r.Context(), "page.html", wispy.Data{"req": r})
     if err != nil {
         http.Error(w, "render error", 500)
         return
@@ -1221,16 +1221,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // Middleware helper
-mux.Handle("/about", eng.Handler("pages/about.html", func(r *http.Request) grove.Data {
-    return grove.Data{"user": sessionUser(r)}
+mux.Handle("/about", eng.Handler("pages/about.html", func(r *http.Request) wispy.Data {
+    return wispy.Data{"user": sessionUser(r)}
 }))
 ```
 
 #### Error Types
 
 ```go
-var err *grove.ParseError   // syntax errors — template source + line + column
-var err *grove.RuntimeError // execution errors — template + line + variable name
+var err *wispy.ParseError   // syntax errors — template source + line + column
+var err *wispy.RuntimeError // execution errors — template + line + variable name
 
 if errors.As(err, &parseErr) {
     fmt.Printf("%s:%d:%d %s\n", parseErr.Template, parseErr.Line, parseErr.Column, parseErr.Message)
@@ -1242,10 +1242,10 @@ if errors.As(err, &parseErr) {
 
 ### 3.10 TDD Reference Test Suite
 
-The following tests are organized by feature and are ready to drop into `grove_test.go` (or split into per-feature files). They use `github.com/stretchr/testify/require` for assertions and assume the package is `grove` with the public API described in §3.9.
+The following tests are organized by feature and are ready to drop into `wispy_test.go` (or split into per-feature files). They use `github.com/stretchr/testify/require` for assertions and assume the package is `wispy` with the public API described in §3.9.
 
 ```go
-package grove_test
+package wispy_test
 
 import (
     "context"
@@ -1256,25 +1256,25 @@ import (
     "time"
 
     "github.com/stretchr/testify/require"
-    "your/module/pkg/grove"
+    "your/module/pkg/wispy"
 )
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-func newEngine(t *testing.T, opts ...grove.Option) *grove.Engine {
+func newEngine(t *testing.T, opts ...wispy.Option) *wispy.Engine {
     t.Helper()
-    eng := grove.New(opts...)
+    eng := wispy.New(opts...)
     return eng
 }
 
-func render(t *testing.T, eng *grove.Engine, tmpl string, data grove.Data) string {
+func render(t *testing.T, eng *wispy.Engine, tmpl string, data wispy.Data) string {
     t.Helper()
     result, err := eng.RenderTemplate(context.Background(), tmpl, data)
     require.NoError(t, err)
     return result.Body
 }
 
-func renderErr(t *testing.T, eng *grove.Engine, tmpl string, data grove.Data) error {
+func renderErr(t *testing.T, eng *wispy.Engine, tmpl string, data wispy.Data) error {
     t.Helper()
     _, err := eng.RenderTemplate(context.Background(), tmpl, data)
     return err
@@ -1284,15 +1284,15 @@ func renderErr(t *testing.T, eng *grove.Engine, tmpl string, data grove.Data) er
 
 func TestVariables_SimpleString(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `Hello, {{ name }}!`, grove.Data{"name": "World"})
+    got := render(t, eng, `Hello, {{ name }}!`, wispy.Data{"name": "World"})
     require.Equal(t, "Hello, World!", got)
 }
 
 func TestVariables_NestedAccess(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ user.address.city }}`, grove.Data{
-        "user": grove.Data{
-            "address": grove.Data{"city": "Berlin"},
+    got := render(t, eng, `{{ user.address.city }}`, wispy.Data{
+        "user": wispy.Data{
+            "address": wispy.Data{"city": "Berlin"},
         },
     })
     require.Equal(t, "Berlin", got)
@@ -1300,7 +1300,7 @@ func TestVariables_NestedAccess(t *testing.T) {
 
 func TestVariables_IndexAccess(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ items[0] }}`, grove.Data{
+    got := render(t, eng, `{{ items[0] }}`, wispy.Data{
         "items": []string{"alpha", "beta", "gamma"},
     })
     require.Equal(t, "alpha", got)
@@ -1308,7 +1308,7 @@ func TestVariables_IndexAccess(t *testing.T) {
 
 func TestVariables_MapAccess(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ config["debug"] }}`, grove.Data{
+    got := render(t, eng, `{{ config["debug"] }}`, wispy.Data{
         "config": map[string]any{"debug": "true"},
     })
     require.Equal(t, "true", got)
@@ -1316,15 +1316,15 @@ func TestVariables_MapAccess(t *testing.T) {
 
 func TestVariables_UndefinedReturnsEmpty(t *testing.T) {
     eng := newEngine(t) // strict=false by default
-    got := render(t, eng, `[{{ missing }}]`, grove.Data{})
+    got := render(t, eng, `[{{ missing }}]`, wispy.Data{})
     require.Equal(t, "[]", got)
 }
 
 func TestVariables_StrictModeErrors(t *testing.T) {
-    eng := newEngine(t, grove.WithStrictVariables(true))
-    err := renderErr(t, eng, `{{ missing }}`, grove.Data{})
+    eng := newEngine(t, wispy.WithStrictVariables(true))
+    err := renderErr(t, eng, `{{ missing }}`, wispy.Data{})
     require.Error(t, err)
-    var re *grove.RuntimeError
+    var re *wispy.RuntimeError
     require.ErrorAs(t, err, &re)
     require.Contains(t, re.Message, "missing")
 }
@@ -1332,18 +1332,18 @@ func TestVariables_StrictModeErrors(t *testing.T) {
 func TestVariables_Resolvable(t *testing.T) {
     type Product struct{ Name string; price float64 }
     p := Product{Name: "Widget", price: 9.99}
-    // Product must implement grove.Resolvable
+    // Product must implement wispy.Resolvable
     eng := newEngine(t)
-    got := render(t, eng, `{{ product.name }}`, grove.Data{"product": p})
+    got := render(t, eng, `{{ product.name }}`, wispy.Data{"product": p})
     require.Equal(t, "Widget", got)
 }
 
 func TestVariables_ResolvableHidesUnexposed(t *testing.T) {
     type Product struct{ Name string; price float64 }
     p := Product{Name: "Widget", price: 9.99}
-    eng := newEngine(t, grove.WithStrictVariables(true))
-    // price is exposed via GroveResolve but passwordHash is not
-    err := renderErr(t, eng, `{{ product.secret }}`, grove.Data{"product": p})
+    eng := newEngine(t, wispy.WithStrictVariables(true))
+    // price is exposed via WispyResolve but passwordHash is not
+    err := renderErr(t, eng, `{{ product.secret }}`, wispy.Data{"product": p})
     require.Error(t, err)
 }
 
@@ -1359,41 +1359,41 @@ func TestExpressions_Arithmetic(t *testing.T) {
         {`{{ 10 % 3 }}`, "1"},
     }
     for _, tc := range cases {
-        got := render(t, eng, tc.tmpl, grove.Data{})
+        got := render(t, eng, tc.tmpl, wispy.Data{})
         require.Equal(t, tc.want, got, "template: %s", tc.tmpl)
     }
 }
 
 func TestExpressions_StringConcat(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ "Hello" ~ ", " ~ name ~ "!" }}`, grove.Data{"name": "Grove"})
-    require.Equal(t, "Hello, Grove!", got)
+    got := render(t, eng, `{{ "Hello" ~ ", " ~ name ~ "!" }}`, wispy.Data{"name": "Wispy"})
+    require.Equal(t, "Hello, Wispy!", got)
 }
 
 func TestExpressions_Comparison(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ x > 5 }}`, grove.Data{"x": 10})
+    got := render(t, eng, `{{ x > 5 }}`, wispy.Data{"x": 10})
     require.Equal(t, "true", got)
 }
 
 func TestExpressions_LogicalOperators(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ a and b }}`, grove.Data{"a": true, "b": true})
+    got := render(t, eng, `{{ a and b }}`, wispy.Data{"a": true, "b": true})
     require.Equal(t, "true", got)
 
-    got = render(t, eng, `{{ a and b }}`, grove.Data{"a": true, "b": false})
+    got = render(t, eng, `{{ a and b }}`, wispy.Data{"a": true, "b": false})
     require.Equal(t, "false", got)
 }
 
 func TestExpressions_InlineTernary(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ name if active else "Guest" }}`, grove.Data{
+    got := render(t, eng, `{{ name if active else "Guest" }}`, wispy.Data{
         "name":   "Alice",
         "active": true,
     })
     require.Equal(t, "Alice", got)
 
-    got = render(t, eng, `{{ name if active else "Guest" }}`, grove.Data{
+    got = render(t, eng, `{{ name if active else "Guest" }}`, wispy.Data{
         "name":   "Alice",
         "active": false,
     })
@@ -1402,7 +1402,7 @@ func TestExpressions_InlineTernary(t *testing.T) {
 
 func TestExpressions_Not(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ not banned }}`, grove.Data{"banned": false})
+    got := render(t, eng, `{{ not banned }}`, wispy.Data{"banned": false})
     require.Equal(t, "true", got)
 }
 
@@ -1410,14 +1410,14 @@ func TestExpressions_Not(t *testing.T) {
 
 func TestFilters_Upcase(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ name | upcase }}`, grove.Data{"name": "grove"})
+    got := render(t, eng, `{{ name | upcase }}`, wispy.Data{"name": "wispy"})
     require.Equal(t, "GROVE", got)
 }
 
 func TestFilters_Truncate_LengthExcludesSuffix(t *testing.T) {
     eng := newEngine(t)
     // n=10 counts chars before suffix; "Hello, thi" (10) + "…" = 11 total
-    got := render(t, eng, `{{ bio | truncate(10, "…") }}`, grove.Data{
+    got := render(t, eng, `{{ bio | truncate(10, "…") }}`, wispy.Data{
         "bio": "Hello, this is a long biography.",
     })
     require.Equal(t, "Hello, thi…", got)
@@ -1425,19 +1425,19 @@ func TestFilters_Truncate_LengthExcludesSuffix(t *testing.T) {
 
 func TestFilters_Truncate_NoTruncationWhenShort(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ bio | truncate(100, "…") }}`, grove.Data{"bio": "Short."})
+    got := render(t, eng, `{{ bio | truncate(100, "…") }}`, wispy.Data{"bio": "Short."})
     require.Equal(t, "Short.", got) // no truncation, no suffix appended
 }
 
 func TestFilters_Chain(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ name | upcase | truncate(5, "") }}`, grove.Data{"name": "grove engine"})
+    got := render(t, eng, `{{ name | upcase | truncate(5, "") }}`, wispy.Data{"name": "wispy engine"})
     require.Equal(t, "GROVE", got)
 }
 
 func TestFilters_Sort(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ items | sort | join(", ") }}`, grove.Data{
+    got := render(t, eng, `{{ items | sort | join(", ") }}`, wispy.Data{
         "items": []string{"banana", "apple", "cherry"},
     })
     require.Equal(t, "apple, banana, cherry", got)
@@ -1446,8 +1446,8 @@ func TestFilters_Sort(t *testing.T) {
 func TestFilters_SortByAttr(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng, `{% for p in products | sort(attr="name") %}{{ p.name }} {% endfor %}`,
-        grove.Data{
-            "products": []grove.Data{
+        wispy.Data{
+            "products": []wispy.Data{
                 {"name": "Zebra"},
                 {"name": "Apple"},
                 {"name": "Mango"},
@@ -1458,32 +1458,32 @@ func TestFilters_SortByAttr(t *testing.T) {
 
 func TestFilters_ExpressionThenFilter(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ price * 1.2 | round(2) }}`, grove.Data{"price": 9.99})
+    got := render(t, eng, `{{ price * 1.2 | round(2) }}`, wispy.Data{"price": 9.99})
     require.Equal(t, "11.99", got)
 }
 
 func TestFilters_CustomFilter(t *testing.T) {
     eng := newEngine(t)
-    eng.RegisterFilter("shout", func(v grove.Value, args []grove.Value) (grove.Value, error) {
-        return grove.StringValue(strings.ToUpper(v.String()) + "!!!"), nil
+    eng.RegisterFilter("shout", func(v wispy.Value, args []wispy.Value) (wispy.Value, error) {
+        return wispy.StringValue(strings.ToUpper(v.String()) + "!!!"), nil
     })
-    got := render(t, eng, `{{ msg | shout }}`, grove.Data{"msg": "hello"})
+    got := render(t, eng, `{{ msg | shout }}`, wispy.Data{"msg": "hello"})
     require.Equal(t, "HELLO!!!", got)
 }
 
 func TestFilters_CustomFilterWithArgs(t *testing.T) {
     eng := newEngine(t)
-    eng.RegisterFilter("repeat", func(v grove.Value, args []grove.Value) (grove.Value, error) {
-        n := grove.ArgInt(args, 0, 2)
-        return grove.StringValue(strings.Repeat(v.String(), n)), nil
+    eng.RegisterFilter("repeat", func(v wispy.Value, args []wispy.Value) (wispy.Value, error) {
+        n := wispy.ArgInt(args, 0, 2)
+        return wispy.StringValue(strings.Repeat(v.String(), n)), nil
     })
-    got := render(t, eng, `{{ "ha" | repeat(3) }}`, grove.Data{})
+    got := render(t, eng, `{{ "ha" | repeat(3) }}`, wispy.Data{})
     require.Equal(t, "hahaha", got)
 }
 
 func TestFilters_SafeFilter_TrustedHTML(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ html | safe }}`, grove.Data{
+    got := render(t, eng, `{{ html | safe }}`, wispy.Data{
         "html": "<b>bold</b>",
     })
     require.Equal(t, "<b>bold</b>", got)
@@ -1491,14 +1491,14 @@ func TestFilters_SafeFilter_TrustedHTML(t *testing.T) {
 
 func TestFilters_CustomHTMLFilter_SkipsEscape(t *testing.T) {
     eng := newEngine(t)
-    eng.RegisterFilter("bold", grove.FilterFunc(
-        func(v grove.Value, _ []grove.Value) (grove.Value, error) {
-            return grove.SafeHTMLValue("<b>" + v.String() + "</b>"), nil
+    eng.RegisterFilter("bold", wispy.FilterFunc(
+        func(v wispy.Value, _ []wispy.Value) (wispy.Value, error) {
+            return wispy.SafeHTMLValue("<b>" + v.String() + "</b>"), nil
         },
-        grove.FilterOutputsHTML(),
+        wispy.FilterOutputsHTML(),
     ))
-    got := render(t, eng, `{{ name | bold }}`, grove.Data{"name": "Grove"})
-    require.Equal(t, "<b>Grove</b>", got)
+    got := render(t, eng, `{{ name | bold }}`, wispy.Data{"name": "Wispy"})
+    require.Equal(t, "<b>Wispy</b>", got)
 }
 
 // ─── 4. CONTROL FLOW ─────────────────────────────────────────────────────────
@@ -1506,28 +1506,28 @@ func TestFilters_CustomHTMLFilter_SkipsEscape(t *testing.T) {
 func TestIf_Basic(t *testing.T) {
     eng := newEngine(t)
     tmpl := `{% if active %}yes{% else %}no{% endif %}`
-    require.Equal(t, "yes", render(t, eng, tmpl, grove.Data{"active": true}))
-    require.Equal(t, "no", render(t, eng, tmpl, grove.Data{"active": false}))
+    require.Equal(t, "yes", render(t, eng, tmpl, wispy.Data{"active": true}))
+    require.Equal(t, "no", render(t, eng, tmpl, wispy.Data{"active": false}))
 }
 
 func TestIf_Elif(t *testing.T) {
     eng := newEngine(t)
     tmpl := `{% if role == "admin" %}admin{% elif role == "mod" %}mod{% else %}user{% endif %}`
-    require.Equal(t, "admin", render(t, eng, tmpl, grove.Data{"role": "admin"}))
-    require.Equal(t, "mod", render(t, eng, tmpl, grove.Data{"role": "mod"}))
-    require.Equal(t, "user", render(t, eng, tmpl, grove.Data{"role": "viewer"}))
+    require.Equal(t, "admin", render(t, eng, tmpl, wispy.Data{"role": "admin"}))
+    require.Equal(t, "mod", render(t, eng, tmpl, wispy.Data{"role": "mod"}))
+    require.Equal(t, "user", render(t, eng, tmpl, wispy.Data{"role": "viewer"}))
 }
 
 func TestUnless(t *testing.T) {
     eng := newEngine(t)
     tmpl := `{% unless banned %}Welcome!{% endunless %}`
-    require.Equal(t, "Welcome!", render(t, eng, tmpl, grove.Data{"banned": false}))
-    require.Equal(t, "", render(t, eng, tmpl, grove.Data{"banned": true}))
+    require.Equal(t, "Welcome!", render(t, eng, tmpl, wispy.Data{"banned": false}))
+    require.Equal(t, "", render(t, eng, tmpl, wispy.Data{"banned": true}))
 }
 
 func TestFor_Basic(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% for x in items %}{{ x }},{% endfor %}`, grove.Data{
+    got := render(t, eng, `{% for x in items %}{{ x }},{% endfor %}`, wispy.Data{
         "items": []string{"a", "b", "c"},
     })
     require.Equal(t, "a,b,c,", got)
@@ -1535,7 +1535,7 @@ func TestFor_Basic(t *testing.T) {
 
 func TestFor_Empty(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% for x in items %}{{ x }}{% empty %}none{% endfor %}`, grove.Data{
+    got := render(t, eng, `{% for x in items %}{{ x }}{% empty %}none{% endfor %}`, wispy.Data{
         "items": []string{},
     })
     require.Equal(t, "none", got)
@@ -1545,7 +1545,7 @@ func TestFor_LoopVariables(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% for x in items %}{{ loop.index }}:{{ loop.first }}:{{ loop.last }} {% endfor %}`,
-        grove.Data{"items": []string{"a", "b", "c"}},
+        wispy.Data{"items": []string{"a", "b", "c"}},
     )
     require.Equal(t, "1:true:false 2:false:false 3:false:true ", got)
 }
@@ -1553,13 +1553,13 @@ func TestFor_LoopVariables(t *testing.T) {
 func TestFor_LoopLength(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng, `{% for x in items %}{{ loop.length }}{% endfor %}`,
-        grove.Data{"items": []int{1, 2, 3}})
+        wispy.Data{"items": []int{1, 2, 3}})
     require.Equal(t, "333", got)
 }
 
 func TestFor_Range(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% for i in range(1, 4) %}{{ i }}{% endfor %}`, grove.Data{})
+    got := render(t, eng, `{% for i in range(1, 4) %}{{ i }}{% endfor %}`, wispy.Data{})
     require.Equal(t, "123", got)
 }
 
@@ -1567,7 +1567,7 @@ func TestFor_NestedLoopDepth(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% for a in outer %}{% for b in inner %}{{ loop.depth }}{% endfor %}{% endfor %}`,
-        grove.Data{
+        wispy.Data{
             "outer": []int{1, 2},
             "inner": []int{1, 2},
         },
@@ -1579,13 +1579,13 @@ func TestFor_NestedLoopDepth(t *testing.T) {
 
 func TestSet_Basic(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% set x = 42 %}{{ x }}`, grove.Data{})
+    got := render(t, eng, `{% set x = 42 %}{{ x }}`, wispy.Data{})
     require.Equal(t, "42", got)
 }
 
 func TestSet_Expression(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% set total = price * qty %}{{ total }}`, grove.Data{
+    got := render(t, eng, `{% set total = price * qty %}{{ total }}`, wispy.Data{
         "price": 5,
         "qty":   3,
     })
@@ -1594,7 +1594,7 @@ func TestSet_Expression(t *testing.T) {
 
 func TestWith_ScopeIsolation(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% with %}{% set x = 99 %}{{ x }}{% endwith %}[{{ x }}]`, grove.Data{})
+    got := render(t, eng, `{% with %}{% set x = 99 %}{{ x }}{% endwith %}[{{ x }}]`, wispy.Data{})
     require.Equal(t, "99[]", got) // x not visible outside with block
 }
 
@@ -1602,7 +1602,7 @@ func TestCapture(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% capture greeting %}Hello, {{ name }}!{% endcapture %}{{ greeting | upcase }}`,
-        grove.Data{"name": "Grove"},
+        wispy.Data{"name": "Wispy"},
     )
     require.Equal(t, "HELLO, GROVE!", got)
 }
@@ -1610,46 +1610,46 @@ func TestCapture(t *testing.T) {
 // ─── 6. TEMPLATE INHERITANCE ─────────────────────────────────────────────────
 
 func TestInheritance_ExtendsBlock(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("base.html", `<html><body>{% block content %}base{% endblock %}</body></html>`)
     store.Set("child.html", `{% extends "base.html" %}{% block content %}child{% endblock %}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "child.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "child.html", wispy.Data{})
     require.NoError(t, err)
     require.Equal(t, "<html><body>child</body></html>", result.Body)
 }
 
 func TestInheritance_Super(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("base.html", `{% block title %}Base Title{% endblock %}`)
     store.Set("child.html", `{% extends "base.html" %}{% block title %}Child — {{ super() }}{% endblock %}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "child.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "child.html", wispy.Data{})
     require.NoError(t, err)
     require.Equal(t, "Child — Base Title", result.Body)
 }
 
 func TestInheritance_DefaultBlock(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("base.html", `{% block footer %}Default Footer{% endblock %}`)
     store.Set("child.html", `{% extends "base.html" %}`) // no footer override
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "child.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "child.html", wispy.Data{})
     require.NoError(t, err)
     require.Equal(t, "Default Footer", result.Body)
 }
 
 func TestInheritance_MultiLevel(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("root.html", `[{% block a %}root{% endblock %}]`)
     store.Set("mid.html", `{% extends "root.html" %}{% block a %}mid:{{ super() }}{% endblock %}`)
     store.Set("leaf.html", `{% extends "mid.html" %}{% block a %}leaf:{{ super() }}{% endblock %}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "leaf.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "leaf.html", wispy.Data{})
     require.NoError(t, err)
     require.Equal(t, "[leaf:mid:root]", result.Body)
 }
@@ -1661,7 +1661,7 @@ func TestMacro_Basic(t *testing.T) {
     got := render(t, eng, `
 {% macro greet(name, greeting="Hello") %}{{ greeting }}, {{ name }}!{% endmacro %}
 {{ greet("Alice") }}
-{{ greet("Bob", greeting="Hi") }}`, grove.Data{})
+{{ greet("Bob", greeting="Hi") }}`, wispy.Data{})
     require.Contains(t, got, "Hello, Alice!")
     require.Contains(t, got, "Hi, Bob!")
 }
@@ -1670,7 +1670,7 @@ func TestMacro_DefaultArgs(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% macro btn(label, type="button", disabled=false) %}<button type="{{ type }}"{{ " disabled" if disabled }}>{{ label }}</button>{% endmacro %}{{ btn("Save", type="submit") }}`,
-        grove.Data{},
+        wispy.Data{},
     )
     require.Equal(t, `<button type="submit">Save</button>`, strings.TrimSpace(got))
 }
@@ -1679,52 +1679,52 @@ func TestMacro_CallerBody(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng, `
 {% macro card(title) %}<div><h2>{{ title }}</h2>{{ caller() }}</div>{% endmacro %}
-{% call card("News") %}<p>Breaking!</p>{% endcall %}`, grove.Data{})
+{% call card("News") %}<p>Breaking!</p>{% endcall %}`, wispy.Data{})
     require.Contains(t, got, "<div><h2>News</h2><p>Breaking!</p></div>")
 }
 
 // ─── 8. INCLUDE & IMPORT ─────────────────────────────────────────────────────
 
 func TestInclude_Basic(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("main.html", `before{% include "partial.html" %}after`)
     store.Set("partial.html", `[PARTIAL:{{ name }}]`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "main.html", grove.Data{"name": "Grove"})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "main.html", wispy.Data{"name": "Wispy"})
     require.NoError(t, err)
-    require.Equal(t, "before[PARTIAL:Grove]after", result.Body)
+    require.Equal(t, "before[PARTIAL:Wispy]after", result.Body)
 }
 
 func TestInclude_WithExtraVars(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("main.html", `{% include "p.html" with { label: "Custom" } %}`)
     store.Set("p.html", `{{ label }}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "main.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "main.html", wispy.Data{})
     require.NoError(t, err)
     require.Equal(t, "Custom", result.Body)
 }
 
 func TestInclude_Isolated(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("main.html", `{% set secret = "hidden" %}{% include "p.html" isolated %}`)
     store.Set("p.html", `[{{ secret }}]`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "main.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "main.html", wispy.Data{})
     require.NoError(t, err)
     require.Equal(t, "[]", result.Body) // secret not visible
 }
 
 func TestImport_Macros(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("macros.html", `{% macro shout(x) %}{{ x | upcase }}!{% endmacro %}`)
     store.Set("page.html", `{% import "macros.html" as m %}{{ m.shout("hello") }}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
     require.NoError(t, err)
     require.Equal(t, "HELLO!", result.Body)
 }
@@ -1732,34 +1732,34 @@ func TestImport_Macros(t *testing.T) {
 // ─── 9. COMPONENTS WITH SLOTS ────────────────────────────────────────────────
 
 func TestComponent_DefaultSlot(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("components/box.html", `{% props title %}<div class="box"><h2>{{ title }}</h2>{% slot %}{% endslot %}</div>`)
     store.Set("page.html", `{% component "components/box.html" title="Hello" %}<p>Content</p>{% endcomponent %}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
     require.NoError(t, err)
     require.Equal(t, `<div class="box"><h2>Hello</h2><p>Content</p></div>`, result.Body)
 }
 
 func TestComponent_NamedSlot(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("components/card.html", `<div>{% slot "header" %}default header{% endslot %}<main>{% slot %}{% endslot %}</main></div>`)
     store.Set("page.html", `{% component "components/card.html" %}Body{% fill "header" %}Custom Header{% endfill %}{% endcomponent %}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
     require.NoError(t, err)
     require.Equal(t, "<div>Custom Header<main>Body</main></div>", result.Body)
 }
 
 func TestComponent_SlotFallback(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("components/card.html", `<footer>{% slot "footer" %}Default Footer{% endslot %}</footer>`)
     store.Set("page.html", `{% component "components/card.html" %}{% endcomponent %}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
     require.NoError(t, err)
     require.Equal(t, "<footer>Default Footer</footer>", result.Body)
 }
@@ -1767,13 +1767,13 @@ func TestComponent_SlotFallback(t *testing.T) {
 // ─── 10. ASSET HOISTING ──────────────────────────────────────────────────────
 
 func TestAsset_Deduplication(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("a.html", `{% asset src="/js/lib.js" type="script" %}[A]`)
     store.Set("b.html", `{% asset src="/js/lib.js" type="script" %}[B]`)
     store.Set("page.html", `{% include "a.html" %}{% include "b.html" %}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
     require.NoError(t, err)
 
     // Body has no injected assets
@@ -1789,7 +1789,7 @@ func TestAsset_StylesCollected(t *testing.T) {
     result, err := eng.RenderTemplate(
         context.Background(),
         `{% asset src="/css/btn.css" type="style" %}{% asset src="/css/form.css" type="style" %}hello`,
-        grove.Data{},
+        wispy.Data{},
     )
     require.NoError(t, err)
     require.Len(t, result.Assets.Styles, 2)
@@ -1802,7 +1802,7 @@ func TestAsset_InjectAssets(t *testing.T) {
     result, err := eng.RenderTemplate(
         context.Background(),
         `{% asset src="/js/app.js" type="script" defer %}<html><head></head><body>hi</body></html>`,
-        grove.Data{},
+        wispy.Data{},
     )
     require.NoError(t, err)
     full := result.InjectAssets()
@@ -1817,7 +1817,7 @@ func TestHoist_BasicMetadata(t *testing.T) {
     result, err := eng.RenderTemplate(
         context.Background(),
         `{% hoist "title" %}My Page{% endhoist %}content`,
-        grove.Data{},
+        wispy.Data{},
     )
     require.NoError(t, err)
     require.Equal(t, "content", result.Body)
@@ -1829,7 +1829,7 @@ func TestHoist_MultipleMeta(t *testing.T) {
     result, err := eng.RenderTemplate(
         context.Background(),
         `{% hoist "title" %}T{% endhoist %}{% hoist "desc" %}D{% endhoist %}body`,
-        grove.Data{},
+        wispy.Data{},
     )
     require.NoError(t, err)
     require.Equal(t, "T", result.Meta["title"])
@@ -1841,7 +1841,7 @@ func TestHoist_MultipleMeta(t *testing.T) {
 
 func TestEscape_AutoEscapeByDefault(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ input }}`, grove.Data{
+    got := render(t, eng, `{{ input }}`, wispy.Data{
         "input": `<script>alert("xss")</script>`,
     })
     require.Equal(t, `&lt;script&gt;alert(&#34;xss&#34;)&lt;/script&gt;`, got)
@@ -1849,19 +1849,19 @@ func TestEscape_AutoEscapeByDefault(t *testing.T) {
 
 func TestEscape_SafeFilterBypassesEscape(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{{ html | safe }}`, grove.Data{"html": "<b>bold</b>"})
+    got := render(t, eng, `{{ html | safe }}`, wispy.Data{"html": "<b>bold</b>"})
     require.Equal(t, "<b>bold</b>", got)
 }
 
 func TestEscape_RawBlockBypassesEscape(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% raw %}{{ not_a_variable }}{% endraw %}`, grove.Data{})
+    got := render(t, eng, `{% raw %}{{ not_a_variable }}{% endraw %}`, wispy.Data{})
     require.Equal(t, "{{ not_a_variable }}", got)
 }
 
 func TestEscape_NilValueNoOutput(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `[{{ val }}]`, grove.Data{"val": nil})
+    got := render(t, eng, `[{{ val }}]`, wispy.Data{"val": nil})
     require.Equal(t, "[]", got)
 }
 
@@ -1869,75 +1869,75 @@ func TestEscape_NilValueNoOutput(t *testing.T) {
 
 func TestWhitespace_StripLeft(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, "  {{- name }}", grove.Data{"name": "Grove"})
-    require.Equal(t, "Grove", got)
+    got := render(t, eng, "  {{- name }}", wispy.Data{"name": "Wispy"})
+    require.Equal(t, "Wispy", got)
 }
 
 func TestWhitespace_StripRight(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, "{{ name -}}  ", grove.Data{"name": "Grove"})
-    require.Equal(t, "Grove", got)
+    got := render(t, eng, "{{ name -}}  ", wispy.Data{"name": "Wispy"})
+    require.Equal(t, "Wispy", got)
 }
 
 func TestWhitespace_StripBoth(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, "  {{- name -}}  extra", grove.Data{"name": "Grove"})
-    require.Equal(t, "Groveextra", got)
+    got := render(t, eng, "  {{- name -}}  extra", wispy.Data{"name": "Wispy"})
+    require.Equal(t, "Wispyextra", got)
 }
 
 func TestWhitespace_TagStrip(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, "before\n{%- if true -%}\nhello\n{%- endif -%}\nafter", grove.Data{})
+    got := render(t, eng, "before\n{%- if true -%}\nhello\n{%- endif -%}\nafter", wispy.Data{})
     require.Equal(t, "beforehelloafter", got)
 }
 
 // ─── 14. SANDBOX MODE ────────────────────────────────────────────────────────
 
 func TestSandbox_MaxLoopIterations(t *testing.T) {
-    eng := newEngine(t, grove.WithSandbox(grove.SandboxConfig{
+    eng := newEngine(t, wispy.WithSandbox(wispy.SandboxConfig{
         MaxLoopIter: 5,
     }))
     _, err := eng.RenderTemplate(
         context.Background(),
         `{% for i in range(1, 100) %}{{ i }}{% endfor %}`,
-        grove.Data{},
+        wispy.Data{},
     )
     require.Error(t, err)
     require.Contains(t, err.Error(), "loop limit")
 }
 
 func TestSandbox_MaxOutputBytes(t *testing.T) {
-    eng := newEngine(t, grove.WithSandbox(grove.SandboxConfig{
+    eng := newEngine(t, wispy.WithSandbox(wispy.SandboxConfig{
         MaxOutputBytes: 10,
     }))
     _, err := eng.RenderTemplate(
         context.Background(),
         `{{ text }}`,
-        grove.Data{"text": strings.Repeat("x", 100)},
+        wispy.Data{"text": strings.Repeat("x", 100)},
     )
     require.Error(t, err)
     require.Contains(t, err.Error(), "output limit")
 }
 
 func TestSandbox_AllowedFiltersOnly(t *testing.T) {
-    eng := newEngine(t, grove.WithSandbox(grove.SandboxConfig{
+    eng := newEngine(t, wispy.WithSandbox(wispy.SandboxConfig{
         AllowedFilters: []string{"upcase"},
     }))
-    _, err := eng.RenderTemplate(context.Background(), `{{ name | downcase }}`, grove.Data{"name": "Grove"})
+    _, err := eng.RenderTemplate(context.Background(), `{{ name | downcase }}`, wispy.Data{"name": "Wispy"})
     require.Error(t, err)
-    var pe *grove.ParseError // AllowedFilters is enforced at compile time
+    var pe *wispy.ParseError // AllowedFilters is enforced at compile time
     require.ErrorAs(t, err, &pe)
     require.Contains(t, pe.Message, "downcase")
 }
 
 func TestSandbox_DisableIncludes(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("partial.html", `secret`)
     store.Set("page.html", `{% include "partial.html" %}`)
-    eng := newEngine(t, grove.WithStore(store), grove.WithSandbox(grove.SandboxConfig{
+    eng := newEngine(t, wispy.WithStore(store), wispy.WithSandbox(wispy.SandboxConfig{
         DisableIncludes: true,
     }))
-    _, err := eng.Render(context.Background(), "page.html", grove.Data{})
+    _, err := eng.Render(context.Background(), "page.html", wispy.Data{})
     require.Error(t, err)
 }
 
@@ -1948,7 +1948,7 @@ func TestCustomTag_ConditionalRender(t *testing.T) {
     flags := map[string]bool{"dark-mode": true, "beta": false}
     eng.SetGlobal("featureFlags", flags)
 
-    eng.RegisterTag("feature", grove.TagFunc(func(ctx *grove.TagContext) error {
+    eng.RegisterTag("feature", wispy.TagFunc(func(ctx *wispy.TagContext) error {
         flag, err := ctx.ArgString(0)
         if err != nil {
             return err
@@ -1959,7 +1959,7 @@ func TestCustomTag_ConditionalRender(t *testing.T) {
         return ctx.DiscardBody()
     }))
 
-    got := render(t, eng, `{% feature "dark-mode" %}dark{% endfeature %}{% feature "beta" %}beta{% endfeature %}`, grove.Data{})
+    got := render(t, eng, `{% feature "dark-mode" %}dark{% endfeature %}{% feature "beta" %}beta{% endfeature %}`, wispy.Data{})
     require.Equal(t, "dark", got)
 }
 
@@ -1969,8 +1969,8 @@ func TestGlobalContext_AvailableInAllRenders(t *testing.T) {
     eng := newEngine(t)
     eng.SetGlobal("siteName", "Acme Corp")
 
-    got1 := render(t, eng, `{{ siteName }}`, grove.Data{})
-    got2 := render(t, eng, `Welcome to {{ siteName }}`, grove.Data{})
+    got1 := render(t, eng, `{{ siteName }}`, wispy.Data{})
+    got2 := render(t, eng, `Welcome to {{ siteName }}`, wispy.Data{})
     require.Equal(t, "Acme Corp", got1)
     require.Equal(t, "Welcome to Acme Corp", got2)
 }
@@ -1979,13 +1979,13 @@ func TestGlobalContext_RenderContextOverridesGlobal(t *testing.T) {
     eng := newEngine(t)
     eng.SetGlobal("greeting", "Hello")
 
-    got := render(t, eng, `{{ greeting }}`, grove.Data{"greeting": "Hi"})
+    got := render(t, eng, `{{ greeting }}`, wispy.Data{"greeting": "Hi"})
     require.Equal(t, "Hi", got) // render ctx wins
 }
 
 func TestGlobalContext_LocalScopeOverridesRenderContext(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% set x = "local" %}{{ x }}`, grove.Data{"x": "render"})
+    got := render(t, eng, `{% set x = "local" %}{{ x }}`, wispy.Data{"x": "render"})
     require.Equal(t, "local", got)
 }
 
@@ -1996,7 +1996,7 @@ func TestRenderResult_BodyAndAssets(t *testing.T) {
     result, err := eng.RenderTemplate(
         context.Background(),
         `{% asset src="/app.css" type="style" %}{% asset src="/app.js" type="script" async %}Hello`,
-        grove.Data{},
+        wispy.Data{},
     )
     require.NoError(t, err)
     require.Equal(t, "Hello", result.Body)
@@ -2009,32 +2009,32 @@ func TestRenderResult_BodyAndAssets(t *testing.T) {
 
 func TestError_ParseError_LineNumber(t *testing.T) {
     eng := newEngine(t)
-    _, err := eng.RenderTemplate(context.Background(), "line1\n{% if %}\nline3", grove.Data{})
+    _, err := eng.RenderTemplate(context.Background(), "line1\n{% if %}\nline3", wispy.Data{})
     require.Error(t, err)
-    var pe *grove.ParseError
+    var pe *wispy.ParseError
     require.ErrorAs(t, err, &pe)
     require.Equal(t, 2, pe.Line)
 }
 
 func TestError_UndefinedFilterInStrictMode(t *testing.T) {
     eng := newEngine(t)
-    _, err := eng.RenderTemplate(context.Background(), `{{ name | nonexistent }}`, grove.Data{"name": "x"})
+    _, err := eng.RenderTemplate(context.Background(), `{{ name | nonexistent }}`, wispy.Data{"name": "x"})
     require.Error(t, err)
 }
 
 func TestError_DivisionByZero(t *testing.T) {
     eng := newEngine(t)
-    _, err := eng.RenderTemplate(context.Background(), `{{ 10 / x }}`, grove.Data{"x": 0})
+    _, err := eng.RenderTemplate(context.Background(), `{{ 10 / x }}`, wispy.Data{"x": 0})
     require.Error(t, err)
 }
 
 func TestError_MaxInheritanceDepth(t *testing.T) {
     // Circular inheritance: a extends b extends a → parse error
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("a.html", `{% extends "b.html" %}`)
     store.Set("b.html", `{% extends "a.html" %}`)
-    eng := newEngine(t, grove.WithStore(store))
-    _, err := eng.Render(context.Background(), "a.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    _, err := eng.Render(context.Background(), "a.html", wispy.Data{})
     require.Error(t, err)
     require.Contains(t, err.Error(), "circular")
 }
@@ -2042,35 +2042,35 @@ func TestError_MaxInheritanceDepth(t *testing.T) {
 // ─── 19. STORE: MEMORY STORE ─────────────────────────────────────────────────
 
 func TestMemoryStore_SetAndRender(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("hello.html", `Hello, {{ name }}!`)
-    eng := newEngine(t, grove.WithStore(store))
+    eng := newEngine(t, wispy.WithStore(store))
 
-    result, err := eng.Render(context.Background(), "hello.html", grove.Data{"name": "World"})
+    result, err := eng.Render(context.Background(), "hello.html", wispy.Data{"name": "World"})
     require.NoError(t, err)
     require.Equal(t, "Hello, World!", result.Body)
 }
 
 func TestMemoryStore_HotReload(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("t.html", `v1`)
-    eng := newEngine(t, grove.WithStore(store), grove.WithHotReload(true))
+    eng := newEngine(t, wispy.WithStore(store), wispy.WithHotReload(true))
 
-    r1, _ := eng.Render(context.Background(), "t.html", grove.Data{})
+    r1, _ := eng.Render(context.Background(), "t.html", wispy.Data{})
     require.Equal(t, "v1", r1.Body)
 
     store.Set("t.html", `v2`) // update template
     time.Sleep(time.Millisecond) // ensure mtime advances
 
-    r2, _ := eng.Render(context.Background(), "t.html", grove.Data{})
+    r2, _ := eng.Render(context.Background(), "t.html", wispy.Data{})
     require.Equal(t, "v2", r2.Body)
 }
 
 // ─── 20. PERFORMANCE-SENSITIVE PATHS ─────────────────────────────────────────
 
 func BenchmarkRender_SimpleSubstitution(b *testing.B) {
-    eng := grove.New()
-    data := grove.Data{"name": "World", "count": 42}
+    eng := wispy.New()
+    data := wispy.Data{"name": "World", "count": 42}
     bgCtx := context.Background()
     b.ReportAllocs()
     b.ResetTimer()
@@ -2083,8 +2083,8 @@ func BenchmarkRender_SimpleSubstitution(b *testing.B) {
 }
 
 func BenchmarkRender_FilterChain(b *testing.B) {
-    eng := grove.New()
-    data := grove.Data{"items": []string{"banana", "apple", "cherry", "date"}}
+    eng := wispy.New()
+    data := wispy.Data{"items": []string{"banana", "apple", "cherry", "date"}}
     bgCtx := context.Background()
     b.ReportAllocs()
     b.ResetTimer()
@@ -2101,12 +2101,12 @@ func BenchmarkRender_FilterChain(b *testing.B) {
 }
 
 func BenchmarkRender_ForLoop(b *testing.B) {
-    eng := grove.New()
-    items := make([]grove.Data, 100)
+    eng := wispy.New()
+    items := make([]wispy.Data, 100)
     for i := range items {
-        items[i] = grove.Data{"name": "Item", "price": float64(i) * 1.5}
+        items[i] = wispy.Data{"name": "Item", "price": float64(i) * 1.5}
     }
-    data := grove.Data{"items": items}
+    data := wispy.Data{"items": items}
     bgCtx := context.Background()
     b.ReportAllocs()
     b.ResetTimer()
@@ -2123,11 +2123,11 @@ func BenchmarkRender_ForLoop(b *testing.B) {
 }
 
 func BenchmarkRender_Inheritance(b *testing.B) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("base.html", `<html><head>{% block head %}{% endblock %}</head><body>{% block body %}{% endblock %}</body></html>`)
     store.Set("page.html", `{% extends "base.html" %}{% block head %}<title>{{ title }}</title>{% endblock %}{% block body %}<h1>{{ title }}</h1><p>{{ content }}</p>{% endblock %}`)
-    eng := grove.New(grove.WithStore(store))
-    data := grove.Data{"title": "Benchmark Page", "content": "Lorem ipsum dolor sit amet."}
+    eng := wispy.New(wispy.WithStore(store))
+    data := wispy.Data{"title": "Benchmark Page", "content": "Lorem ipsum dolor sit amet."}
     bgCtx := context.Background()
     b.ReportAllocs()
     b.ResetTimer()
@@ -2140,8 +2140,8 @@ func BenchmarkRender_Inheritance(b *testing.B) {
 }
 
 func BenchmarkRender_Parallel(b *testing.B) {
-    eng := grove.New()
-    data := grove.Data{"name": "World"}
+    eng := wispy.New()
+    data := wispy.Data{"name": "World"}
     bgCtx := context.Background()
     b.ReportAllocs()
     b.ResetTimer()
@@ -2159,13 +2159,13 @@ func BenchmarkRender_Parallel(b *testing.B) {
 
 func TestUnless_RendersWhenFalse(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% unless banned %}Welcome!{% endunless %}`, grove.Data{"banned": false})
+    got := render(t, eng, `{% unless banned %}Welcome!{% endunless %}`, wispy.Data{"banned": false})
     require.Equal(t, "Welcome!", got)
 }
 
 func TestUnless_SuppressedWhenTrue(t *testing.T) {
     eng := newEngine(t)
-    got := render(t, eng, `{% unless banned %}Welcome!{% endunless %}`, grove.Data{"banned": true})
+    got := render(t, eng, `{% unless banned %}Welcome!{% endunless %}`, wispy.Data{"banned": true})
     require.Equal(t, "", got)
 }
 
@@ -2176,7 +2176,7 @@ func TestWith_LeakedSetIsNotVisible(t *testing.T) {
     // Variable set inside {% with %} must not be accessible outside
     got := render(t, eng,
         `{% with %}{% set x = "inner" %}{{ x }}{% endwith %}[{{ x }}]`,
-        grove.Data{})
+        wispy.Data{})
     require.Equal(t, "inner[]", got)
 }
 
@@ -2184,8 +2184,8 @@ func TestWith_OuterVarsReadable(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% with %}{{ name }}{% endwith %}`,
-        grove.Data{"name": "Grove"})
-    require.Equal(t, "Grove", got) // outer vars are visible inside
+        wispy.Data{"name": "Wispy"})
+    require.Equal(t, "Wispy", got) // outer vars are visible inside
 }
 
 // ─── 23. CAPTURE ──────────────────────────────────────────────────────────────
@@ -2194,7 +2194,7 @@ func TestCapture_RendersToVariable(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% capture greeting %}Hello, {{ name }}!{% endcapture %}[{{ greeting }}]`,
-        grove.Data{"name": "World"})
+        wispy.Data{"name": "World"})
     require.Equal(t, "[Hello, World!]", got)
 }
 
@@ -2202,7 +2202,7 @@ func TestCapture_NotOutputtedDuringCapture(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `before{% capture x %}captured{% endcapture %}after`,
-        grove.Data{})
+        wispy.Data{})
     require.Equal(t, "beforeafter", got) // capture block produces no direct output
 }
 
@@ -2212,7 +2212,7 @@ func TestMacro_PositionalArgs(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% macro greet(name) %}Hello, {{ name }}!{% endmacro %}{{ greet("Alice") }}`,
-        grove.Data{})
+        wispy.Data{})
     require.Equal(t, "Hello, Alice!", got)
 }
 
@@ -2220,7 +2220,7 @@ func TestMacro_NamedArgsWithDefaults(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% macro greet(name, greeting="Hello") %}{{ greeting }}, {{ name }}!{% endmacro %}{{ greet("Bob", greeting="Hi") }}`,
-        grove.Data{})
+        wispy.Data{})
     require.Equal(t, "Hi, Bob!", got)
 }
 
@@ -2228,7 +2228,7 @@ func TestMacro_DefaultUsedWhenArgOmitted(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% macro greet(name, greeting="Hello") %}{{ greeting }}, {{ name }}!{% endmacro %}{{ greet("Alice") }}`,
-        grove.Data{})
+        wispy.Data{})
     require.Equal(t, "Hello, Alice!", got)
 }
 
@@ -2236,7 +2236,7 @@ func TestMacro_CallerBlock(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% macro card(title) %}<div><h2>{{ title }}</h2>{{ caller() }}</div>{% endmacro %}{% call card("Orders") %}<p>3 items</p>{% endcall %}`,
-        grove.Data{})
+        wispy.Data{})
     require.Equal(t, "<div><h2>Orders</h2><p>3 items</p></div>", got)
 }
 
@@ -2248,7 +2248,7 @@ type testUser struct {
     token string // unexported — should be unreachable
 }
 
-func (u testUser) GroveResolve(key string) (any, bool) {
+func (u testUser) WispyResolve(key string) (any, bool) {
     switch key {
     case "name":  return u.Name, true
     case "email": return u.Email, true
@@ -2259,21 +2259,21 @@ func (u testUser) GroveResolve(key string) (any, bool) {
 func TestResolvable_ExposedFieldsAccessible(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng, `{{ user.name }} <{{ user.email }}>`,
-        grove.Data{"user": testUser{Name: "Alice", Email: "alice@example.com"}})
+        wispy.Data{"user": testUser{Name: "Alice", Email: "alice@example.com"}})
     require.Equal(t, "Alice <alice@example.com>", got)
 }
 
 func TestResolvable_UnexposedFieldReturnsEmpty(t *testing.T) {
     eng := newEngine(t) // strict=false — missing returns empty, not error
     got := render(t, eng, `[{{ user.token }}]`,
-        grove.Data{"user": testUser{Name: "Alice", Email: "alice@example.com", token: "secret"}})
-    require.Equal(t, "[]", got) // token not in GroveResolve — silently empty
+        wispy.Data{"user": testUser{Name: "Alice", Email: "alice@example.com", token: "secret"}})
+    require.Equal(t, "[]", got) // token not in WispyResolve — silently empty
 }
 
 func TestResolvable_UnexposedFieldStrictModeErrors(t *testing.T) {
-    eng := newEngine(t, grove.WithStrictVariables(true))
+    eng := newEngine(t, wispy.WithStrictVariables(true))
     err := renderErr(t, eng, `{{ user.token }}`,
-        grove.Data{"user": testUser{Name: "Alice", token: "secret"}})
+        wispy.Data{"user": testUser{Name: "Alice", token: "secret"}})
     require.Error(t, err)
 }
 
@@ -2283,7 +2283,7 @@ func TestForLoop_NestedLoopParent(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% for i in outer %}{% for j in inner %}{{ loop.parent.index }}.{{ loop.index }} {% endfor %}{% endfor %}`,
-        grove.Data{"outer": []int{1, 2}, "inner": []int{1, 2}})
+        wispy.Data{"outer": []int{1, 2}, "inner": []int{1, 2}})
     require.Equal(t, "1.1 1.2 2.1 2.2 ", got)
 }
 
@@ -2291,7 +2291,7 @@ func TestForLoop_LoopDepth(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% for i in outer %}{{ loop.depth }}{% for j in inner %}{{ loop.depth }}{% endfor %}{% endfor %}`,
-        grove.Data{"outer": []int{1}, "inner": []int{1, 2}})
+        wispy.Data{"outer": []int{1}, "inner": []int{1, 2}})
     require.Equal(t, "112", got) // outer=1, inner=2,2
 }
 
@@ -2299,11 +2299,11 @@ func TestForLoop_LoopLength(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{{ loop.length }}`,  // available outside loop? No — only inside
-        grove.Data{})
+        wispy.Data{})
     // loop.length is only defined inside {% for %}
     got = render(t, eng,
         `{% for i in items %}{{ loop.length }}{% endfor %}`,
-        grove.Data{"items": []string{"a", "b", "c"}})
+        wispy.Data{"items": []string{"a", "b", "c"}})
     require.Equal(t, "333", got)
 }
 
@@ -2313,7 +2313,7 @@ func TestForLoop_MapIterationSorted(t *testing.T) {
     eng := newEngine(t)
     got := render(t, eng,
         `{% for k, v in data %}{{ k }}={{ v }} {% endfor %}`,
-        grove.Data{"data": map[string]string{"z": "1", "a": "2", "m": "3"}})
+        wispy.Data{"data": map[string]string{"z": "1", "a": "2", "m": "3"}})
     require.Equal(t, "a=2 m=3 z=1 ", got) // keys sorted lexicographically
 }
 
@@ -2322,9 +2322,9 @@ func TestForLoop_MapIterationSorted(t *testing.T) {
 func TestRenderTemplate_ExtendsIsParseError(t *testing.T) {
     eng := newEngine(t)
     _, err := eng.RenderTemplate(context.Background(),
-        `{% extends "base.html" %}`, grove.Data{})
+        `{% extends "base.html" %}`, wispy.Data{})
     require.Error(t, err)
-    var pe *grove.ParseError
+    var pe *wispy.ParseError
     require.ErrorAs(t, err, &pe)
     require.Contains(t, pe.Message, "extends not allowed in inline templates")
 }
@@ -2332,9 +2332,9 @@ func TestRenderTemplate_ExtendsIsParseError(t *testing.T) {
 func TestRenderTemplate_ImportIsParseError(t *testing.T) {
     eng := newEngine(t)
     _, err := eng.RenderTemplate(context.Background(),
-        `{% import "macros.html" as m %}`, grove.Data{})
+        `{% import "macros.html" as m %}`, wispy.Data{})
     require.Error(t, err)
-    var pe *grove.ParseError
+    var pe *wispy.ParseError
     require.ErrorAs(t, err, &pe)
     require.Contains(t, pe.Message, "import not allowed in inline templates")
 }
@@ -2342,25 +2342,25 @@ func TestRenderTemplate_ImportIsParseError(t *testing.T) {
 // ─── 29. RENDER TAG ───────────────────────────────────────────────────────────
 
 func TestRender_IsolatedScope(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("card.html", `[{{ item.name }}:{{ secret }}]`)
     store.Set("page.html", `{% set secret = "hidden" %}{% render "card.html" with { item: item } %}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "page.html", grove.Data{
-        "item": grove.Data{"name": "Widget"},
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "page.html", wispy.Data{
+        "item": wispy.Data{"name": "Widget"},
     })
     require.NoError(t, err)
     require.Equal(t, "[Widget:]", result.Body) // secret not visible in render scope
 }
 
 func TestRender_ShorthandSyntax(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("label.html", `{{ text | upcase }}`)
     store.Set("page.html", `{% render "label.html" text: "hello" %}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
     require.NoError(t, err)
     require.Equal(t, "HELLO", result.Body)
 }
@@ -2368,12 +2368,12 @@ func TestRender_ShorthandSyntax(t *testing.T) {
 // ─── 30. CIRCULAR INCLUDE ─────────────────────────────────────────────────────
 
 func TestInclude_CircularIsParseError(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("a.html", `{% include "b.html" %}`)
     store.Set("b.html", `{% include "a.html" %}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    _, err := eng.Render(context.Background(), "a.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    _, err := eng.Render(context.Background(), "a.html", wispy.Data{})
     require.Error(t, err)
     require.Contains(t, err.Error(), "circular")
 }
@@ -2385,7 +2385,7 @@ func TestHoist_WithExpression(t *testing.T) {
     result, err := eng.RenderTemplate(
         context.Background(),
         `{% hoist "title" %}{{ site }} — {{ page }}{% endhoist %}body`,
-        grove.Data{"site": "Acme", "page": "Home"},
+        wispy.Data{"site": "Acme", "page": "Home"},
     )
     require.NoError(t, err)
     require.Equal(t, "body", result.Body)
@@ -2399,7 +2399,7 @@ func TestCapture_InsideForLoop(t *testing.T) {
     // Each iteration overwrites the capture variable; final value is from last iteration.
     got := render(t, eng,
         `{% for x in items %}{% capture last %}{{ x }}{% endcapture %}{% endfor %}{{ last }}`,
-        grove.Data{"items": []string{"a", "b", "c"}},
+        wispy.Data{"items": []string{"a", "b", "c"}},
     )
     require.Equal(t, "c", got)
 }
@@ -2411,7 +2411,7 @@ func TestInjectAssets_NoHeadTagIsNoop(t *testing.T) {
     result, err := eng.RenderTemplate(
         context.Background(),
         `{% asset src="/app.js" type="script" %}just a fragment`,
-        grove.Data{},
+        wispy.Data{},
     )
     require.NoError(t, err)
     // InjectAssets returns body unchanged when there is no </head> to inject before
@@ -2438,13 +2438,13 @@ func TestEngine_ConcurrentRenders(t *testing.T) {
             for i := 0; i < renders; i++ {
                 got, err := eng.RenderTemplate(context.Background(),
                     `Hello, {{ name }}! ({{ id }})`,
-                    grove.Data{"name": "Grove", "id": id},
+                    wispy.Data{"name": "Wispy", "id": id},
                 )
                 if err != nil {
                     errors <- err
                     return
                 }
-                expected := fmt.Sprintf("Hello, Grove! (%d)", id)
+                expected := fmt.Sprintf("Hello, Wispy! (%d)", id)
                 if got.Body != expected {
                     errors <- fmt.Errorf("goroutine %d: got %q, want %q", id, got.Body, expected)
                     return
@@ -2463,24 +2463,24 @@ func TestEngine_ConcurrentRenders(t *testing.T) {
 // ─── 35. COMPONENT PROPS VALIDATION ──────────────────────────────────────────
 
 func TestComponent_MissingRequiredPropIsError(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     // title has no default — it is required
     store.Set("components/card.html", `{% props title, variant="default" %}<div>{{ title }}</div>`)
     store.Set("page.html", `{% component "components/card.html" variant="primary" %}{% endcomponent %}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    _, err := eng.Render(context.Background(), "page.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    _, err := eng.Render(context.Background(), "page.html", wispy.Data{})
     require.Error(t, err)
     require.Contains(t, err.Error(), "title") // error names the missing prop
 }
 
 func TestComponent_OptionalPropUsesDefault(t *testing.T) {
-    store := grove.NewMemoryStore()
+    store := wispy.NewMemoryStore()
     store.Set("components/badge.html", `{% props label, color="blue" %}<span class="{{ color }}">{{ label }}</span>`)
     store.Set("page.html", `{% component "components/badge.html" label="New" %}{% endcomponent %}`)
 
-    eng := newEngine(t, grove.WithStore(store))
-    result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+    eng := newEngine(t, wispy.WithStore(store))
+    result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
     require.NoError(t, err)
     require.Equal(t, `<span class="blue">New</span>`, result.Body)
 }
@@ -2494,7 +2494,7 @@ func TestComponent_OptionalPropUsesDefault(t *testing.T) {
 
 **Bytecode VM vs Tree-Walk**
 
-The bytecode VM delivers ~3–5× better throughput than a tree-walker on realistic templates. However it significantly increases implementation complexity: two compilation stages (parse→AST, AST→bytecode), an opcode design that must be stable, and a disassembler for debugging. If Grove's primary users are building CMSs or small web apps, the added complexity may not be justified compared to a well-optimized tree-walker. The bytecode approach only pays off if the render path is actually the bottleneck, which for most database-backed web apps it is not.
+The bytecode VM delivers ~3–5× better throughput than a tree-walker on realistic templates. However it significantly increases implementation complexity: two compilation stages (parse→AST, AST→bytecode), an opcode design that must be stable, and a disassembler for debugging. If Wispy's primary users are building CMSs or small web apps, the added complexity may not be justified compared to a well-optimized tree-walker. The bytecode approach only pays off if the render path is actually the bottleneck, which for most database-backed web apps it is not.
 
 **Hot-Reload vs Maximum Performance**
 
@@ -2506,7 +2506,7 @@ The Jinja2-inspired expression language (ternary, inline if/else, chained filter
 
 **Resolvable Interface vs reflect**
 
-Not using reflection on arbitrary structs is correct for security but imposes a boilerplate burden on callers. Every domain type needs a `GroveResolve` method, or must be converted to `grove.Data` at the call site. In large applications this adds friction. A possible mitigation is a `grove.Reflect(v)` adapter that wraps a struct with reflection, opt-in per call site, making the danger explicit.
+Not using reflection on arbitrary structs is correct for security but imposes a boilerplate burden on callers. Every domain type needs a `WispyResolve` method, or must be converted to `wispy.Data` at the call site. In large applications this adds friction. A possible mitigation is a `wispy.Reflect(v)` adapter that wraps a struct with reflection, opt-in per call site, making the danger explicit.
 
 **RenderResult vs io.Writer**
 
@@ -2514,7 +2514,7 @@ Returning `RenderResult` (which buffers the body as a string) prevents zero-copy
 
 **Component System Complexity**
 
-Components with named slots, `{% fill %}`, `{% props %}`, and `{% asset %}` declarations form a sub-language inside the template language. This is powerful but adds significant surface area: slot resolution, fill matching, props validation, and scope isolation between component and caller all need careful specification and testing. Vue, Svelte, and React have all had subtle slot scoping bugs in their histories. Grove uses runtime inheritance resolution (not compile-time), but slot content is still evaluated in the caller's scope — this boundary is a known source of confusion.
+Components with named slots, `{% fill %}`, `{% props %}`, and `{% asset %}` declarations form a sub-language inside the template language. This is powerful but adds significant surface area: slot resolution, fill matching, props validation, and scope isolation between component and caller all need careful specification and testing. Vue, Svelte, and React have all had subtle slot scoping bugs in their histories. Wispy uses runtime inheritance resolution (not compile-time), but slot content is still evaluated in the caller's scope — this boundary is a known source of confusion.
 
 ---
 
@@ -2538,7 +2538,7 @@ Imported macros (`{% import "macros.html" as m %}`) run in the scope of the file
 
 **No Compile-Time Type Checking**
 
-Unlike quicktemplate, Grove templates are not type-checked at build time. A typo in `{{ uesr.name }}` will silently produce empty output (or error in strict mode) — not a compile error. Teams investing heavily in Grove should consider building a static analysis tool (similar to the `grovec` CLI mentioned) that validates variable names against a provided schema.
+Unlike quicktemplate, Wispy templates are not type-checked at build time. A typo in `{{ uesr.name }}` will silently produce empty output (or error in strict mode) — not a compile error. Teams investing heavily in Wispy should consider building a static analysis tool (similar to the `wispyc` CLI mentioned) that validates variable names against a provided schema.
 
 **Deep Inheritance Performance**
 
@@ -2550,15 +2550,15 @@ Inheritance is resolved at runtime: each `OP_EXTENDS` call loads the parent via 
 
 **vs quicktemplate: Raw throughput**
 
-Grove's target of ~1–3M renders/sec is ~3–8× slower than quicktemplate's ~8M+/sec. For applications rendering hundreds of thousands of requests per second, Grove is not the right choice. quicktemplate has no viable substitute for maximum throughput.
+Wispy's target of ~1–3M renders/sec is ~3–8× slower than quicktemplate's ~8M+/sec. For applications rendering hundreds of thousands of requests per second, Wispy is not the right choice. quicktemplate has no viable substitute for maximum throughput.
 
 **vs pongo2: Ecosystem and maturity**
 
-pongo2 has years of production use, a `pongo2-addons` ecosystem, integration examples with Gin/Beego/Macaron, and a large test fixture library. Grove starts from zero. Ecosystem growth depends entirely on adoption.
+pongo2 has years of production use, a `pongo2-addons` ecosystem, integration examples with Gin/Beego/Macaron, and a large test fixture library. Wispy starts from zero. Ecosystem growth depends entirely on adoption.
 
 **vs osteele/liquid: Shopify compatibility**
 
-Grove makes no attempt at Shopify Liquid or Django template compatibility. Teams migrating from either ecosystem cannot reuse templates. osteele/liquid and pongo2 both offer migration paths; Grove does not.
+Wispy makes no attempt at Shopify Liquid or Django template compatibility. Teams migrating from either ecosystem cannot reuse templates. osteele/liquid and pongo2 both offer migration paths; Wispy does not.
 
 ---
 
@@ -2574,13 +2574,13 @@ Grove makes no attempt at Shopify Liquid or Django template compatibility. Teams
      → eng.Render("page.html", data)   // cache miss again — recompile
    ```
 
-   Disk-cache and deploy-time precompilation were considered and rejected. The core risk — a Grove version bump that changes opcode semantics without invalidating cached files — creates a class of silent correctness bug with no safe recovery path. For long-running servers the compile cost is amortized over millions of renders; for environments with genuinely frequent cold starts (serverless, aggressive auto-scaling) the recommended mitigation is cache warming at startup, not persisted bytecode. Revisit in v2 if real-world data shows cold-start cost is a consistent bottleneck.
+   Disk-cache and deploy-time precompilation were considered and rejected. The core risk — a Wispy version bump that changes opcode semantics without invalidating cached files — creates a class of silent correctness bug with no safe recovery path. For long-running servers the compile cost is amortized over millions of renders; for environments with genuinely frequent cold starts (serverless, aggressive auto-scaling) the recommended mitigation is cache warming at startup, not persisted bytecode. Revisit in v2 if real-world data shows cold-start cost is a consistent bottleneck.
 
-2. ~~**Template validation CLI**~~ — **Deferred (not in v1):** A `grovec` CLI tool is out of scope for the initial release. The engine itself is the deliverable; a companion validator can be built once the template language is stable and real-world usage reveals which error classes are actually painful in practice. Building a schema format before that data exists risks designing for the wrong problems. The `cmd/grovec/` directory placeholder in §3.5 remains reserved but empty for v1.
+2. ~~**Template validation CLI**~~ — **Deferred (not in v1):** A `wispyc` CLI tool is out of scope for the initial release. The engine itself is the deliverable; a companion validator can be built once the template language is stable and real-world usage reveals which error classes are actually painful in practice. Building a schema format before that data exists risks designing for the wrong problems. The `cmd/wispyc/` directory placeholder in §3.5 remains reserved but empty for v1.
 
 3. ~~**Async rendering**~~ — **Resolved:** All `Render*` methods accept `context.Context` as the first argument. Cancellation is checked at `ITER_NEXT` opcodes. The sandbox handles resource limits (loop count, output size, time budget) independently. Both mechanisms coexist.
 
-4. ~~**`grove.Reflect()` adapter**~~ — **Resolved (Option A — Mandatory `Resolvable` only):** Every type exposed to templates must implement `GroveResolve`. No reflection on arbitrary structs.
+4. ~~**`wispy.Reflect()` adapter**~~ — **Resolved (Option A — Mandatory `Resolvable` only):** Every type exposed to templates must implement `WispyResolve`. No reflection on arbitrary structs.
 
    ```go
    type User struct {
@@ -2591,7 +2591,7 @@ Grove makes no attempt at Shopify Liquid or Django template compatibility. Teams
        AuthToken    string  // exported, but deliberately hidden
    }
 
-   func (u User) GroveResolve(key string) (any, bool) {
+   func (u User) WispyResolve(key string) (any, bool) {
        switch key {
        case "id":    return u.ID, true
        case "name":  return u.Name, true
@@ -2601,7 +2601,7 @@ Grove makes no attempt at Shopify Liquid or Django template compatibility. Teams
    }
    ```
 
-   The boilerplate cost is real (~10 lines per type, ~40 for a large struct) but the security model is unambiguous: sensitive fields cannot leak by accident, and a full audit of template-visible data is a single `grep GroveResolve`. Reflection-based opt-in (`grove.Reflect()`) was considered and deferred to v1.1 — the allowlist model is the right default for a new engine, and the friction should be validated against real usage before adding an escape hatch.
+   The boilerplate cost is real (~10 lines per type, ~40 for a large struct) but the security model is unambiguous: sensitive fields cannot leak by accident, and a full audit of template-visible data is a single `grep WispyResolve`. Reflection-based opt-in (`wispy.Reflect()`) was considered and deferred to v1.1 — the allowlist model is the right default for a new engine, and the friction should be validated against real usage before adding an escape hatch.
 
 5. ~~**Asset ordering guarantees**~~ — **Resolved (strict deduplication):** Assets are deduplicated by `src` + `type` in insertion order. Identical duplicates (same `src`, `type`, and `attrs`) are silently dropped. Conflicting duplicates (same `src` and `type`, different `attrs`) are a `RenderError` at render time — the error names both declaration sites. Later declarations cannot override attributes; the correct fix is always to consolidate into a shared macro or base layout. See §3.3 Asset Hoisting for the full policy and examples.
 
@@ -2636,7 +2636,7 @@ Grove makes no attempt at Shopify Liquid or Django template compatibility. Teams
 
    The macro carries a closure over the caller's scope at definition time, so `order_row` can reference any variable from the caller's scope in addition to its explicit arguments. The component receives it as an opaque callable — it does not need to know anything about the caller's scope.
 
-   **Spec implications:** `grove.Value` gains a `ValueTypeMacro` variant. The `{% props %}` declaration accepts macro-typed props without special syntax. Calling a macro-valued variable uses the same `{{ row_renderer(args) }}` call syntax as inline macro calls. Passing a non-macro value where a macro call is attempted is a `RuntimeError`. The `MacroValue` type is not serializable (cannot be passed to `grove.Data` from Go — only from within a template via `{% macro %}`).
+   **Spec implications:** `wispy.Value` gains a `ValueTypeMacro` variant. The `{% props %}` declaration accepts macro-typed props without special syntax. Calling a macro-valued variable uses the same `{{ row_renderer(args) }}` call syntax as inline macro calls. Passing a non-macro value where a macro call is attempted is a `RuntimeError`. The `MacroValue` type is not serializable (cannot be passed to `wispy.Data` from Go — only from within a template via `{% macro %}`).
 
    Scoped slots (Option B) were considered and rejected: the bidirectional scope model requires closures in the VM frame stack at slot boundaries, has a history of subtle bugs in Vue/Svelte, and complicates the mental model for template authors in ways that are hard to document clearly. The render-prop pattern achieves the same expressive power with a single, well-understood primitive (function passing) and no new scoping rules.
 

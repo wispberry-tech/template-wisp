@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"grove/internal/ast"
+	"wispy/internal/ast"
 )
 
 // Compile walks prog and emits Bytecode.

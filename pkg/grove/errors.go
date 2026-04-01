@@ -1,10 +1,10 @@
-// pkg/grove/errors.go
-package grove
+// pkg/wispy/errors.go
+package wispy
 
-import "grove/internal/groverrors"
+import "wispy/internal/wispyrrors"
 
 // ParseError is returned for syntax errors. Template, Line, and Column identify the source location.
-type ParseError = groverrors.ParseError
+type ParseError = wispyrrors.ParseError
 
 // RuntimeError is returned for errors during template execution.
-type RuntimeError = groverrors.RuntimeError
+type RuntimeError = wispyrrors.RuntimeError

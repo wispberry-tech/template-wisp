@@ -1,12 +1,12 @@
-# Grove Control Flow — Implementation Plan
+# Wispy Control Flow — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add control flow to the Grove engine: `{% if %}`/`{% elif %}`/`{% else %}`/`{% unless %}`, `{% for %}`/`{% empty %}` with `loop.*` magic variable, `{% set %}`, `{% with %}` scope isolation, and `{% capture %}`.
+**Goal:** Add control flow to the Wispy engine: `{% if %}`/`{% elif %}`/`{% else %}`/`{% unless %}`, `{% for %}`/`{% empty %}` with `loop.*` magic variable, `{% set %}`, `{% with %}` scope isolation, and `{% capture %}`.
 
 **Architecture:** Extends Plan 1's pipeline. New AST nodes (IfNode, ForNode, SetNode, WithNode, CaptureNode, FuncCallNode) are parsed by an extended parser. The compiler emits new opcodes. The VM gains a loop-state stack (for nested `{% for %}` + `loop.*`) and capture-output stack (for `{% capture %}`). Scope push/pop opcodes implement `{% with %}` isolation. `range()` is a built-in function compiled to `OP_CALL_RANGE`.
 
-**Tech Stack:** Go 1.24, `github.com/stretchr/testify v1.9.0`. Module: `grove`.
+**Tech Stack:** Go 1.24, `github.com/stretchr/testify v1.9.0`. Module: `wispy`.
 
 ---
 
@@ -34,7 +34,7 @@
 
 | File | Change |
 |------|--------|
-| `pkg/grove/controlflow_test.go` | NEW — all Plan 2 tests |
+| `pkg/wispy/controlflow_test.go` | NEW — all Plan 2 tests |
 | `internal/lexer/token.go` | Add `TK_IN` keyword |
 | `internal/lexer/lexer.go` | No changes needed (TK_IN added to lexIdent) |
 | `internal/ast/node.go` | Add IfNode, ForNode, SetNode, WithNode, CaptureNode, FuncCallNode |
@@ -48,70 +48,70 @@
 ## Task 1: Write Control Flow Tests
 
 **Files:**
-- Create: `pkg/grove/controlflow_test.go`
+- Create: `pkg/wispy/controlflow_test.go`
 
 Tests won't pass yet. Lock in the contract first.
 
-- [ ] **Step 1: Create `pkg/grove/controlflow_test.go`**
+- [ ] **Step 1: Create `pkg/wispy/controlflow_test.go`**
 
 ```go
-// pkg/grove/controlflow_test.go
-package grove_test
+// pkg/wispy/controlflow_test.go
+package wispy_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"grove/pkg/grove"
+	"wispy/pkg/wispy"
 )
 
 // ─── IF / ELIF / ELSE ────────────────────────────────────────────────────────
 
 func TestIf_Basic(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	tmpl := `{% if active %}yes{% else %}no{% endif %}`
-	result, err := eng.RenderTemplate(context.Background(), tmpl, grove.Data{"active": true})
+	result, err := eng.RenderTemplate(context.Background(), tmpl, wispy.Data{"active": true})
 	require.NoError(t, err)
 	require.Equal(t, "yes", result.Body)
 
-	result, err = eng.RenderTemplate(context.Background(), tmpl, grove.Data{"active": false})
+	result, err = eng.RenderTemplate(context.Background(), tmpl, wispy.Data{"active": false})
 	require.NoError(t, err)
 	require.Equal(t, "no", result.Body)
 }
 
 func TestIf_NoElse(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	tmpl := `{% if active %}yes{% endif %}`
-	result, err := eng.RenderTemplate(context.Background(), tmpl, grove.Data{"active": false})
+	result, err := eng.RenderTemplate(context.Background(), tmpl, wispy.Data{"active": false})
 	require.NoError(t, err)
 	require.Equal(t, "", result.Body)
 }
 
 func TestIf_Elif(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	tmpl := `{% if role == "admin" %}admin{% elif role == "mod" %}mod{% else %}user{% endif %}`
-	result, err := eng.RenderTemplate(context.Background(), tmpl, grove.Data{"role": "admin"})
+	result, err := eng.RenderTemplate(context.Background(), tmpl, wispy.Data{"role": "admin"})
 	require.NoError(t, err)
 	require.Equal(t, "admin", result.Body)
 
-	result, err = eng.RenderTemplate(context.Background(), tmpl, grove.Data{"role": "mod"})
+	result, err = eng.RenderTemplate(context.Background(), tmpl, wispy.Data{"role": "mod"})
 	require.NoError(t, err)
 	require.Equal(t, "mod", result.Body)
 
-	result, err = eng.RenderTemplate(context.Background(), tmpl, grove.Data{"role": "viewer"})
+	result, err = eng.RenderTemplate(context.Background(), tmpl, wispy.Data{"role": "viewer"})
 	require.NoError(t, err)
 	require.Equal(t, "user", result.Body)
 }
 
 func TestIf_Nested(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	tmpl := `{% if a %}{% if b %}both{% else %}only-a{% endif %}{% else %}neither{% endif %}`
-	result, err := eng.RenderTemplate(context.Background(), tmpl, grove.Data{"a": true, "b": true})
+	result, err := eng.RenderTemplate(context.Background(), tmpl, wispy.Data{"a": true, "b": true})
 	require.NoError(t, err)
 	require.Equal(t, "both", result.Body)
 
-	result, err = eng.RenderTemplate(context.Background(), tmpl, grove.Data{"a": true, "b": false})
+	result, err = eng.RenderTemplate(context.Background(), tmpl, wispy.Data{"a": true, "b": false})
 	require.NoError(t, err)
 	require.Equal(t, "only-a", result.Body)
 }
@@ -119,13 +119,13 @@ func TestIf_Nested(t *testing.T) {
 // ─── UNLESS ──────────────────────────────────────────────────────────────────
 
 func TestUnless(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	tmpl := `{% unless banned %}Welcome!{% endunless %}`
-	result, err := eng.RenderTemplate(context.Background(), tmpl, grove.Data{"banned": false})
+	result, err := eng.RenderTemplate(context.Background(), tmpl, wispy.Data{"banned": false})
 	require.NoError(t, err)
 	require.Equal(t, "Welcome!", result.Body)
 
-	result, err = eng.RenderTemplate(context.Background(), tmpl, grove.Data{"banned": true})
+	result, err = eng.RenderTemplate(context.Background(), tmpl, wispy.Data{"banned": true})
 	require.NoError(t, err)
 	require.Equal(t, "", result.Body)
 }
@@ -133,82 +133,82 @@ func TestUnless(t *testing.T) {
 // ─── FOR ─────────────────────────────────────────────────────────────────────
 
 func TestFor_Basic(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% for x in items %}{{ x }},{% endfor %}`,
-		grove.Data{"items": []string{"a", "b", "c"}})
+		wispy.Data{"items": []string{"a", "b", "c"}})
 	require.NoError(t, err)
 	require.Equal(t, "a,b,c,", result.Body)
 }
 
 func TestFor_Empty(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% for x in items %}{{ x }}{% empty %}none{% endfor %}`,
-		grove.Data{"items": []string{}})
+		wispy.Data{"items": []string{}})
 	require.NoError(t, err)
 	require.Equal(t, "none", result.Body)
 }
 
 func TestFor_LoopVariables(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% for x in items %}{{ loop.index }}:{{ loop.first }}:{{ loop.last }} {% endfor %}`,
-		grove.Data{"items": []string{"a", "b", "c"}})
+		wispy.Data{"items": []string{"a", "b", "c"}})
 	require.NoError(t, err)
 	require.Equal(t, "1:true:false 2:false:false 3:false:true ", result.Body)
 }
 
 func TestFor_LoopLength(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% for x in items %}{{ loop.length }}{% endfor %}`,
-		grove.Data{"items": []int{1, 2, 3}})
+		wispy.Data{"items": []int{1, 2, 3}})
 	require.NoError(t, err)
 	require.Equal(t, "333", result.Body)
 }
 
 func TestFor_LoopIndex0(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% for x in items %}{{ loop.index0 }}{% endfor %}`,
-		grove.Data{"items": []string{"a", "b"}})
+		wispy.Data{"items": []string{"a", "b"}})
 	require.NoError(t, err)
 	require.Equal(t, "01", result.Body)
 }
 
 func TestFor_Range(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% for i in range(1, 4) %}{{ i }}{% endfor %}`,
-		grove.Data{})
+		wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "123", result.Body)
 }
 
 func TestFor_RangeOneArg(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% for i in range(3) %}{{ i }}{% endfor %}`,
-		grove.Data{})
+		wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "012", result.Body)
 }
 
 func TestFor_RangeStep(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% for i in range(5, 0, -1) %}{{ i }}{% endfor %}`,
-		grove.Data{})
+		wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "54321", result.Body)
 }
 
 func TestFor_NestedLoopDepth(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% for a in outer %}{% for b in inner %}{{ loop.depth }}{% endfor %}{% endfor %}`,
-		grove.Data{
+		wispy.Data{
 			"outer": []int{1, 2},
 			"inner": []int{1, 2},
 		})
@@ -217,29 +217,29 @@ func TestFor_NestedLoopDepth(t *testing.T) {
 }
 
 func TestFor_TwoVarList(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% for i, item in items %}{{ i }}:{{ item }} {% endfor %}`,
-		grove.Data{"items": []string{"a", "b", "c"}})
+		wispy.Data{"items": []string{"a", "b", "c"}})
 	require.NoError(t, err)
 	require.Equal(t, "0:a 1:b 2:c ", result.Body)
 }
 
 func TestFor_TwoVarMap(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% for k, v in cfg %}{{ k }}={{ v }} {% endfor %}`,
-		grove.Data{"cfg": map[string]any{"b": "2", "a": "1"}})
+		wispy.Data{"cfg": map[string]any{"b": "2", "a": "1"}})
 	require.NoError(t, err)
 	// Keys sorted lexicographically
 	require.Equal(t, "a=1 b=2 ", result.Body)
 }
 
 func TestFor_NestedParentLoop(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% for a in outer %}{% for b in inner %}{{ loop.parent.index }}{% endfor %}{% endfor %}`,
-		grove.Data{
+		wispy.Data{
 			"outer": []int{1, 2},
 			"inner": []int{1},
 		})
@@ -250,27 +250,27 @@ func TestFor_NestedParentLoop(t *testing.T) {
 // ─── SET ─────────────────────────────────────────────────────────────────────
 
 func TestSet_Basic(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
-		`{% set x = 42 %}{{ x }}`, grove.Data{})
+		`{% set x = 42 %}{{ x }}`, wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "42", result.Body)
 }
 
 func TestSet_Expression(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% set total = price * qty %}{{ total }}`,
-		grove.Data{"price": 5, "qty": 3})
+		wispy.Data{"price": 5, "qty": 3})
 	require.NoError(t, err)
 	require.Equal(t, "15", result.Body)
 }
 
 func TestSet_StringConcat(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% set greeting = "Hello, " ~ name %}{{ greeting }}`,
-		grove.Data{"name": "World"})
+		wispy.Data{"name": "World"})
 	require.NoError(t, err)
 	require.Equal(t, "Hello, World", result.Body)
 }
@@ -278,28 +278,28 @@ func TestSet_StringConcat(t *testing.T) {
 // ─── WITH ─────────────────────────────────────────────────────────────────────
 
 func TestWith_ScopeIsolation(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% with %}{% set x = 99 %}{{ x }}{% endwith %}[{{ x }}]`,
-		grove.Data{})
+		wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "99[]", result.Body)
 }
 
 func TestWith_AccessesOuterScope(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% with %}{{ name }}{% endwith %}`,
-		grove.Data{"name": "Grove"})
+		wispy.Data{"name": "Wispy"})
 	require.NoError(t, err)
-	require.Equal(t, "Grove", result.Body)
+	require.Equal(t, "Wispy", result.Body)
 }
 
 // ─── CAPTURE ─────────────────────────────────────────────────────────────────
 
 func TestCapture(t *testing.T) {
-	eng := grove.New()
-	eng.RegisterFilter("upcase", func(v grove.Value, _ []grove.Value) (grove.Value, error) {
+	eng := wispy.New()
+	eng.RegisterFilter("upcase", func(v wispy.Value, _ []wispy.Value) (wispy.Value, error) {
 		s := v.String()
 		result := make([]byte, len(s))
 		for i := 0; i < len(s); i++ {
@@ -309,20 +309,20 @@ func TestCapture(t *testing.T) {
 			}
 			result[i] = c
 		}
-		return grove.StringValue(string(result)), nil
+		return wispy.StringValue(string(result)), nil
 	})
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% capture greeting %}Hello, {{ name }}!{% endcapture %}{{ greeting | upcase }}`,
-		grove.Data{"name": "Grove"})
+		wispy.Data{"name": "Wispy"})
 	require.NoError(t, err)
 	require.Equal(t, "HELLO, GROVE!", result.Body)
 }
 
 func TestCapture_UsedInIf(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% capture msg %}{% if active %}on{% else %}off{% endif %}{% endcapture %}[{{ msg }}]`,
-		grove.Data{"active": true})
+		wispy.Data{"active": true})
 	require.NoError(t, err)
 	require.Equal(t, "[on]", result.Body)
 }
@@ -331,10 +331,10 @@ func TestCapture_UsedInIf(t *testing.T) {
 - [ ] **Step 2: Verify tests fail to compile (expected)**
 
 ```bash
-go test ./pkg/grove/... 2>&1 | head -5
+go test ./pkg/wispy/... 2>&1 | head -5
 ```
 
-Expected: Tests compile and run but panic or fail — `grove.New()` exists but tags like `{% if %}` aren't implemented yet.
+Expected: Tests compile and run but panic or fail — `wispy.New()` exists but tags like `{% if %}` aren't implemented yet.
 
 ---
 
@@ -422,7 +422,7 @@ type IfNode struct {
 	Line      int
 }
 
-func (*IfNode) groveNode() {}
+func (*IfNode) wispyNode() {}
 
 // UnlessNode is {% unless cond %}...{% endunless %} — equivalent to if not cond.
 type UnlessNode struct {
@@ -431,7 +431,7 @@ type UnlessNode struct {
 	Line      int
 }
 
-func (*UnlessNode) groveNode() {}
+func (*UnlessNode) wispyNode() {}
 
 // ForNode is {% for var in iterable %}...{% empty %}...{% endfor %}.
 // If Var2 is non-empty, it's a two-variable form (for k,v in map / for i,item in list).
@@ -444,7 +444,7 @@ type ForNode struct {
 	Line     int
 }
 
-func (*ForNode) groveNode() {}
+func (*ForNode) wispyNode() {}
 
 // SetNode is {% set name = expr %}.
 type SetNode struct {
@@ -453,7 +453,7 @@ type SetNode struct {
 	Line int
 }
 
-func (*SetNode) groveNode() {}
+func (*SetNode) wispyNode() {}
 
 // WithNode is {% with %}...{% endwith %} — creates an isolated scope.
 type WithNode struct {
@@ -461,7 +461,7 @@ type WithNode struct {
 	Line int
 }
 
-func (*WithNode) groveNode() {}
+func (*WithNode) wispyNode() {}
 
 // CaptureNode is {% capture name %}...{% endcapture %} — renders body to a string variable.
 type CaptureNode struct {
@@ -470,7 +470,7 @@ type CaptureNode struct {
 	Line int
 }
 
-func (*CaptureNode) groveNode() {}
+func (*CaptureNode) wispyNode() {}
 
 // FuncCallNode is a function call expression: name(args...).
 // Only built-in functions are supported in Plan 2: range().
@@ -480,7 +480,7 @@ type FuncCallNode struct {
 	Line int
 }
 
-func (*FuncCallNode) groveNode() {}
+func (*FuncCallNode) wispyNode() {}
 ```
 
 - [ ] **Step 2: Build check**
@@ -522,9 +522,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"grove/internal/ast"
-	"grove/internal/groverrors"
-	"grove/internal/lexer"
+	"wispy/internal/ast"
+	"wispy/internal/wispyrrors"
+	"wispy/internal/lexer"
 )
 
 // Parse converts a token stream into an AST.
@@ -668,7 +668,7 @@ func (p *parser) parseTag() (ast.Node, error) {
 
 	case "extends":
 		if p.inline {
-			return nil, &groverrors.ParseError{
+			return nil, &wispyrrors.ParseError{
 				Line:    nameTok.Line,
 				Column:  nameTok.Col,
 				Message: "extends not allowed in inline templates",
@@ -678,7 +678,7 @@ func (p *parser) parseTag() (ast.Node, error) {
 
 	case "import":
 		if p.inline {
-			return nil, &groverrors.ParseError{
+			return nil, &wispyrrors.ParseError{
 				Line:    nameTok.Line,
 				Column:  nameTok.Col,
 				Message: "import not allowed in inline templates",
@@ -1229,8 +1229,8 @@ func (p *parser) atEOF() bool {
 	return p.pos >= len(p.tokens) || p.tokens[p.pos].Kind == lexer.TK_EOF
 }
 
-func (p *parser) errorf(line, col int, format string, args ...any) *groverrors.ParseError {
-	return &groverrors.ParseError{
+func (p *parser) errorf(line, col int, format string, args ...any) *wispyrrors.ParseError {
+	return &wispyrrors.ParseError{
 		Line:    line,
 		Column:  col,
 		Message: fmt.Sprintf(format, args...),
@@ -1327,7 +1327,7 @@ package compiler
 import (
 	"fmt"
 
-	"grove/internal/ast"
+	"wispy/internal/ast"
 )
 
 // Compile walks prog and emits Bytecode.
@@ -1751,8 +1751,8 @@ import (
 	"strings"
 	"sync"
 
-	"grove/internal/compiler"
-	"grove/internal/scope"
+	"wispy/internal/compiler"
+	"wispy/internal/scope"
 )
 
 // loopState holds per-loop iterator state.
@@ -2360,7 +2360,7 @@ Expected: no errors.
 go test ./... -count=1 2>&1
 ```
 
-Expected: all lexer and grove tests pass. Investigate any failures.
+Expected: all lexer and wispy tests pass. Investigate any failures.
 
 - [ ] **Step 5: Fix common issues**
 
@@ -2387,8 +2387,8 @@ go test ./... -count=1 2>&1
 
 Expected:
 ```
-ok  grove/internal/lexer    0.002s
-ok  grove/pkg/grove         0.015s
+ok  wispy/internal/lexer    0.002s
+ok  wispy/pkg/wispy         0.015s
 ```
 
 - [ ] **Step 7: Commit**
@@ -2423,7 +2423,7 @@ Expected: All PASS, no FAIL lines.
 - [ ] **Step 2: Run benchmarks (smoke check)**
 
 ```bash
-go test ./pkg/grove/... -bench=BenchmarkRender -benchtime=1s -benchmem 2>&1
+go test ./pkg/wispy/... -bench=BenchmarkRender -benchtime=1s -benchmem 2>&1
 ```
 
 Expected: benchmarks run without error.
@@ -2433,7 +2433,7 @@ Expected: benchmarks run without error.
 ```bash
 git add -A
 git commit -m "$(cat <<'EOF'
-feat: Plan 2 complete — Grove control flow
+feat: Plan 2 complete — Wispy control flow
 
 All control flow tests passing:
 - if/elif/else/endif with nested conditions

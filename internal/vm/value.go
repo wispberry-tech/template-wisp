@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"grove/internal/compiler"
+	"wispy/internal/compiler"
 )
 
 // ValueType identifies the runtime type of a Value.
@@ -39,7 +39,7 @@ var Nil = Value{}
 
 // Resolvable is implemented by Go types that expose specific fields to templates.
 type Resolvable interface {
-	GroveResolve(key string) (any, bool)
+	WispyResolve(key string) (any, bool)
 }
 
 // ─── Constructors ─────────────────────────────────────────────────────────────
@@ -247,7 +247,7 @@ func FromAny(v any) Value {
 			return ResolvableVal(r)
 		}
 		rv := reflect.ValueOf(v)
-		// Handle named map types (e.g. grove.Data which is map[string]any)
+		// Handle named map types (e.g. wispy.Data which is map[string]any)
 		if rv.Kind() == reflect.Map && rv.Type().Key().Kind() == reflect.String {
 			m := make(map[string]any, rv.Len())
 			for _, k := range rv.MapKeys() {
@@ -281,7 +281,7 @@ func GetAttr(obj Value, name string, strict bool) (Value, error) {
 		return Nil, nil
 	case TypeResolvable:
 		r, _ := obj.oval.(Resolvable)
-		if v, ok := r.GroveResolve(name); ok {
+		if v, ok := r.WispyResolve(name); ok {
 			return FromAny(v), nil
 		}
 		if strict {

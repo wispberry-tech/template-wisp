@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"grove/internal/compiler"
-	"grove/internal/scope"
+	"wispy/internal/compiler"
+	"wispy/internal/scope"
 )
 
 // renderCtx accumulates page-level data (assets, meta, hoisted HTML, warnings)
@@ -38,7 +38,7 @@ type ExecuteResult struct {
 	RC   *renderCtx
 }
 
-// ExportedAsset is the public view of an assetEntry for use by pkg/grove.
+// ExportedAsset is the public view of an assetEntry for use by pkg/wispy.
 type ExportedAsset struct {
 	Src      string
 	Type     string

@@ -1,4 +1,4 @@
-# Grove Components + Slots — Implementation Plan
+# Wispy Components + Slots — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -6,7 +6,7 @@
 
 **Architecture:** Components load their template from the store (like `{% render %}`), but add two things on top: (1) **named and default slot dispatch** — the component template declares `{% slot %}` holes that are filled by the caller, (2) **prop validation** — `{% props %}` in the component template declares required and optional parameters with runtime errors for missing or unknown props. Fill content is **lazily rendered in the caller's scope**: fill bodies are compiled into `ComponentDef.Fills` in the bytecode; when the component template hits `OP_SLOT`, the VM executes the matching fill bytecode with the caller's scope saved on the component call stack. This correctly isolates component variables from fill content while allowing fill content to reference caller variables. Components may themselves use `{% extends %}` — the block slot mechanism from Plan 5 and the component fill mechanism are orthogonal and work together.
 
-**Tech Stack:** Go 1.24, standard library, `github.com/stretchr/testify v1.9.0`. Module: `grove`.
+**Tech Stack:** Go 1.24, standard library, `github.com/stretchr/testify v1.9.0`. Module: `wispy`.
 
 ---
 
@@ -84,7 +84,7 @@ If the component template uses `{% extends %}`, the Plan 5 block slot mechanism 
 
 | File | Change |
 |------|--------|
-| `pkg/grove/component_test.go` | NEW — all Plan 6 tests |
+| `pkg/wispy/component_test.go` | NEW — all Plan 6 tests |
 | `internal/ast/node.go` | ADD `ComponentNode`, `SlotNode`, `PropsNode` |
 | `internal/parser/parser.go` | Parse `component`/`endcomponent`, `slot`/`endslot`, `props` tags; `fill`/`endfill` consumed inside component body parser |
 | `internal/compiler/bytecode.go` | ADD `FillDef`, `ComponentDef`; ADD `Props []MacroParam`, `Components []ComponentDef` to `Bytecode` |
@@ -96,26 +96,26 @@ If the component template uses `{% extends %}`, the Plan 5 block slot mechanism 
 ## Task 1: Write All Tests
 
 **Files:**
-- Create: `pkg/grove/component_test.go`
+- Create: `pkg/wispy/component_test.go`
 
-- [ ] **Step 1: Create `pkg/grove/component_test.go`**
+- [ ] **Step 1: Create `pkg/wispy/component_test.go`**
 
 ```go
-// pkg/grove/component_test.go
-package grove_test
+// pkg/wispy/component_test.go
+package wispy_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"grove/pkg/grove"
+	"wispy/pkg/wispy"
 )
 
 // renderComponent creates an engine with a store and renders the named template.
-func renderComponent(t *testing.T, store *grove.MemoryStore, name string, data grove.Data) string {
+func renderComponent(t *testing.T, store *wispy.MemoryStore, name string, data wispy.Data) string {
 	t.Helper()
-	eng := grove.New(grove.WithStore(store))
+	eng := wispy.New(wispy.WithStore(store))
 	result, err := eng.Render(context.Background(), name, data)
 	require.NoError(t, err)
 	return result.Body
@@ -124,143 +124,143 @@ func renderComponent(t *testing.T, store *grove.MemoryStore, name string, data g
 // ─── Basic component + default slot ──────────────────────────────────────────
 
 func TestComponent_DefaultSlot(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("box.html", `<div>{% slot %}{% endslot %}</div>`)
 	store.Set("page.html", `{% component "box.html" %}<p>Hello</p>{% endcomponent %}`)
-	require.Equal(t, "<div><p>Hello</p></div>", renderComponent(t, store, "page.html", grove.Data{}))
+	require.Equal(t, "<div><p>Hello</p></div>", renderComponent(t, store, "page.html", wispy.Data{}))
 }
 
 func TestComponent_DefaultSlotFallback(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("box.html", `<div>{% slot %}fallback{% endslot %}</div>`)
 	store.Set("page.html", `{% component "box.html" %}{% endcomponent %}`) // no fill
-	require.Equal(t, "<div>fallback</div>", renderComponent(t, store, "page.html", grove.Data{}))
+	require.Equal(t, "<div>fallback</div>", renderComponent(t, store, "page.html", wispy.Data{}))
 }
 
 func TestComponent_NamedSlot(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("card.html", `<header>{% slot "title" %}{% endslot %}</header><main>{% slot %}{% endslot %}</main>`)
 	store.Set("page.html", `{% component "card.html" %}body{% fill "title" %}My Title{% endfill %}{% endcomponent %}`)
-	require.Equal(t, "<header>My Title</header><main>body</main>", renderComponent(t, store, "page.html", grove.Data{}))
+	require.Equal(t, "<header>My Title</header><main>body</main>", renderComponent(t, store, "page.html", wispy.Data{}))
 }
 
 func TestComponent_NamedSlotFallback(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("card.html", `<footer>{% slot "footer" %}Default Footer{% endslot %}</footer>`)
 	store.Set("page.html", `{% component "card.html" %}{% endcomponent %}`) // no footer fill
-	require.Equal(t, "<footer>Default Footer</footer>", renderComponent(t, store, "page.html", grove.Data{}))
+	require.Equal(t, "<footer>Default Footer</footer>", renderComponent(t, store, "page.html", wispy.Data{}))
 }
 
 func TestComponent_MultipleNamedSlots(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("layout.html", `[{% slot "a" %}A{% endslot %}|{% slot "b" %}B{% endslot %}]`)
 	store.Set("page.html", `{% component "layout.html" %}{% fill "a" %}X{% endfill %}{% fill "b" %}Y{% endfill %}{% endcomponent %}`)
-	require.Equal(t, "[X|Y]", renderComponent(t, store, "page.html", grove.Data{}))
+	require.Equal(t, "[X|Y]", renderComponent(t, store, "page.html", wispy.Data{}))
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 func TestComponent_Props_Basic(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("btn.html", `{% props label, type="button" %}<button type="{{ type }}">{{ label }}</button>`)
 	store.Set("page.html", `{% component "btn.html" label="Save" type="submit" %}{% endcomponent %}`)
-	require.Equal(t, `<button type="submit">Save</button>`, renderComponent(t, store, "page.html", grove.Data{}))
+	require.Equal(t, `<button type="submit">Save</button>`, renderComponent(t, store, "page.html", wispy.Data{}))
 }
 
 func TestComponent_Props_Default(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("btn.html", `{% props label, type="button" %}<button type="{{ type }}">{{ label }}</button>`)
 	store.Set("page.html", `{% component "btn.html" label="OK" %}{% endcomponent %}`) // type uses default
-	require.Equal(t, `<button type="button">OK</button>`, renderComponent(t, store, "page.html", grove.Data{}))
+	require.Equal(t, `<button type="button">OK</button>`, renderComponent(t, store, "page.html", wispy.Data{}))
 }
 
 func TestComponent_Props_MissingRequired_Error(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("btn.html", `{% props label %}<button>{{ label }}</button>`)
 	store.Set("page.html", `{% component "btn.html" %}{% endcomponent %}`) // label missing
-	eng := grove.New(grove.WithStore(store))
-	_, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	eng := wispy.New(wispy.WithStore(store))
+	_, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "label")
 }
 
 func TestComponent_Props_UnknownProp_Error(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("btn.html", `{% props label %}<button>{{ label }}</button>`)
 	store.Set("page.html", `{% component "btn.html" label="OK" unknown="x" %}{% endcomponent %}`)
-	eng := grove.New(grove.WithStore(store))
-	_, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	eng := wispy.New(wispy.WithStore(store))
+	_, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "unknown")
 }
 
 func TestComponent_NoProps_PermissiveMode(t *testing.T) {
 	// No {% props %} declaration — any passed props are bound, no validation
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("tag.html", `<span class="{{ cls }}">{{ text }}</span>`)
 	store.Set("page.html", `{% component "tag.html" cls="badge" text="New" %}{% endcomponent %}`)
-	require.Equal(t, `<span class="badge">New</span>`, renderComponent(t, store, "page.html", grove.Data{}))
+	require.Equal(t, `<span class="badge">New</span>`, renderComponent(t, store, "page.html", wispy.Data{}))
 }
 
 // ─── Fill scope (caller's variables visible inside fills) ─────────────────────
 
 func TestComponent_FillSeesCallerVars(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("wrap.html", `<div>{% slot %}{% endslot %}</div>`)
 	store.Set("page.html", `{% component "wrap.html" %}<p>{{ message }}</p>{% endcomponent %}`)
-	require.Equal(t, "<div><p>Hello!</p></div>", renderComponent(t, store, "page.html", grove.Data{"message": "Hello!"}))
+	require.Equal(t, "<div><p>Hello!</p></div>", renderComponent(t, store, "page.html", wispy.Data{"message": "Hello!"}))
 }
 
 func TestComponent_FillDoesNotSeeComponentProps(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("wrap.html", `{% props secret="hidden" %}<div>{% slot %}{% endslot %}</div>`)
 	store.Set("page.html", `{% component "wrap.html" secret="topsecret" %}<p>{{ secret }}</p>{% endcomponent %}`)
 	// "secret" inside the fill renders from caller scope, not component scope
 	// caller scope has no "secret" var → renders empty (non-strict mode)
-	require.Equal(t, "<div><p></p></div>", renderComponent(t, store, "page.html", grove.Data{}))
+	require.Equal(t, "<div><p></p></div>", renderComponent(t, store, "page.html", wispy.Data{}))
 }
 
 func TestComponent_NamedFillSeesCallerVars(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("card.html", `<h2>{% slot "title" %}{% endslot %}</h2>`)
 	store.Set("page.html", `{% component "card.html" %}{% fill "title" %}{{ heading }}{% endfill %}{% endcomponent %}`)
-	require.Equal(t, "<h2>My Heading</h2>", renderComponent(t, store, "page.html", grove.Data{"heading": "My Heading"}))
+	require.Equal(t, "<h2>My Heading</h2>", renderComponent(t, store, "page.html", wispy.Data{"heading": "My Heading"}))
 }
 
 // ─── Nested components ────────────────────────────────────────────────────────
 
 func TestComponent_Nested(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("inner.html", `[{% slot %}{% endslot %}]`)
 	store.Set("outer.html", `<div>{% slot %}{% endslot %}</div>`)
 	store.Set("page.html", `{% component "outer.html" %}{% component "inner.html" %}content{% endcomponent %}{% endcomponent %}`)
-	require.Equal(t, "<div>[content]</div>", renderComponent(t, store, "page.html", grove.Data{}))
+	require.Equal(t, "<div>[content]</div>", renderComponent(t, store, "page.html", wispy.Data{}))
 }
 
 // ─── Component + inheritance ──────────────────────────────────────────────────
 
 func TestComponent_WithExtends(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("base-card.html", `{% props title %}<div><h2>{{ title }}</h2>{% slot %}{% endslot %}</div>`)
 	// card.html extends base-card.html — inheriting its layout
 	store.Set("card.html", `{% props title %}{% extends "base-card.html" %}`)
 	store.Set("page.html", `{% component "card.html" title="News" %}<p>Content</p>{% endcomponent %}`)
-	require.Equal(t, "<div><h2>News</h2><p>Content</p></div>", renderComponent(t, store, "page.html", grove.Data{}))
+	require.Equal(t, "<div><h2>News</h2><p>Content</p></div>", renderComponent(t, store, "page.html", wispy.Data{}))
 }
 
 // ─── component in inline template is an error ─────────────────────────────────
 
 func TestComponent_InInlineTemplate_Error(t *testing.T) {
-	eng := grove.New()
-	_, err := eng.RenderTemplate(context.Background(), `{% component "x.html" %}{% endcomponent %}`, grove.Data{})
+	eng := wispy.New()
+	_, err := eng.RenderTemplate(context.Background(), `{% component "x.html" %}{% endcomponent %}`, wispy.Data{})
 	require.Error(t, err)
 }
 
 // ─── component requires a store ───────────────────────────────────────────────
 
 func TestComponent_NoStore_Error(t *testing.T) {
-	eng := grove.New() // no store
-	_, err := eng.RenderTemplate(context.Background(), `{% component "x.html" %}{% endcomponent %}`, grove.Data{})
+	eng := wispy.New() // no store
+	_, err := eng.RenderTemplate(context.Background(), `{% component "x.html" %}{% endcomponent %}`, wispy.Data{})
 	require.Error(t, err)
 }
 ```
@@ -285,7 +285,7 @@ type PropsNode struct {
 	Line   int
 }
 
-func (*PropsNode) groveNode() {}
+func (*PropsNode) wispyNode() {}
 
 // FillNode is {% fill "name" %}...{% endfill %} inside a component call body.
 // FillNode is NOT directly part of the template AST — it is consumed by the parser
@@ -305,7 +305,7 @@ type ComponentNode struct {
 	Line        int
 }
 
-func (*ComponentNode) groveNode() {}
+func (*ComponentNode) wispyNode() {}
 
 // SlotNode is {% slot ["name"] %}...{% endslot %} inside a component template.
 type SlotNode struct {
@@ -314,7 +314,7 @@ type SlotNode struct {
 	Line    int
 }
 
-func (*SlotNode) groveNode() {}
+func (*SlotNode) wispyNode() {}
 ```
 
 ### Step 2b: Parser changes in `internal/parser/parser.go`
@@ -324,7 +324,7 @@ func (*SlotNode) groveNode() {}
 ```go
 case "component":
     if p.inline {
-        return nil, &groverrors.ParseError{Line: tagStart.Line, Col: tagStart.Col,
+        return nil, &wispyrrors.ParseError{Line: tagStart.Line, Col: tagStart.Col,
             Message: "component not allowed in inline templates"}
     }
     return p.parseComponent(tagStart)

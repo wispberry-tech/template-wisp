@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"grove/internal/ast"
-	"grove/internal/groverrors"
-	"grove/internal/lexer"
+	"wispy/internal/ast"
+	"wispy/internal/wispyrrors"
+	"wispy/internal/lexer"
 )
 
 // Parse converts a token stream into an AST.
@@ -148,7 +148,7 @@ func (p *parser) parseTag() (ast.Node, error) {
 	// Sandbox: check allowed tags whitelist (skip internal close-tags like endif, endfor, etc.)
 	if p.allowedTags != nil && !isCloseTag(name) {
 		if !p.allowedTags[name] {
-			return nil, &groverrors.ParseError{
+			return nil, &wispyrrors.ParseError{
 				Line:    nameTok.Line,
 				Column:  nameTok.Col,
 				Message: fmt.Sprintf("sandbox: tag %q is not allowed", name),
@@ -203,7 +203,7 @@ func (p *parser) parseTag() (ast.Node, error) {
 
 	case "import":
 		if p.inline {
-			return nil, &groverrors.ParseError{
+			return nil, &wispyrrors.ParseError{
 				Line:    tagStart.Line,
 				Column:  tagStart.Col,
 				Message: "import not allowed in inline templates",
@@ -213,7 +213,7 @@ func (p *parser) parseTag() (ast.Node, error) {
 
 	case "component":
 		if p.inline {
-			return nil, &groverrors.ParseError{
+			return nil, &wispyrrors.ParseError{
 				Line:    tagStart.Line,
 				Column:  tagStart.Col,
 				Message: "component not allowed in inline templates",
@@ -229,7 +229,7 @@ func (p *parser) parseTag() (ast.Node, error) {
 
 	case "asset":
 		if p.inline {
-			return nil, &groverrors.ParseError{
+			return nil, &wispyrrors.ParseError{
 				Line:    tagStart.Line,
 				Column:  tagStart.Col,
 				Message: "{% asset %} not allowed in inline templates",
@@ -780,8 +780,8 @@ func (p *parser) atEOF() bool {
 	return p.pos >= len(p.tokens) || p.tokens[p.pos].Kind == lexer.TK_EOF
 }
 
-func (p *parser) errorf(line, col int, format string, args ...any) *groverrors.ParseError {
-	return &groverrors.ParseError{
+func (p *parser) errorf(line, col int, format string, args ...any) *wispyrrors.ParseError {
+	return &wispyrrors.ParseError{
 		Line:    line,
 		Column:  col,
 		Message: fmt.Sprintf(format, args...),
@@ -1024,7 +1024,7 @@ func (p *parser) parseImport(tagStart lexer.Token) (*ast.ImportNode, error) {
 // Inline templates may not use extends.
 func (p *parser) parseExtends(tagStart lexer.Token) (*ast.ExtendsNode, error) {
 	if p.inline {
-		return nil, &groverrors.ParseError{
+		return nil, &wispyrrors.ParseError{
 			Line:    tagStart.Line,
 			Column:  tagStart.Col,
 			Message: "extends not allowed in inline templates",

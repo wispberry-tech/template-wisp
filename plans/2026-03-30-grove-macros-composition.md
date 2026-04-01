@@ -1,4 +1,4 @@
-# Grove Macros + Template Composition — Implementation Plan
+# Wispy Macros + Template Composition — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -6,7 +6,7 @@
 
 **Architecture:** All new features extend the existing lexer → parser → AST → compiler → VM pipeline. Macros compile to `MacroDef` objects stored in `Bytecode.Macros`; at runtime a `TypeMacro` value holds the `*MacroDef`. Macro calls execute the macro body in an isolated scope by recursively calling `v.run(ctx, macroDef.Body)` with output redirected through the existing capture mechanism. Include/render/import call back to the engine via an extended `EngineIface.LoadTemplate()`. The engine stores a `Store` interface; `MemoryStore` is the in-memory implementation used in tests.
 
-**Tech Stack:** Go 1.24, standard library, `github.com/stretchr/testify v1.9.0`. Module: `grove`.
+**Tech Stack:** Go 1.24, standard library, `github.com/stretchr/testify v1.9.0`. Module: `wispy`.
 
 ---
 
@@ -34,9 +34,9 @@
 
 | File | Change |
 |------|--------|
-| `pkg/grove/composition_test.go` | NEW — all Plan 4 tests |
+| `pkg/wispy/composition_test.go` | NEW — all Plan 4 tests |
 | `internal/store/store.go` | NEW — `Store` interface + `MemoryStore` |
-| `pkg/grove/store.go` | NEW — public `NewMemoryStore()` + `MemoryStore` wrapper |
+| `pkg/wispy/store.go` | NEW — public `NewMemoryStore()` + `MemoryStore` wrapper |
 | `internal/ast/node.go` | ADD `NamedArgNode`, `MacroNode`, `MacroCallExpr`, `CallNode`, `IncludeNode`, `RenderNode`, `ImportNode` |
 | `internal/lexer/token.go` | ADD `TK_AS` keyword |
 | `internal/lexer/lexer.go` | Recognise `as` → `TK_AS` in `lexIdent` |
@@ -45,35 +45,35 @@
 | `internal/compiler/compiler.go` | Compile new AST nodes |
 | `internal/vm/value.go` | ADD `TypeMacro`; `MacroVal()` constructor |
 | `internal/vm/vm.go` | Extend `EngineIface` with `LoadTemplate`; handle new opcodes |
-| `pkg/grove/engine.go` | ADD `WithStore`, `Render()`, `LoadTemplate()`, implement extended `EngineIface` |
+| `pkg/wispy/engine.go` | ADD `WithStore`, `Render()`, `LoadTemplate()`, implement extended `EngineIface` |
 
 ---
 
 ## Task 1: Write All Tests
 
 **Files:**
-- Create: `pkg/grove/composition_test.go`
+- Create: `pkg/wispy/composition_test.go`
 
 Tests will fail until implementation is added.
 
-- [ ] **Step 1: Create `pkg/grove/composition_test.go`**
+- [ ] **Step 1: Create `pkg/wispy/composition_test.go`**
 
 ```go
-// pkg/grove/composition_test.go
-package grove_test
+// pkg/wispy/composition_test.go
+package wispy_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"grove/pkg/grove"
+	"wispy/pkg/wispy"
 )
 
 // renderStore creates an engine with the given store and renders the named template.
-func renderStore(t *testing.T, store *grove.MemoryStore, name string, data grove.Data) string {
+func renderStore(t *testing.T, store *wispy.MemoryStore, name string, data wispy.Data) string {
 	t.Helper()
-	eng := grove.New(grove.WithStore(store))
+	eng := wispy.New(wispy.WithStore(store))
 	result, err := eng.Render(context.Background(), name, data)
 	require.NoError(t, err)
 	return result.Body
@@ -82,72 +82,72 @@ func renderStore(t *testing.T, store *grove.MemoryStore, name string, data grove
 // ─── MemoryStore + eng.Render() ──────────────────────────────────────────────
 
 func TestRender_NamedTemplate_Basic(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("hello.html", `Hello, {{ name }}!`)
-	require.Equal(t, "Hello, Grove!", renderStore(t, store, "hello.html", grove.Data{"name": "Grove"}))
+	require.Equal(t, "Hello, Wispy!", renderStore(t, store, "hello.html", wispy.Data{"name": "Wispy"}))
 }
 
 func TestRender_NamedTemplate_NotFound(t *testing.T) {
-	store := grove.NewMemoryStore()
-	eng := grove.New(grove.WithStore(store))
-	_, err := eng.Render(context.Background(), "missing.html", grove.Data{})
+	store := wispy.NewMemoryStore()
+	eng := wispy.New(wispy.WithStore(store))
+	_, err := eng.Render(context.Background(), "missing.html", wispy.Data{})
 	require.Error(t, err)
 }
 
 // ─── INLINE MACROS ───────────────────────────────────────────────────────────
 
 func TestMacro_Positional(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% macro greet(name) %}Hello, {{ name }}!{% endmacro %}{{ greet("World") }}`,
-		grove.Data{})
+		wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "Hello, World!", result.Body)
 }
 
 func TestMacro_DefaultArg(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% macro greet(name="stranger") %}Hi {{ name }}{% endmacro %}{{ greet() }}`,
-		grove.Data{})
+		wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "Hi stranger", result.Body)
 }
 
 func TestMacro_NamedArg(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
-		`{% macro greet(name="stranger") %}Hi {{ name }}{% endmacro %}{{ greet(name="Grove") }}`,
-		grove.Data{})
+		`{% macro greet(name="stranger") %}Hi {{ name }}{% endmacro %}{{ greet(name="Wispy") }}`,
+		wispy.Data{})
 	require.NoError(t, err)
-	require.Equal(t, "Hi Grove", result.Body)
+	require.Equal(t, "Hi Wispy", result.Body)
 }
 
 func TestMacro_MultipleParams(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% macro link(href, text, target="_self") %}<a href="{{ href }}" target="{{ target }}">{{ text }}</a>{% endmacro %}{{ link("https://example.com", "Click", target="_blank") }}`,
-		grove.Data{})
+		wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, `<a href="https://example.com" target="_blank">Click</a>`, result.Body)
 }
 
 func TestMacro_IsolatedScope(t *testing.T) {
 	// Macros cannot read outer template variables
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% set secret = "outer" %}{% macro peek() %}{{ secret }}{% endmacro %}[{{ peek() }}]`,
-		grove.Data{})
+		wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "[]", result.Body) // secret is not visible inside macro
 }
 
 func TestMacro_OutputIsSafe(t *testing.T) {
 	// Macro output is SafeHTML — not double-escaped
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% macro bold(text) %}<b>{{ text }}</b>{% endmacro %}{{ bold("hi") }}`,
-		grove.Data{})
+		wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "<b>hi</b>", result.Body)
 }
@@ -155,10 +155,10 @@ func TestMacro_OutputIsSafe(t *testing.T) {
 // ─── caller() ────────────────────────────────────────────────────────────────
 
 func TestMacro_Caller_Basic(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% macro card(title) %}<div><h2>{{ title }}</h2>{{ caller() }}</div>{% endmacro %}{% call card("Orders") %}<p>3 orders</p>{% endcall %}`,
-		grove.Data{})
+		wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "<div><h2>Orders</h2><p>3 orders</p></div>", result.Body)
 }
@@ -166,63 +166,63 @@ func TestMacro_Caller_Basic(t *testing.T) {
 // ─── INCLUDE ─────────────────────────────────────────────────────────────────
 
 func TestInclude_Basic(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("page.html", `before {% include "nav.html" %} after`)
 	store.Set("nav.html", `<nav>{{ user }}</nav>`)
 	require.Equal(t, "before <nav>Alice</nav> after",
-		renderStore(t, store, "page.html", grove.Data{"user": "Alice"}))
+		renderStore(t, store, "page.html", wispy.Data{"user": "Alice"}))
 }
 
 func TestInclude_SharedScope(t *testing.T) {
 	// Include sees outer template's variables
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("page.html", `{% set greeting = "Hello" %}{% include "part.html" %}`)
 	store.Set("part.html", `{{ greeting }}`)
-	require.Equal(t, "Hello", renderStore(t, store, "page.html", grove.Data{}))
+	require.Equal(t, "Hello", renderStore(t, store, "page.html", wispy.Data{}))
 }
 
 func TestInclude_WithVars(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("page.html", `{% include "part.html" with color="blue", size="lg" %}`)
 	store.Set("part.html", `{{ color }}-{{ size }}`)
-	require.Equal(t, "blue-lg", renderStore(t, store, "page.html", grove.Data{}))
+	require.Equal(t, "blue-lg", renderStore(t, store, "page.html", wispy.Data{}))
 }
 
 func TestInclude_Isolated(t *testing.T) {
 	// Isolated include cannot see outer scope variables
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("page.html", `{% set secret = "hidden" %}{% include "part.html" isolated %}`)
 	store.Set("part.html", `[{{ secret }}]`)
-	require.Equal(t, "[]", renderStore(t, store, "page.html", grove.Data{}))
+	require.Equal(t, "[]", renderStore(t, store, "page.html", wispy.Data{}))
 }
 
 // ─── RENDER ──────────────────────────────────────────────────────────────────
 
 func TestRender_Tag(t *testing.T) {
 	// render is always isolated; vars passed explicitly
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("page.html", `{% set secret = "hidden" %}{% render "card.html" with item="Widget" %}`)
 	store.Set("card.html", `[{{ item }}][{{ secret }}]`)
-	require.Equal(t, "[Widget][]", renderStore(t, store, "page.html", grove.Data{}))
+	require.Equal(t, "[Widget][]", renderStore(t, store, "page.html", wispy.Data{}))
 }
 
 // ─── IMPORT ──────────────────────────────────────────────────────────────────
 
 func TestImport_Basic(t *testing.T) {
-	store := grove.NewMemoryStore()
-	store.Set("page.html", `{% import "macros.html" as m %}{{ m.greet("Grove") }}`)
+	store := wispy.NewMemoryStore()
+	store.Set("page.html", `{% import "macros.html" as m %}{{ m.greet("Wispy") }}`)
 	store.Set("macros.html", `{% macro greet(name) %}Hello, {{ name }}!{% endmacro %}`)
-	require.Equal(t, "Hello, Grove!", renderStore(t, store, "page.html", grove.Data{}))
+	require.Equal(t, "Hello, Wispy!", renderStore(t, store, "page.html", wispy.Data{}))
 }
 ```
 
 - [ ] **Step 2: Run tests to confirm they fail**
 
 ```bash
-go test ./pkg/grove/... -run 'TestRender_NamedTemplate|TestMacro|TestInclude|TestRender_Tag|TestImport' -count=1 2>&1 | head -20
+go test ./pkg/wispy/... -run 'TestRender_NamedTemplate|TestMacro|TestInclude|TestRender_Tag|TestImport' -count=1 2>&1 | head -20
 ```
 
-Expected: compile errors or FAIL lines — `grove.NewMemoryStore`, `grove.WithStore`, `eng.Render` do not exist yet.
+Expected: compile errors or FAIL lines — `wispy.NewMemoryStore`, `wispy.WithStore`, `eng.Render` do not exist yet.
 
 ---
 
@@ -230,8 +230,8 @@ Expected: compile errors or FAIL lines — `grove.NewMemoryStore`, `grove.WithSt
 
 **Files:**
 - Create: `internal/store/store.go`
-- Create: `pkg/grove/store.go`
-- Modify: `pkg/grove/engine.go`
+- Create: `pkg/wispy/store.go`
+- Modify: `pkg/wispy/engine.go`
 - Modify: `internal/vm/vm.go` (extend `EngineIface`)
 
 - [ ] **Step 1: Create `internal/store/store.go`**
@@ -281,16 +281,16 @@ func (s *MemoryStore) Load(name string) ([]byte, error) {
 }
 ```
 
-- [ ] **Step 2: Create `pkg/grove/store.go`**
+- [ ] **Step 2: Create `pkg/wispy/store.go`**
 
 ```go
-// pkg/grove/store.go
-package grove
+// pkg/wispy/store.go
+package wispy
 
-import "grove/internal/store"
+import "wispy/internal/store"
 
 // MemoryStore holds templates in memory. Use NewMemoryStore() to create one.
-// Pass to an Engine via grove.WithStore(s).
+// Pass to an Engine via wispy.WithStore(s).
 type MemoryStore = store.MemoryStore
 
 // NewMemoryStore creates an empty MemoryStore.
@@ -317,25 +317,25 @@ type EngineIface interface {
 
 Note: `internal/vm` already imports `internal/compiler`, so `*compiler.Bytecode` is valid here.
 
-- [ ] **Step 4: Update `pkg/grove/engine.go`**
+- [ ] **Step 4: Update `pkg/wispy/engine.go`**
 
 Add `store` field, `WithStore` option, `Render` method, and `LoadTemplate` method. Here is the complete updated file:
 
 ```go
-// pkg/grove/engine.go
-package grove
+// pkg/wispy/engine.go
+package wispy
 
 import (
 	"context"
 	"fmt"
 
-	"grove/internal/compiler"
-	"grove/internal/groverrors"
-	"grove/internal/filters"
-	"grove/internal/lexer"
-	"grove/internal/parser"
-	"grove/internal/store"
-	"grove/internal/vm"
+	"wispy/internal/compiler"
+	"wispy/internal/wispyrrors"
+	"wispy/internal/filters"
+	"wispy/internal/lexer"
+	"wispy/internal/parser"
+	"wispy/internal/store"
+	"wispy/internal/vm"
 )
 
 // Option configures an Engine at creation time.
@@ -356,7 +356,7 @@ func WithStore(s store.Store) Option {
 	return func(c *engineCfg) { c.store = s }
 }
 
-// Engine is the Grove template engine. Create with New(). Safe for concurrent use.
+// Engine is the Wispy template engine. Create with New(). Safe for concurrent use.
 type Engine struct {
 	cfg     engineCfg
 	globals map[string]any
@@ -401,7 +401,7 @@ func (e *Engine) RenderTemplate(ctx context.Context, src string, data Data) (Ren
 		if le, ok := err.(liner); ok {
 			line = le.LexLine()
 		}
-		return RenderResult{}, &groverrors.ParseError{
+		return RenderResult{}, &wispyrrors.ParseError{
 			Message: err.Error(),
 			Line:    line,
 		}
@@ -414,15 +414,15 @@ func (e *Engine) RenderTemplate(ctx context.Context, src string, data Data) (Ren
 
 	bc, err := compiler.Compile(prog)
 	if err != nil {
-		return RenderResult{}, &groverrors.ParseError{Message: err.Error()}
+		return RenderResult{}, &wispyrrors.ParseError{Message: err.Error()}
 	}
 
 	body, err := vm.Execute(ctx, bc, map[string]any(data), e)
 	if err != nil {
-		if _, ok := err.(*groverrors.RuntimeError); ok {
+		if _, ok := err.(*wispyrrors.RuntimeError); ok {
 			return RenderResult{}, err
 		}
-		return RenderResult{}, &groverrors.RuntimeError{Message: err.Error()}
+		return RenderResult{}, &wispyrrors.RuntimeError{Message: err.Error()}
 	}
 
 	return RenderResult{Body: body}, nil
@@ -437,10 +437,10 @@ func (e *Engine) Render(ctx context.Context, name string, data Data) (RenderResu
 
 	body, err := vm.Execute(ctx, bc, map[string]any(data), e)
 	if err != nil {
-		if _, ok := err.(*groverrors.RuntimeError); ok {
+		if _, ok := err.(*wispyrrors.RuntimeError); ok {
 			return RenderResult{}, err
 		}
-		return RenderResult{}, &groverrors.RuntimeError{Message: err.Error()}
+		return RenderResult{}, &wispyrrors.RuntimeError{Message: err.Error()}
 	}
 
 	return RenderResult{Body: body}, nil
@@ -450,7 +450,7 @@ func (e *Engine) Render(ctx context.Context, name string, data Data) (RenderResu
 // Implements vm.EngineIface.
 func (e *Engine) LoadTemplate(name string) (*compiler.Bytecode, error) {
 	if e.cfg.store == nil {
-		return nil, fmt.Errorf("no store configured — use grove.WithStore() to load named templates")
+		return nil, fmt.Errorf("no store configured — use wispy.WithStore() to load named templates")
 	}
 	src, err := e.cfg.store.Load(name)
 	if err != nil {
@@ -458,7 +458,7 @@ func (e *Engine) LoadTemplate(name string) (*compiler.Bytecode, error) {
 	}
 	tokens, err := lexer.Tokenize(string(src))
 	if err != nil {
-		return nil, &groverrors.ParseError{Message: err.Error()}
+		return nil, &wispyrrors.ParseError{Message: err.Error()}
 	}
 	prog, err := parser.Parse(tokens, false) // non-inline: allows extends/import
 	if err != nil {
@@ -466,7 +466,7 @@ func (e *Engine) LoadTemplate(name string) (*compiler.Bytecode, error) {
 	}
 	bc, err := compiler.Compile(prog)
 	if err != nil {
-		return nil, &groverrors.ParseError{Message: err.Error()}
+		return nil, &wispyrrors.ParseError{Message: err.Error()}
 	}
 	return bc, nil
 }
@@ -506,7 +506,7 @@ Order of operations: Step 3 (`vm/value.go`) → Step 4 (`engine.go`) → `go bui
 - [ ] **Step 6: Run MemoryStore tests**
 
 ```bash
-go test ./pkg/grove/... -run 'TestRender_NamedTemplate' -count=1 -v 2>&1
+go test ./pkg/wispy/... -run 'TestRender_NamedTemplate' -count=1 -v 2>&1
 ```
 
 Expected: `TestRender_NamedTemplate_Basic` PASS, `TestRender_NamedTemplate_NotFound` PASS.
@@ -514,11 +514,11 @@ Expected: `TestRender_NamedTemplate_Basic` PASS, `TestRender_NamedTemplate_NotFo
 - [ ] **Step 7: Commit**
 
 ```bash
-git add internal/store/ pkg/grove/store.go pkg/grove/engine.go internal/vm/value.go
+git add internal/store/ pkg/wispy/store.go pkg/wispy/engine.go internal/vm/value.go
 git commit -m "$(cat <<'EOF'
 feat: add MemoryStore + eng.Render() for named template rendering
 
-Store interface in internal/store/. Public MemoryStore via pkg/grove/store.go.
+Store interface in internal/store/. Public MemoryStore via pkg/wispy/store.go.
 Engine.Render() loads from store, compiles, executes.
 Extend EngineIface with LoadTemplate().
 
@@ -552,7 +552,7 @@ type NamedArgNode struct {
 	Line  int
 }
 
-func (*NamedArgNode) groveNode() {}
+func (*NamedArgNode) wispyNode() {}
 
 // MacroParam is a single parameter in a macro definition.
 type MacroParam struct {
@@ -568,7 +568,7 @@ type MacroNode struct {
 	Line   int
 }
 
-func (*MacroNode) groveNode() {}
+func (*MacroNode) wispyNode() {}
 
 // MacroCallExpr is a macro call expression: name(args...) or ns.name(args...).
 // Callee is an Identifier or AttributeAccess.
@@ -579,7 +579,7 @@ type MacroCallExpr struct {
 	Line      int
 }
 
-func (*MacroCallExpr) groveNode() {}
+func (*MacroCallExpr) wispyNode() {}
 
 // CallNode is {% call macro(args) %}body{% endcall %} — call with a caller body.
 type CallNode struct {
@@ -590,7 +590,7 @@ type CallNode struct {
 	Line      int
 }
 
-func (*CallNode) groveNode() {}
+func (*CallNode) wispyNode() {}
 
 // IncludeNode is {% include "name" [with k=v, ...] [isolated] %}.
 type IncludeNode struct {
@@ -600,7 +600,7 @@ type IncludeNode struct {
 	Line     int
 }
 
-func (*IncludeNode) groveNode() {}
+func (*IncludeNode) wispyNode() {}
 
 // RenderNode is {% render "name" [with k=v, ...] %} — always isolated.
 type RenderNode struct {
@@ -609,7 +609,7 @@ type RenderNode struct {
 	Line     int
 }
 
-func (*RenderNode) groveNode() {}
+func (*RenderNode) wispyNode() {}
 
 // ImportNode is {% import "name" as alias %}.
 type ImportNode struct {
@@ -618,7 +618,7 @@ type ImportNode struct {
 	Line  int
 }
 
-func (*ImportNode) groveNode() {}
+func (*ImportNode) wispyNode() {}
 ```
 
 - [ ] **Step 2: Add `MacroParam`, `MacroDef`, and new opcodes to `internal/compiler/bytecode.go`**
@@ -715,7 +715,7 @@ In `internal/parser/parser.go`:
 
 	case "import":
 		if p.inline {
-			return nil, &groverrors.ParseError{
+			return nil, &wispyrrors.ParseError{
 				Line:    nameTok.Line,
 				Column:  nameTok.Col,
 				Message: "import not allowed in inline templates",
@@ -1456,7 +1456,7 @@ Expected: no errors.
 - [ ] **Step 10: Run macro tests**
 
 ```bash
-go test ./pkg/grove/... -run 'TestMacro|TestRender_NamedTemplate|TestInclude|TestRender_Tag|TestImport' -count=1 -v 2>&1 | grep -E '^(--- FAIL|--- PASS|FAIL|ok)'
+go test ./pkg/wispy/... -run 'TestMacro|TestRender_NamedTemplate|TestInclude|TestRender_Tag|TestImport' -count=1 -v 2>&1 | grep -E '^(--- FAIL|--- PASS|FAIL|ok)'
 ```
 
 Expected: all tests PASS. If failures occur, proceed to Step 11.
@@ -1472,8 +1472,8 @@ The `OP_OUTPUT` opcode checks `val.typ == TypeSafeHTML` and skips escaping. When
 **`TestInclude_SharedScope` fails — included template can't see outer var:**
 Verify that for non-isolated include, `v.sc` is not replaced — the included template runs with `v.sc` unchanged.
 
-**`TestImport_Basic` fails — `m.greet("Grove")` returns empty:**
-The import stores a `MapVal` in scope under alias `m`. When `{{ m.greet("Grove") }}` is compiled, `m.greet` is `AttributeAccess{Object: Identifier{m}, Key: "greet"}` and `m.greet("Grove")` is `MacroCallExpr{Callee: AttributeAccess{...}, PosArgs: [StringLit("Grove")]}`. At runtime, `OP_LOAD m` returns the map, `OP_GET_ATTR greet` returns the `MacroVal`. Then `OP_CALL_MACRO_VAL` pops the `MacroVal` and executes. Verify `GetAttr` handles `TypeMacro` values in maps: it should return `FromAny(m["greet"])` which, since the value is already a `Value`, returns it directly.
+**`TestImport_Basic` fails — `m.greet("Wispy")` returns empty:**
+The import stores a `MapVal` in scope under alias `m`. When `{{ m.greet("Wispy") }}` is compiled, `m.greet` is `AttributeAccess{Object: Identifier{m}, Key: "greet"}` and `m.greet("Wispy")` is `MacroCallExpr{Callee: AttributeAccess{...}, PosArgs: [StringLit("Wispy")]}`. At runtime, `OP_LOAD m` returns the map, `OP_GET_ATTR greet` returns the `MacroVal`. Then `OP_CALL_MACRO_VAL` pops the `MacroVal` and executes. Verify `GetAttr` handles `TypeMacro` values in maps: it should return `FromAny(m["greet"])` which, since the value is already a `Value`, returns it directly.
 
 Check `FromAny` in `value.go`:
 ```go
@@ -1488,7 +1488,7 @@ The `import` handler uses a capture frame to discard output from the imported te
 - [ ] **Step 12: Commit**
 
 ```bash
-git add internal/ast/node.go internal/lexer/ internal/parser/ internal/compiler/ internal/vm/ internal/store/ internal/scope/ pkg/grove/
+git add internal/ast/node.go internal/lexer/ internal/parser/ internal/compiler/ internal/vm/ internal/store/ internal/scope/ pkg/wispy/
 git commit -m "$(cat <<'EOF'
 feat: add macros, caller(), include, render, import
 
@@ -1553,7 +1553,7 @@ EOF
 - ✅ `{% include "name" isolated %}` — OP_INCLUDE Flags=1
 - ✅ `{% render "name" with k=v %}` — OP_RENDER (always isolated)
 - ✅ `{% import "name" as alias %}` — OP_IMPORT + ForEach extraction
-- ✅ `MemoryStore` + `eng.Render()` — internal/store + pkg/grove/store.go + Engine.Render()
+- ✅ `MemoryStore` + `eng.Render()` — internal/store + pkg/wispy/store.go + Engine.Render()
 - ✅ `WithStore(s)` engine option
 
 **Placeholder scan:** None found.

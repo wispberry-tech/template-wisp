@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Component Library — Grove Blog{% endblock %}
+{% block title %}Component Library — Wispy Blog{% endblock %}
 
 {% block content %}
-{% meta name="description" content="A showcase of all reusable Grove components" %}
+{% meta name="description" content="A showcase of all reusable Wispy components" %}
 
 <h1 style="margin: 0 0 0.5rem;">Component Library</h1>
-<p style="color: #666; margin: 0 0 2rem;">A showcase of every reusable component in the Grove Blog.</p>
+<p style="color: #666; margin: 0 0 2rem;">A showcase of every reusable component in the Wispy Blog.</p>
 
 {# ── Buttons ─────────────────────────────────────────── #}
 <section style="margin-bottom: 3rem;">
@@ -59,7 +59,7 @@
   <div style="display: grid; gap: 1.5rem; margin-top: 1rem;">
     {% component "components/card.html" title="Card With Tags" summary="This card demonstrates the tags slot, which lets the caller inject tag components into the card footer." href="#" date="April 1, 2026" %}
       {% fill "tags" %}
-        {% component "components/tag.html" label="Grove" color="purple" %}{% endcomponent %}
+        {% component "components/tag.html" label="Wispy" color="purple" %}{% endcomponent %}
         {% component "components/tag.html" label="Example" color="blue" %}{% endcomponent %}
       {% endfill %}
     {% endcomponent %}

@@ -1,9 +1,9 @@
 // internal/filters/register.go
 package filters
 
-import "grove/internal/vm"
+import "wispy/internal/vm"
 
-// Builtins returns a vm.FilterSet containing all built-in Grove filters.
+// Builtins returns a vm.FilterSet containing all built-in Wispy filters.
 func Builtins() vm.FilterSet {
 	return vm.FilterSet{
 		// String

@@ -2,12 +2,12 @@
 package ast
 
 // Node is the base interface for all AST nodes.
-type Node interface{ groveNode() }
+type Node interface{ wispyNode() }
 
 // Program is the root node.
 type Program struct{ Body []Node }
 
-func (*Program) groveNode() {}
+func (*Program) wispyNode() {}
 
 // ─── Statement nodes ──────────────────────────────────────────────────────────
 
@@ -17,7 +17,7 @@ type TextNode struct {
 	Line  int
 }
 
-func (*TextNode) groveNode() {}
+func (*TextNode) wispyNode() {}
 
 // OutputNode holds an {{ expression }} to be evaluated and printed.
 type OutputNode struct {
@@ -27,7 +27,7 @@ type OutputNode struct {
 	Line       int
 }
 
-func (*OutputNode) groveNode() {}
+func (*OutputNode) wispyNode() {}
 
 // RawNode holds content from {% raw %}...{% endraw %} — printed verbatim.
 type RawNode struct {
@@ -35,7 +35,7 @@ type RawNode struct {
 	Line  int
 }
 
-func (*RawNode) groveNode() {}
+func (*RawNode) wispyNode() {}
 
 // TagNode is an unrecognised or deferred tag (e.g. if/for/extends).
 // The parser uses this as a placeholder for tags handled in later plans,
@@ -45,14 +45,14 @@ type TagNode struct {
 	Line int
 }
 
-func (*TagNode) groveNode() {}
+func (*TagNode) wispyNode() {}
 
 // ─── Expression nodes ─────────────────────────────────────────────────────────
 
 // NilLiteral is the nil/null literal.
 type NilLiteral struct{ Line int }
 
-func (*NilLiteral) groveNode() {}
+func (*NilLiteral) wispyNode() {}
 
 // BoolLiteral is true or false.
 type BoolLiteral struct {
@@ -60,7 +60,7 @@ type BoolLiteral struct {
 	Line  int
 }
 
-func (*BoolLiteral) groveNode() {}
+func (*BoolLiteral) wispyNode() {}
 
 // IntLiteral is an integer literal.
 type IntLiteral struct {
@@ -68,7 +68,7 @@ type IntLiteral struct {
 	Line  int
 }
 
-func (*IntLiteral) groveNode() {}
+func (*IntLiteral) wispyNode() {}
 
 // FloatLiteral is a floating-point literal.
 type FloatLiteral struct {
@@ -76,7 +76,7 @@ type FloatLiteral struct {
 	Line  int
 }
 
-func (*FloatLiteral) groveNode() {}
+func (*FloatLiteral) wispyNode() {}
 
 // StringLiteral is a quoted string literal.
 type StringLiteral struct {
@@ -84,7 +84,7 @@ type StringLiteral struct {
 	Line  int
 }
 
-func (*StringLiteral) groveNode() {}
+func (*StringLiteral) wispyNode() {}
 
 // Identifier is a variable reference.
 type Identifier struct {
@@ -92,7 +92,7 @@ type Identifier struct {
 	Line int
 }
 
-func (*Identifier) groveNode() {}
+func (*Identifier) wispyNode() {}
 
 // AttributeAccess is obj.key — resolves key on obj.
 type AttributeAccess struct {
@@ -101,7 +101,7 @@ type AttributeAccess struct {
 	Line   int
 }
 
-func (*AttributeAccess) groveNode() {}
+func (*AttributeAccess) wispyNode() {}
 
 // IndexAccess is obj[key] — integer or string key.
 type IndexAccess struct {
@@ -110,7 +110,7 @@ type IndexAccess struct {
 	Line   int
 }
 
-func (*IndexAccess) groveNode() {}
+func (*IndexAccess) wispyNode() {}
 
 // BinaryExpr is left op right.
 // Op is one of: + - * / % ~ == != < <= > >= and or
@@ -121,7 +121,7 @@ type BinaryExpr struct {
 	Line  int
 }
 
-func (*BinaryExpr) groveNode() {}
+func (*BinaryExpr) wispyNode() {}
 
 // UnaryExpr is op operand.
 // Op is one of: not -
@@ -131,10 +131,10 @@ type UnaryExpr struct {
 	Line    int
 }
 
-func (*UnaryExpr) groveNode() {}
+func (*UnaryExpr) wispyNode() {}
 
 // TernaryExpr is: Consequence if Condition else Alternative
-// (Grove syntax: `value if cond else fallback`)
+// (Wispy syntax: `value if cond else fallback`)
 type TernaryExpr struct {
 	Condition   Node
 	Consequence Node
@@ -142,7 +142,7 @@ type TernaryExpr struct {
 	Line        int
 }
 
-func (*TernaryExpr) groveNode() {}
+func (*TernaryExpr) wispyNode() {}
 
 // FilterExpr applies Filter(Args...) to Value.
 // e.g. name | truncate(20, "…") → FilterExpr{Value: Identifier{name}, Filter: "truncate", Args: [20, "…"]}
@@ -153,7 +153,7 @@ type FilterExpr struct {
 	Line   int
 }
 
-func (*FilterExpr) groveNode() {}
+func (*FilterExpr) wispyNode() {}
 
 // ─── Control flow nodes ───────────────────────────────────────────────────────
 
@@ -172,7 +172,7 @@ type IfNode struct {
 	Line      int
 }
 
-func (*IfNode) groveNode() {}
+func (*IfNode) wispyNode() {}
 
 // UnlessNode is {% unless cond %}...{% endunless %} — equivalent to if not cond.
 type UnlessNode struct {
@@ -181,7 +181,7 @@ type UnlessNode struct {
 	Line      int
 }
 
-func (*UnlessNode) groveNode() {}
+func (*UnlessNode) wispyNode() {}
 
 // ForNode is {% for var in iterable %}...{% empty %}...{% endfor %}.
 // If Var2 is non-empty, it's a two-variable form (for k,v in map / for i,item in list).
@@ -194,7 +194,7 @@ type ForNode struct {
 	Line     int
 }
 
-func (*ForNode) groveNode() {}
+func (*ForNode) wispyNode() {}
 
 // SetNode is {% set name = expr %}.
 type SetNode struct {
@@ -203,7 +203,7 @@ type SetNode struct {
 	Line int
 }
 
-func (*SetNode) groveNode() {}
+func (*SetNode) wispyNode() {}
 
 // WithNode is {% with %}...{% endwith %} — creates an isolated scope.
 type WithNode struct {
@@ -211,7 +211,7 @@ type WithNode struct {
 	Line int
 }
 
-func (*WithNode) groveNode() {}
+func (*WithNode) wispyNode() {}
 
 // CaptureNode is {% capture name %}...{% endcapture %} — renders body to a string variable.
 type CaptureNode struct {
@@ -220,7 +220,7 @@ type CaptureNode struct {
 	Line int
 }
 
-func (*CaptureNode) groveNode() {}
+func (*CaptureNode) wispyNode() {}
 
 // FuncCallNode is a function call expression: name(args...).
 // Only built-in functions are supported in Plan 2: range().
@@ -230,7 +230,7 @@ type FuncCallNode struct {
 	Line int
 }
 
-func (*FuncCallNode) groveNode() {}
+func (*FuncCallNode) wispyNode() {}
 
 // NamedArgNode is a key=value argument in a macro call: name="Alice".
 type NamedArgNode struct {
@@ -239,7 +239,7 @@ type NamedArgNode struct {
 	Line  int
 }
 
-func (*NamedArgNode) groveNode() {}
+func (*NamedArgNode) wispyNode() {}
 
 // MacroParam is a single parameter in a macro definition.
 type MacroParam struct {
@@ -255,7 +255,7 @@ type MacroNode struct {
 	Line   int
 }
 
-func (*MacroNode) groveNode() {}
+func (*MacroNode) wispyNode() {}
 
 // MacroCallExpr is a macro call expression: name(args...) or ns.name(args...).
 // Callee is an Identifier or AttributeAccess.
@@ -266,7 +266,7 @@ type MacroCallExpr struct {
 	Line      int
 }
 
-func (*MacroCallExpr) groveNode() {}
+func (*MacroCallExpr) wispyNode() {}
 
 // CallNode is {% call macro(args) %}body{% endcall %} — call with a caller body.
 type CallNode struct {
@@ -277,7 +277,7 @@ type CallNode struct {
 	Line      int
 }
 
-func (*CallNode) groveNode() {}
+func (*CallNode) wispyNode() {}
 
 // IncludeNode is {% include "name" [with k=v, ...] [isolated] %}.
 type IncludeNode struct {
@@ -287,7 +287,7 @@ type IncludeNode struct {
 	Line     int
 }
 
-func (*IncludeNode) groveNode() {}
+func (*IncludeNode) wispyNode() {}
 
 // RenderNode is {% render "name" [with k=v, ...] %} — always isolated.
 type RenderNode struct {
@@ -296,7 +296,7 @@ type RenderNode struct {
 	Line     int
 }
 
-func (*RenderNode) groveNode() {}
+func (*RenderNode) wispyNode() {}
 
 // ImportNode is {% import "name" as alias %}.
 type ImportNode struct {
@@ -305,7 +305,7 @@ type ImportNode struct {
 	Line  int
 }
 
-func (*ImportNode) groveNode() {}
+func (*ImportNode) wispyNode() {}
 
 // ExtendsNode is {% extends "name" %} — must be the first non-whitespace node.
 type ExtendsNode struct {
@@ -313,7 +313,7 @@ type ExtendsNode struct {
 	Line int
 }
 
-func (*ExtendsNode) groveNode() {}
+func (*ExtendsNode) wispyNode() {}
 
 // BlockNode is {% block name %}...{% endblock %}.
 // In an extending template, Block nodes define overrides.
@@ -324,7 +324,7 @@ type BlockNode struct {
 	Line int
 }
 
-func (*BlockNode) groveNode() {}
+func (*BlockNode) wispyNode() {}
 
 // PropsNode is {% props name, name2="default", ... %} — declares accepted props.
 // Must appear at the top of a component template. Reuses MacroParam for params.
@@ -333,7 +333,7 @@ type PropsNode struct {
 	Line   int
 }
 
-func (*PropsNode) groveNode() {}
+func (*PropsNode) wispyNode() {}
 
 // FillNode is {% fill "name" %}...{% endfill %} inside a component call body.
 // FillNode is NOT directly part of the template AST — it is consumed by the parser
@@ -353,7 +353,7 @@ type ComponentNode struct {
 	Line        int
 }
 
-func (*ComponentNode) groveNode() {}
+func (*ComponentNode) wispyNode() {}
 
 // SlotNode is {% slot ["name"] %}...{% endslot %} inside a component template.
 type SlotNode struct {
@@ -362,7 +362,7 @@ type SlotNode struct {
 	Line    int
 }
 
-func (*SlotNode) groveNode() {}
+func (*SlotNode) wispyNode() {}
 
 // ─── Plan 7 nodes ─────────────────────────────────────────────────────────────
 
@@ -377,7 +377,7 @@ type AssetNode struct {
 	Line      int
 }
 
-func (*AssetNode) groveNode() {}
+func (*AssetNode) wispyNode() {}
 
 // MetaNode declares a metadata entry for RenderResult.Meta.
 // Key is the value of the name=, property=, or http-equiv= attribute.
@@ -388,7 +388,7 @@ type MetaNode struct {
 	Line  int
 }
 
-func (*MetaNode) groveNode() {}
+func (*MetaNode) wispyNode() {}
 
 // HoistNode collects its rendered body into RenderResult.Hoisted[Target].
 // Target is a user-defined string (e.g. "head", "foot", "analytics").
@@ -398,4 +398,4 @@ type HoistNode struct {
 	Line   int
 }
 
-func (*HoistNode) groveNode() {}
+func (*HoistNode) wispyNode() {}

@@ -1,5 +1,5 @@
-// pkg/grove/webprimitives_test.go
-package grove_test
+// pkg/wispy/webprimitives_test.go
+package wispy_test
 
 import (
 	"bytes"
@@ -9,16 +9,16 @@ import (
 	"strings"
 	"testing"
 
-	"grove/pkg/grove"
+	"wispy/pkg/wispy"
 )
 
 // ─── {% raw %} tests ──────────────────────────────────────────────────────────
 
 func TestRaw_OutputExpr(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% raw %}{{ variable }}{% endraw %}`,
-		grove.Data{"variable": "should not render"})
+		wispy.Data{"variable": "should not render"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,10 +28,10 @@ func TestRaw_OutputExpr(t *testing.T) {
 }
 
 func TestRaw_OutputTag(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% raw %}{% if foo %}bar{% endif %}{% endraw %}`,
-		grove.Data{})
+		wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,9 +41,9 @@ func TestRaw_OutputTag(t *testing.T) {
 }
 
 func TestRaw_MultiLine(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	src := "{% raw %}\nline one\n{{ expr }}\n{% endraw %}"
-	result, err := eng.RenderTemplate(context.Background(), src, grove.Data{})
+	result, err := eng.RenderTemplate(context.Background(), src, wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,20 +54,20 @@ func TestRaw_MultiLine(t *testing.T) {
 
 // ─── {% asset %} tests ────────────────────────────────────────────────────────
 
-func newStoreEng(templates map[string]string, opts ...grove.Option) *grove.Engine {
-	s := grove.NewMemoryStore()
+func newStoreEng(templates map[string]string, opts ...wispy.Option) *wispy.Engine {
+	s := wispy.NewMemoryStore()
 	for k, v := range templates {
 		s.Set(k, v)
 	}
-	opts = append(opts, grove.WithStore(s))
-	return grove.New(opts...)
+	opts = append(opts, wispy.WithStore(s))
+	return wispy.New(opts...)
 }
 
 func TestAsset_StylesheetCollected(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% asset "app.css" type="stylesheet" %}hello`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestAsset_ScriptCollected(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% asset "app.js" type="script" %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestAsset_Deduplication(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% asset "app.js" type="script" %}{% asset "app.js" type="script" %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,7 +113,7 @@ func TestAsset_BooleanAttrInFootHTML(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% asset "app.js" type="script" defer %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +130,7 @@ func TestAsset_Priority(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% asset "b.css" type="stylesheet" %}{% asset "a.css" type="stylesheet" priority=10 %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +149,7 @@ func TestAsset_HeadHTML(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% asset "style.css" type="stylesheet" %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +163,7 @@ func TestAsset_FootHTML(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% asset "main.js" type="script" %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,7 +178,7 @@ func TestAsset_FromComponent(t *testing.T) {
 		"button.html": `{% asset "button.css" type="stylesheet" %}<button>click</button>`,
 		"page.html":   `{% component "button.html" %}{% endcomponent %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,9 +188,9 @@ func TestAsset_FromComponent(t *testing.T) {
 }
 
 func TestAsset_InlineTemplateError(t *testing.T) {
-	eng := grove.New()
+	eng := wispy.New()
 	_, err := eng.RenderTemplate(context.Background(),
-		`{% asset "app.css" type="stylesheet" %}`, grove.Data{})
+		`{% asset "app.css" type="stylesheet" %}`, wispy.Data{})
 	if err == nil {
 		t.Fatal("expected ParseError for asset in inline template")
 	}
@@ -202,7 +202,7 @@ func TestHoist_BasicTarget(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% hoist target="head" %}<style>.hero{}</style>{% endhoist %}body`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +219,7 @@ func TestHoist_MultipleBlocks(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% hoist target="head" %}first{% endhoist %}{% hoist target="head" %}second{% endhoist %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -236,7 +236,7 @@ func TestHoist_IndependentTargets(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% hoist target="head" %}HEAD{% endhoist %}{% hoist target="foot" %}FOOT{% endhoist %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -253,7 +253,7 @@ func TestHoist_FromComponent(t *testing.T) {
 		"widget.html": `{% hoist target="head" %}<style>.widget{}</style>{% endhoist %}widget`,
 		"page.html":   `{% component "widget.html" %}{% endcomponent %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +268,7 @@ func TestMeta_NameAttr(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% meta name="description" content="A great page" %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -281,7 +281,7 @@ func TestMeta_PropertyAttr(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% meta property="og:title" content="My Page" %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,7 +294,7 @@ func TestMeta_CollisionWarning(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% meta name="title" content="First" %}{% meta name="title" content="Second" %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -311,7 +311,7 @@ func TestMeta_FromComponent(t *testing.T) {
 		"hero.html": `{% meta name="og:image" content="/hero.jpg" %}`,
 		"page.html": `{% component "hero.html" %}{% endcomponent %}`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -327,7 +327,7 @@ func TestFileSystemStore_Load(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "page.html"), []byte("hello world"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	s := grove.NewFileSystemStore(dir)
+	s := wispy.NewFileSystemStore(dir)
 	data, err := s.Load("page.html")
 	if err != nil {
 		t.Fatal(err)
@@ -339,7 +339,7 @@ func TestFileSystemStore_Load(t *testing.T) {
 
 func TestFileSystemStore_PathTraversal(t *testing.T) {
 	dir := t.TempDir()
-	s := grove.NewFileSystemStore(dir)
+	s := wispy.NewFileSystemStore(dir)
 	_, err := s.Load("../etc/passwd")
 	if err == nil {
 		t.Fatal("expected error for path traversal")
@@ -348,7 +348,7 @@ func TestFileSystemStore_PathTraversal(t *testing.T) {
 
 func TestFileSystemStore_AbsolutePath(t *testing.T) {
 	dir := t.TempDir()
-	s := grove.NewFileSystemStore(dir)
+	s := wispy.NewFileSystemStore(dir)
 	_, err := s.Load("/etc/passwd")
 	if err == nil {
 		t.Fatal("expected error for absolute path")
@@ -364,7 +364,7 @@ func TestFileSystemStore_CleanedPath(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(subdir, "tmpl.html"), []byte("ok"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	s := grove.NewFileSystemStore(dir)
+	s := wispy.NewFileSystemStore(dir)
 	// a/../sub/tmpl.html cleans to sub/tmpl.html — should be allowed
 	data, err := s.Load("a/../sub/tmpl.html")
 	if err != nil {
@@ -380,12 +380,12 @@ func TestFileSystemStore_RenderFromFS(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "hi.html"), []byte("Hello {{ name }}!"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	eng := grove.New(grove.WithStore(grove.NewFileSystemStore(dir)))
-	result, err := eng.Render(context.Background(), "hi.html", grove.Data{"name": "Grove"})
+	eng := wispy.New(wispy.WithStore(wispy.NewFileSystemStore(dir)))
+	result, err := eng.Render(context.Background(), "hi.html", wispy.Data{"name": "Wispy"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Body != "Hello Grove!" {
+	if result.Body != "Hello Wispy!" {
 		t.Errorf("body = %q", result.Body)
 	}
 }
@@ -393,7 +393,7 @@ func TestFileSystemStore_RenderFromFS(t *testing.T) {
 // ─── LRU cache tests ──────────────────────────────────────────────────────────
 
 type countingStore struct {
-	inner *grove.MemoryStore
+	inner *wispy.MemoryStore
 	loads map[string]int
 }
 
@@ -403,15 +403,15 @@ func (cs *countingStore) Load(name string) ([]byte, error) {
 }
 
 func TestLRUCache_Hit(t *testing.T) {
-	ms := grove.NewMemoryStore()
+	ms := wispy.NewMemoryStore()
 	ms.Set("t.html", "hello")
 	cs := &countingStore{inner: ms, loads: make(map[string]int)}
 
-	eng := grove.New(grove.WithStore(cs))
+	eng := wispy.New(wispy.WithStore(cs))
 	ctx := context.Background()
 
 	for i := 0; i < 3; i++ {
-		if _, err := eng.Render(ctx, "t.html", grove.Data{}); err != nil {
+		if _, err := eng.Render(ctx, "t.html", wispy.Data{}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -421,24 +421,24 @@ func TestLRUCache_Hit(t *testing.T) {
 }
 
 func TestLRUCache_Eviction(t *testing.T) {
-	ms := grove.NewMemoryStore()
+	ms := wispy.NewMemoryStore()
 	ms.Set("a.html", "A")
 	ms.Set("b.html", "B")
 	ms.Set("c.html", "C")
 	cs := &countingStore{inner: ms, loads: make(map[string]int)}
 
 	// Cache size 1: only 1 entry fits
-	eng := grove.New(grove.WithStore(cs), grove.WithCacheSize(1))
+	eng := wispy.New(wispy.WithStore(cs), wispy.WithCacheSize(1))
 	ctx := context.Background()
 
-	if _, err := eng.Render(ctx, "a.html", grove.Data{}); err != nil {
+	if _, err := eng.Render(ctx, "a.html", wispy.Data{}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := eng.Render(ctx, "b.html", grove.Data{}); err != nil {
+	if _, err := eng.Render(ctx, "b.html", wispy.Data{}); err != nil {
 		t.Fatal(err)
 	}
 	// a.html was evicted — should be re-loaded
-	if _, err := eng.Render(ctx, "a.html", grove.Data{}); err != nil {
+	if _, err := eng.Render(ctx, "a.html", wispy.Data{}); err != nil {
 		t.Fatal(err)
 	}
 	if cs.loads["a.html"] != 2 {
@@ -449,12 +449,12 @@ func TestLRUCache_Eviction(t *testing.T) {
 // ─── RenderTo tests ───────────────────────────────────────────────────────────
 
 func TestRenderTo_WritesBody(t *testing.T) {
-	s := grove.NewMemoryStore()
+	s := wispy.NewMemoryStore()
 	s.Set("t.html", "hello world")
-	eng := grove.New(grove.WithStore(s))
+	eng := wispy.New(wispy.WithStore(s))
 
 	var buf bytes.Buffer
-	if err := eng.RenderTo(context.Background(), "t.html", grove.Data{}, &buf); err != nil {
+	if err := eng.RenderTo(context.Background(), "t.html", wispy.Data{}, &buf); err != nil {
 		t.Fatal(err)
 	}
 	if buf.String() != "hello world" {
@@ -463,9 +463,9 @@ func TestRenderTo_WritesBody(t *testing.T) {
 }
 
 func TestRenderTo_PropagatesError(t *testing.T) {
-	eng := grove.New() // no store
+	eng := wispy.New() // no store
 	var buf bytes.Buffer
-	err := eng.RenderTo(context.Background(), "missing.html", grove.Data{}, &buf)
+	err := eng.RenderTo(context.Background(), "missing.html", wispy.Data{}, &buf)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -474,15 +474,15 @@ func TestRenderTo_PropagatesError(t *testing.T) {
 // ─── Sandbox tests ────────────────────────────────────────────────────────────
 
 func TestSandbox_AllowedTagsBlocked(t *testing.T) {
-	s := grove.NewMemoryStore()
+	s := wispy.NewMemoryStore()
 	s.Set("t.html", `{% set x = 1 %}{{ x }}`)
-	eng := grove.New(
-		grove.WithStore(s),
-		grove.WithSandbox(grove.SandboxConfig{
+	eng := wispy.New(
+		wispy.WithStore(s),
+		wispy.WithSandbox(wispy.SandboxConfig{
 			AllowedTags: []string{"if", "for"},
 		}),
 	)
-	_, err := eng.Render(context.Background(), "t.html", grove.Data{})
+	_, err := eng.Render(context.Background(), "t.html", wispy.Data{})
 	if err == nil {
 		t.Fatal("expected ParseError for disallowed tag")
 	}
@@ -492,15 +492,15 @@ func TestSandbox_AllowedTagsBlocked(t *testing.T) {
 }
 
 func TestSandbox_AllowedFiltersBlocked(t *testing.T) {
-	s := grove.NewMemoryStore()
+	s := wispy.NewMemoryStore()
 	s.Set("t.html", `{{ "hello" | downcase }}`)
-	eng := grove.New(
-		grove.WithStore(s),
-		grove.WithSandbox(grove.SandboxConfig{
+	eng := wispy.New(
+		wispy.WithStore(s),
+		wispy.WithSandbox(wispy.SandboxConfig{
 			AllowedFilters: []string{"upcase"},
 		}),
 	)
-	_, err := eng.Render(context.Background(), "t.html", grove.Data{})
+	_, err := eng.Render(context.Background(), "t.html", wispy.Data{})
 	if err == nil {
 		t.Fatal("expected error for disallowed filter")
 	}
@@ -510,15 +510,15 @@ func TestSandbox_AllowedFiltersBlocked(t *testing.T) {
 }
 
 func TestSandbox_MaxLoopIter(t *testing.T) {
-	s := grove.NewMemoryStore()
+	s := wispy.NewMemoryStore()
 	s.Set("t.html", `{% for i in items %}{{ i }}{% endfor %}`)
-	eng := grove.New(
-		grove.WithStore(s),
-		grove.WithSandbox(grove.SandboxConfig{MaxLoopIter: 3}),
+	eng := wispy.New(
+		wispy.WithStore(s),
+		wispy.WithSandbox(wispy.SandboxConfig{MaxLoopIter: 3}),
 	)
 	// 10 items — should exceed limit of 3 iterations
 	items := []any{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	_, err := eng.Render(context.Background(), "t.html", grove.Data{"items": items})
+	_, err := eng.Render(context.Background(), "t.html", wispy.Data{"items": items})
 	if err == nil {
 		t.Fatal("expected RuntimeError for MaxLoopIter exceeded")
 	}
@@ -530,16 +530,16 @@ func TestSandbox_MaxLoopIter(t *testing.T) {
 func TestSandbox_DisallowedTagInInclude(t *testing.T) {
 	// sandbox restrictions apply to included sub-templates:
 	// part.html uses {% set %} which is not in AllowedTags
-	s := grove.NewMemoryStore()
+	s := wispy.NewMemoryStore()
 	s.Set("page.html", `{% include "part.html" %}`)
 	s.Set("part.html", `{% set x = 1 %}{{ x }}`)
-	eng := grove.New(
-		grove.WithStore(s),
-		grove.WithSandbox(grove.SandboxConfig{
+	eng := wispy.New(
+		wispy.WithStore(s),
+		wispy.WithSandbox(wispy.SandboxConfig{
 			AllowedTags: []string{"if", "for", "include"}, // include allowed; set is not
 		}),
 	)
-	_, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	_, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err == nil {
 		t.Fatal("expected error for disallowed tag in included template")
 	}
@@ -554,7 +554,7 @@ func TestHoist_InsideConditional_True(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% if show %}{% hoist target="x" %}hoisted{% endhoist %}{% endif %}body`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{"show": true})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{"show": true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -570,7 +570,7 @@ func TestHoist_InsideConditional_False(t *testing.T) {
 	eng := newStoreEng(map[string]string{
 		"page.html": `{% if show %}{% hoist target="x" %}hoisted{% endhoist %}{% endif %}body`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{"show": false})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{"show": false})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -586,7 +586,7 @@ func TestMeta_FromInclude(t *testing.T) {
 		"part.html": `{% meta name="description" content="from include" %}`,
 		"page.html": `{% include "part.html" %}body`,
 	})
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}

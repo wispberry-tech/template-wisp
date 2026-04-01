@@ -1,5 +1,5 @@
-// pkg/grove/integration_test.go
-package grove_test
+// pkg/wispy/integration_test.go
+package wispy_test
 
 import (
 	"context"
@@ -8,19 +8,19 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"grove/pkg/grove"
+	"wispy/pkg/wispy"
 )
 
 // ─── Macro defined at page level + component fill ─────────────────────────────
 
 func TestIntegration_MacroAndComponent(t *testing.T) {
 	// Macro defined at the template level, then called inside a component slot fill.
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("card.html", `<div class="card">{% slot %}{% endslot %}</div>`)
 	store.Set("page.html", `{% macro badge(label) %}<span>{{ label }}</span>{% endmacro %}{% component "card.html" %}{{ badge("New") }}{% endcomponent %}`)
 
-	eng := grove.New(grove.WithStore(store))
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	eng := wispy.New(wispy.WithStore(store))
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, `<div class="card"><span>New</span></div>`, result.Body)
 }
@@ -28,13 +28,13 @@ func TestIntegration_MacroAndComponent(t *testing.T) {
 // ─── Imported macro used inside component fill ────────────────────────────────
 
 func TestIntegration_ImportedMacroInComponentFill(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("macros.html", `{% macro tag(name) %}<{{ name }}>{% endmacro %}`)
 	store.Set("wrap.html", `<section>{% slot %}{% endslot %}</section>`)
 	store.Set("page.html", `{% import "macros.html" as m %}{% component "wrap.html" %}{{ m.tag("span") }}{% endcomponent %}`)
 
-	eng := grove.New(grove.WithStore(store))
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	eng := wispy.New(wispy.WithStore(store))
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "<section><span></section>", result.Body)
 }
@@ -44,12 +44,12 @@ func TestIntegration_ImportedMacroInComponentFill(t *testing.T) {
 func TestIntegration_ComponentBubblesAssetAndHoist(t *testing.T) {
 	// Asset declared and hoist emitted inside a component should appear in the
 	// top-level RenderResult, not in the component body.
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("widget.html", `{% asset "widget.css" type="stylesheet" %}{% hoist target="foot" %}<script>w()</script>{% endhoist %}<div>widget</div>`)
 	store.Set("page.html", `{% component "widget.html" %}{% endcomponent %}`)
 
-	eng := grove.New(grove.WithStore(store))
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	eng := wispy.New(wispy.WithStore(store))
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "<div>widget</div>", result.Body)
 	require.Len(t, result.Assets, 1)
@@ -61,12 +61,12 @@ func TestIntegration_ComponentBubblesAssetAndHoist(t *testing.T) {
 
 func TestIntegration_InheritanceWithDataVars(t *testing.T) {
 	// Variables from render data are visible in both parent and child block content.
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("base.html", `<html><title>{% block title %}{% endblock %}</title><body>{% block body %}{% endblock %}</body></html>`)
 	store.Set("page.html", `{% extends "base.html" %}{% block title %}{{ site }} — {{ page_title }}{% endblock %}{% block body %}{{ content }}{% endblock %}`)
 
-	eng := grove.New(grove.WithStore(store))
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{
+	eng := wispy.New(wispy.WithStore(store))
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{
 		"site":       "Acme",
 		"page_title": "Home",
 		"content":    "Welcome!",
@@ -79,12 +79,12 @@ func TestIntegration_InheritanceWithDataVars(t *testing.T) {
 
 func TestIntegration_ConcurrentRenders(t *testing.T) {
 	// Multiple goroutines render the same multi-template inheritance chain concurrently.
-	// Run with -race to detect data races: go test -race ./pkg/grove/...
-	store := grove.NewMemoryStore()
+	// Run with -race to detect data races: go test -race ./pkg/wispy/...
+	store := wispy.NewMemoryStore()
 	store.Set("base.html", `[{% block title %}base{% endblock %}|{% block body %}{% endblock %}]`)
 	store.Set("page.html", `{% extends "base.html" %}{% block title %}{{ title }}{% endblock %}{% block body %}{{ content }}{% endblock %}`)
 
-	eng := grove.New(grove.WithStore(store))
+	eng := wispy.New(wispy.WithStore(store))
 	ctx := context.Background()
 
 	const goroutines = 20
@@ -98,7 +98,7 @@ func TestIntegration_ConcurrentRenders(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < rendersEach; i++ {
-				result, err := eng.Render(ctx, "page.html", grove.Data{
+				result, err := eng.Render(ctx, "page.html", wispy.Data{
 					"title":   "Page",
 					"content": "hello",
 				})
@@ -127,36 +127,36 @@ func TestIntegration_ConcurrentRenders(t *testing.T) {
 // ─── component/asset/hoist inside block of extending template ─────────────────
 
 func TestIntegration_ComponentInsideBlockOfExtends(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("base.html", `<html><body>{% block content %}{% endblock %}</body></html>`)
 	store.Set("card.html", `<div>{% slot %}{% endslot %}</div>`)
 	store.Set("page.html", `{% extends "base.html" %}{% block content %}{% component "card.html" %}hello{% endcomponent %}{% endblock %}`)
 
-	eng := grove.New(grove.WithStore(store))
-	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
+	eng := wispy.New(wispy.WithStore(store))
+	result, err := eng.Render(context.Background(), "page.html", wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "<html><body><div>hello</div></body></html>", result.Body)
 }
 
 func TestIntegration_AssetInsideBlockOfExtends(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("base.html", `<body>{% block content %}{% endblock %}</body>`)
 	store.Set("child.html", `{% extends "base.html" %}{% block content %}{% asset "app.css" type="stylesheet" %}content{% endblock %}`)
 
-	eng := grove.New(grove.WithStore(store))
-	result, err := eng.Render(context.Background(), "child.html", grove.Data{})
+	eng := wispy.New(wispy.WithStore(store))
+	result, err := eng.Render(context.Background(), "child.html", wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "<body>content</body>", result.Body)
 	require.Len(t, result.Assets, 1)
 }
 
 func TestIntegration_HoistInsideBlockOfExtends(t *testing.T) {
-	store := grove.NewMemoryStore()
+	store := wispy.NewMemoryStore()
 	store.Set("base.html", `<body>{% block content %}{% endblock %}</body>`)
 	store.Set("child.html", `{% extends "base.html" %}{% block content %}{% hoist target="head" %}<style>.x{}</style>{% endhoist %}content{% endblock %}`)
 
-	eng := grove.New(grove.WithStore(store))
-	result, err := eng.Render(context.Background(), "child.html", grove.Data{})
+	eng := wispy.New(wispy.WithStore(store))
+	result, err := eng.Render(context.Background(), "child.html", wispy.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "<body>content</body>", result.Body)
 	require.Contains(t, result.GetHoisted("head"), ".x{}")

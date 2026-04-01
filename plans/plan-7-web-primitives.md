@@ -1,4 +1,4 @@
-# Plan 7: Grove Web App Primitives
+# Plan 7: Wispy Web App Primitives
 
 **Status**: Complete  
 **Depends on**: Plans 1–6  
@@ -8,7 +8,7 @@
 
 ## Scope
 
-Plan 7 delivers the full web-application surface of the Grove template engine:
+Plan 7 delivers the full web-application surface of the Wispy template engine:
 
 | Feature | Tag | Go API |
 |---------|-----|--------|
@@ -50,10 +50,10 @@ Plan 7 delivers the full web-application surface of the Grove template engine:
 |------|------|-------------|
 | `spec/plan-7-render-result.md` | New | Mini spec for render result / page primitives |
 | `plans/plan-7-web-primitives.md` | New | This document |
-| `pkg/grove/webprimitives_test.go` | New | 38 tests (TDD) |
-| `pkg/grove/result.go` | Rewrite | Enriched `RenderResult`, `Asset`, `Warning`, `HeadHTML`, `FootHTML`, `GetHoisted` |
-| `pkg/grove/store.go` | Modified | Added `FileSystemStore` alias + `NewFileSystemStore` |
-| `pkg/grove/engine.go` | Modified | LRU cache, `WithSandbox`, `WithCacheSize`, `RenderTo`, `resultFromExecute`, sandbox enforcement |
+| `pkg/wispy/webprimitives_test.go` | New | 38 tests (TDD) |
+| `pkg/wispy/result.go` | Rewrite | Enriched `RenderResult`, `Asset`, `Warning`, `HeadHTML`, `FootHTML`, `GetHoisted` |
+| `pkg/wispy/store.go` | Modified | Added `FileSystemStore` alias + `NewFileSystemStore` |
+| `pkg/wispy/engine.go` | Modified | LRU cache, `WithSandbox`, `WithCacheSize`, `RenderTo`, `resultFromExecute`, sandbox enforcement |
 | `internal/store/filesystem.go` | New | `FileSystemStore` with path-traversal protection |
 | `internal/ast/node.go` | Modified | Added `AssetNode`, `MetaNode`, `HoistNode` |
 | `internal/lexer/token.go` | Unchanged | `{% raw %}` handled at lexer level without new token type |
@@ -99,7 +99,7 @@ type ExecuteResult struct {
 }
 ```
 
-`engine.go` converts `ExecuteResult` → `grove.RenderResult` via `resultFromExecute()`.
+`engine.go` converts `ExecuteResult` → `wispy.RenderResult` via `resultFromExecute()`.
 
 ### Opcode Summary
 
@@ -128,7 +128,7 @@ Three tiers:
 
 ## Test Coverage
 
-38 tests in `pkg/grove/webprimitives_test.go`:
+38 tests in `pkg/wispy/webprimitives_test.go`:
 
 - `TestRaw_*` (3) — literal output of expressions and tags
 - `TestAsset_*` (9) — collection, dedup, priority, boolean attrs, component bubbling, inline error
@@ -145,9 +145,9 @@ Three tiers:
 
 ```go
 // Create engine with filesystem store
-eng := grove.New(
-    grove.WithStore(grove.NewFileSystemStore("./templates")),
-    grove.WithCacheSize(256),
+eng := wispy.New(
+    wispy.WithStore(wispy.NewFileSystemStore("./templates")),
+    wispy.WithCacheSize(256),
 )
 
 // In a template:
@@ -156,7 +156,7 @@ eng := grove.New(
 // {% meta name="description" content="My page" %}
 // {% hoist target="head" %}<title>My Page</title>{% endhoist %}
 
-result, err := eng.Render(ctx, "page.html", grove.Data{"user": user})
+result, err := eng.Render(ctx, "page.html", wispy.Data{"user": user})
 if err != nil { ... }
 
 // Assemble HTML response:

@@ -1,5 +1,5 @@
-// pkg/grove/engine.go
-package grove
+// pkg/wispy/engine.go
+package wispy
 
 import (
 	"context"
@@ -7,14 +7,14 @@ import (
 	"io"
 	"sync"
 
-	"grove/internal/ast"
-	"grove/internal/compiler"
-	"grove/internal/filters"
-	"grove/internal/groverrors"
-	"grove/internal/lexer"
-	"grove/internal/parser"
-	"grove/internal/store"
-	"grove/internal/vm"
+	"wispy/internal/ast"
+	"wispy/internal/compiler"
+	"wispy/internal/filters"
+	"wispy/internal/wispyrrors"
+	"wispy/internal/lexer"
+	"wispy/internal/parser"
+	"wispy/internal/store"
+	"wispy/internal/vm"
 )
 
 // Option configures an Engine at creation time.
@@ -58,7 +58,7 @@ func WithSandbox(cfg SandboxConfig) Option {
 	return func(c *engineCfg) { c.sandbox = &cfg }
 }
 
-// Engine is the Grove template engine. Create with New(). Safe for concurrent use.
+// Engine is the Wispy template engine. Create with New(). Safe for concurrent use.
 type Engine struct {
 	cfg     engineCfg
 	globals map[string]any
@@ -105,7 +105,7 @@ func (e *Engine) RenderTemplate(ctx context.Context, src string, data Data) (Ren
 		if le, ok := err.(liner); ok {
 			line = le.LexLine()
 		}
-		return RenderResult{}, &groverrors.ParseError{Message: err.Error(), Line: line}
+		return RenderResult{}, &wispyrrors.ParseError{Message: err.Error(), Line: line}
 	}
 
 	prog, err := parser.Parse(tokens, true, e.allowedTagsMap())
@@ -155,7 +155,7 @@ func (e *Engine) LoadTemplate(name string) (*compiler.Bytecode, error) {
 		return bc, nil
 	}
 	if e.cfg.store == nil {
-		return nil, fmt.Errorf("no store configured — use grove.WithStore() to load named templates")
+		return nil, fmt.Errorf("no store configured — use wispy.WithStore() to load named templates")
 	}
 	src, err := e.cfg.store.Load(name)
 	if err != nil {
@@ -163,7 +163,7 @@ func (e *Engine) LoadTemplate(name string) (*compiler.Bytecode, error) {
 	}
 	tokens, err := lexer.Tokenize(string(src))
 	if err != nil {
-		return nil, &groverrors.ParseError{Message: err.Error()}
+		return nil, &wispyrrors.ParseError{Message: err.Error()}
 	}
 	prog, err := parser.Parse(tokens, false, e.allowedTagsMap())
 	if err != nil {
@@ -181,7 +181,7 @@ func (e *Engine) LoadTemplate(name string) (*compiler.Bytecode, error) {
 func (e *Engine) compileChecked(prog *ast.Program) (*compiler.Bytecode, error) {
 	bc, err := compiler.Compile(prog)
 	if err != nil {
-		return nil, &groverrors.ParseError{Message: err.Error()}
+		return nil, &wispyrrors.ParseError{Message: err.Error()}
 	}
 	if e.cfg.sandbox != nil && e.cfg.sandbox.AllowedFilters != nil {
 		allowed := make(map[string]bool, len(e.cfg.sandbox.AllowedFilters))
@@ -201,7 +201,7 @@ func checkAllowedFilters(bc *compiler.Bytecode, allowed map[string]bool) error {
 		if instr.Op == compiler.OP_FILTER {
 			name := bc.Names[instr.A]
 			if !allowed[name] {
-				return &groverrors.ParseError{Message: fmt.Sprintf("sandbox: filter %q is not allowed", name)}
+				return &wispyrrors.ParseError{Message: fmt.Sprintf("sandbox: filter %q is not allowed", name)}
 			}
 		}
 	}
@@ -269,10 +269,10 @@ func (e *Engine) allowedTagsMap() map[string]bool {
 }
 
 func wrapRuntimeErr(err error) error {
-	if _, ok := err.(*groverrors.RuntimeError); ok {
+	if _, ok := err.(*wispyrrors.RuntimeError); ok {
 		return err
 	}
-	return &groverrors.RuntimeError{Message: err.Error()}
+	return &wispyrrors.RuntimeError{Message: err.Error()}
 }
 
 func resultFromExecute(er vm.ExecuteResult) RenderResult {

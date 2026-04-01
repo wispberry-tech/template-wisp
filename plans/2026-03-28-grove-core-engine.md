@@ -1,12 +1,12 @@
-# Grove Core Engine — Implementation Plan
+# Wispy Core Engine — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build the Grove template engine core — lexer, parser, AST, bytecode compiler, and VM — delivering working `eng.RenderTemplate()` for variables, expressions, auto-escape, whitespace control, comments, basic filters, global context, strict mode, and concurrent rendering.
+**Goal:** Build the Wispy template engine core — lexer, parser, AST, bytecode compiler, and VM — delivering working `eng.RenderTemplate()` for variables, expressions, auto-escape, whitespace control, comments, basic filters, global context, strict mode, and concurrent rendering.
 
 **Architecture:** Source → Lexer ([]Token) → Parser (*ast.Program) → Compiler (*Bytecode) → VM → RenderResult. Bytecode is immutable and shared across goroutines; VM instances are pooled via sync.Pool. Auto-escape is on by default; SafeHTML is the only bypass.
 
-**Tech Stack:** Go 1.24, `github.com/stretchr/testify v1.9.0` (tests only), zero runtime dependencies. Module path: `grove`.
+**Tech Stack:** Go 1.24, `github.com/stretchr/testify v1.9.0` (tests only), zero runtime dependencies. Module path: `wispy`.
 
 ---
 
@@ -37,15 +37,15 @@
 
 | File | Role |
 |------|------|
-| `go.mod` | Module `grove`, updated from `template-wisp` |
-| `pkg/grove/engine.go` | `Engine`, `New()`, options, `RenderTemplate()`, `SetGlobal()`, `RegisterFilter()` |
-| `pkg/grove/engine_test.go` | ALL integration tests + benchmarks |
-| `pkg/grove/result.go` | `RenderResult{Body string}` |
-| `pkg/grove/value.go` | Public `Value` wrappers: `StringValue()`, `SafeHTMLValue()`, `Nil`, `ArgInt()` |
-| `pkg/grove/context.go` | `Data`, `Resolvable` interface |
-| `pkg/grove/errors.go` | `ParseError`, `RuntimeError` |
-| `pkg/grove/filter.go` | `FilterFn`, `FilterFunc()`, `FilterOutputsHTML()`, `FilterSet` |
-| `internal/groverrors/errors.go` | Shared error types (imported by parser, vm; re-exported by pkg/grove) |
+| `go.mod` | Module `wispy`, updated from `template-wisp` |
+| `pkg/wispy/engine.go` | `Engine`, `New()`, options, `RenderTemplate()`, `SetGlobal()`, `RegisterFilter()` |
+| `pkg/wispy/engine_test.go` | ALL integration tests + benchmarks |
+| `pkg/wispy/result.go` | `RenderResult{Body string}` |
+| `pkg/wispy/value.go` | Public `Value` wrappers: `StringValue()`, `SafeHTMLValue()`, `Nil`, `ArgInt()` |
+| `pkg/wispy/context.go` | `Data`, `Resolvable` interface |
+| `pkg/wispy/errors.go` | `ParseError`, `RuntimeError` |
+| `pkg/wispy/filter.go` | `FilterFn`, `FilterFunc()`, `FilterOutputsHTML()`, `FilterSet` |
+| `internal/wispyrrors/errors.go` | Shared error types (imported by parser, vm; re-exported by pkg/wispy) |
 | `internal/lexer/token.go` | `Token`, `TokenKind` constants |
 | `internal/lexer/lexer.go` | `Tokenize(src string) ([]Token, error)` |
 | `internal/lexer/lexer_test.go` | Lexer unit tests |
@@ -64,15 +64,15 @@
 ## Task 1: Write Integration Tests
 
 **Files:**
-- Create: `pkg/grove/engine_test.go`
+- Create: `pkg/wispy/engine_test.go`
 
 Tests won't compile yet — that's the point. Lock in the API contract before building.
 
 - [ ] **Step 1: Create the test file**
 
 ```go
-// pkg/grove/engine_test.go
-package grove_test
+// pkg/wispy/engine_test.go
+package wispy_test
 
 import (
 	"context"
@@ -82,24 +82,24 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"grove/pkg/grove"
+	"wispy/pkg/wispy"
 )
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-func newEngine(t *testing.T, opts ...grove.Option) *grove.Engine {
+func newEngine(t *testing.T, opts ...wispy.Option) *wispy.Engine {
 	t.Helper()
-	return grove.New(opts...)
+	return wispy.New(opts...)
 }
 
-func render(t *testing.T, eng *grove.Engine, tmpl string, data grove.Data) string {
+func render(t *testing.T, eng *wispy.Engine, tmpl string, data wispy.Data) string {
 	t.Helper()
 	result, err := eng.RenderTemplate(context.Background(), tmpl, data)
 	require.NoError(t, err)
 	return result.Body
 }
 
-func renderErr(t *testing.T, eng *grove.Engine, tmpl string, data grove.Data) error {
+func renderErr(t *testing.T, eng *wispy.Engine, tmpl string, data wispy.Data) error {
 	t.Helper()
 	_, err := eng.RenderTemplate(context.Background(), tmpl, data)
 	return err
@@ -111,7 +111,7 @@ type testProduct struct {
 	price float64
 }
 
-func (p testProduct) GroveResolve(key string) (any, bool) {
+func (p testProduct) WispyResolve(key string) (any, bool) {
 	switch key {
 	case "name":
 		return p.Name, true
@@ -125,21 +125,21 @@ func (p testProduct) GroveResolve(key string) (any, bool) {
 
 func TestVariables_SimpleString(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `Hello, {{ name }}!`, grove.Data{"name": "World"})
+	got := render(t, eng, `Hello, {{ name }}!`, wispy.Data{"name": "World"})
 	require.Equal(t, "Hello, World!", got)
 }
 
 func TestVariables_NestedAccess(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ user.address.city }}`, grove.Data{
-		"user": grove.Data{"address": grove.Data{"city": "Berlin"}},
+	got := render(t, eng, `{{ user.address.city }}`, wispy.Data{
+		"user": wispy.Data{"address": wispy.Data{"city": "Berlin"}},
 	})
 	require.Equal(t, "Berlin", got)
 }
 
 func TestVariables_IndexAccess(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ items[0] }}`, grove.Data{
+	got := render(t, eng, `{{ items[0] }}`, wispy.Data{
 		"items": []string{"alpha", "beta", "gamma"},
 	})
 	require.Equal(t, "alpha", got)
@@ -147,7 +147,7 @@ func TestVariables_IndexAccess(t *testing.T) {
 
 func TestVariables_MapAccess(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ config["debug"] }}`, grove.Data{
+	got := render(t, eng, `{{ config["debug"] }}`, wispy.Data{
 		"config": map[string]any{"debug": "true"},
 	})
 	require.Equal(t, "true", got)
@@ -155,30 +155,30 @@ func TestVariables_MapAccess(t *testing.T) {
 
 func TestVariables_UndefinedReturnsEmpty(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `[{{ missing }}]`, grove.Data{})
+	got := render(t, eng, `[{{ missing }}]`, wispy.Data{})
 	require.Equal(t, "[]", got)
 }
 
 func TestVariables_StrictModeErrors(t *testing.T) {
-	eng := newEngine(t, grove.WithStrictVariables(true))
-	err := renderErr(t, eng, `{{ missing }}`, grove.Data{})
+	eng := newEngine(t, wispy.WithStrictVariables(true))
+	err := renderErr(t, eng, `{{ missing }}`, wispy.Data{})
 	require.Error(t, err)
-	var re *grove.RuntimeError
+	var re *wispy.RuntimeError
 	require.ErrorAs(t, err, &re)
 	require.Contains(t, re.Message, "missing")
 }
 
 func TestVariables_Resolvable(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ product.name }}`, grove.Data{
+	got := render(t, eng, `{{ product.name }}`, wispy.Data{
 		"product": testProduct{Name: "Widget", price: 9.99},
 	})
 	require.Equal(t, "Widget", got)
 }
 
 func TestVariables_ResolvableHidesUnexposed(t *testing.T) {
-	eng := newEngine(t, grove.WithStrictVariables(true))
-	err := renderErr(t, eng, `{{ product.secret }}`, grove.Data{
+	eng := newEngine(t, wispy.WithStrictVariables(true))
+	err := renderErr(t, eng, `{{ product.secret }}`, wispy.Data{
 		"product": testProduct{Name: "Widget", price: 9.99},
 	})
 	require.Error(t, err)
@@ -196,38 +196,38 @@ func TestExpressions_Arithmetic(t *testing.T) {
 		{`{{ 10 % 3 }}`, "1"},
 	}
 	for _, tc := range cases {
-		got := render(t, eng, tc.tmpl, grove.Data{})
+		got := render(t, eng, tc.tmpl, wispy.Data{})
 		require.Equal(t, tc.want, got, "template: %s", tc.tmpl)
 	}
 }
 
 func TestExpressions_StringConcat(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ "Hello" ~ ", " ~ name ~ "!" }}`, grove.Data{"name": "Grove"})
-	require.Equal(t, "Hello, Grove!", got)
+	got := render(t, eng, `{{ "Hello" ~ ", " ~ name ~ "!" }}`, wispy.Data{"name": "Wispy"})
+	require.Equal(t, "Hello, Wispy!", got)
 }
 
 func TestExpressions_Comparison(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ x > 5 }}`, grove.Data{"x": 10})
+	got := render(t, eng, `{{ x > 5 }}`, wispy.Data{"x": 10})
 	require.Equal(t, "true", got)
 }
 
 func TestExpressions_LogicalOperators(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ a and b }}`, grove.Data{"a": true, "b": true})
+	got := render(t, eng, `{{ a and b }}`, wispy.Data{"a": true, "b": true})
 	require.Equal(t, "true", got)
-	got = render(t, eng, `{{ a and b }}`, grove.Data{"a": true, "b": false})
+	got = render(t, eng, `{{ a and b }}`, wispy.Data{"a": true, "b": false})
 	require.Equal(t, "false", got)
 }
 
 func TestExpressions_InlineTernary(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ name if active else "Guest" }}`, grove.Data{
+	got := render(t, eng, `{{ name if active else "Guest" }}`, wispy.Data{
 		"name": "Alice", "active": true,
 	})
 	require.Equal(t, "Alice", got)
-	got = render(t, eng, `{{ name if active else "Guest" }}`, grove.Data{
+	got = render(t, eng, `{{ name if active else "Guest" }}`, wispy.Data{
 		"name": "Alice", "active": false,
 	})
 	require.Equal(t, "Guest", got)
@@ -235,7 +235,7 @@ func TestExpressions_InlineTernary(t *testing.T) {
 
 func TestExpressions_Not(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ not banned }}`, grove.Data{"banned": false})
+	got := render(t, eng, `{{ not banned }}`, wispy.Data{"banned": false})
 	require.Equal(t, "true", got)
 }
 
@@ -243,46 +243,46 @@ func TestExpressions_Not(t *testing.T) {
 
 func TestFilters_SafeFilter_TrustedHTML(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ html | safe }}`, grove.Data{"html": "<b>bold</b>"})
+	got := render(t, eng, `{{ html | safe }}`, wispy.Data{"html": "<b>bold</b>"})
 	require.Equal(t, "<b>bold</b>", got)
 }
 
 func TestFilters_CustomFilter(t *testing.T) {
 	eng := newEngine(t)
-	eng.RegisterFilter("shout", func(v grove.Value, args []grove.Value) (grove.Value, error) {
-		return grove.StringValue(strings.ToUpper(v.String()) + "!!!"), nil
+	eng.RegisterFilter("shout", func(v wispy.Value, args []wispy.Value) (wispy.Value, error) {
+		return wispy.StringValue(strings.ToUpper(v.String()) + "!!!"), nil
 	})
-	got := render(t, eng, `{{ msg | shout }}`, grove.Data{"msg": "hello"})
+	got := render(t, eng, `{{ msg | shout }}`, wispy.Data{"msg": "hello"})
 	require.Equal(t, "HELLO!!!", got)
 }
 
 func TestFilters_CustomFilterWithArgs(t *testing.T) {
 	eng := newEngine(t)
-	eng.RegisterFilter("repeat", func(v grove.Value, args []grove.Value) (grove.Value, error) {
-		n := grove.ArgInt(args, 0, 2)
-		return grove.StringValue(strings.Repeat(v.String(), n)), nil
+	eng.RegisterFilter("repeat", func(v wispy.Value, args []wispy.Value) (wispy.Value, error) {
+		n := wispy.ArgInt(args, 0, 2)
+		return wispy.StringValue(strings.Repeat(v.String(), n)), nil
 	})
-	got := render(t, eng, `{{ "ha" | repeat(3) }}`, grove.Data{})
+	got := render(t, eng, `{{ "ha" | repeat(3) }}`, wispy.Data{})
 	require.Equal(t, "hahaha", got)
 }
 
 func TestFilters_CustomHTMLFilter_SkipsEscape(t *testing.T) {
 	eng := newEngine(t)
-	eng.RegisterFilter("bold", grove.FilterFunc(
-		func(v grove.Value, _ []grove.Value) (grove.Value, error) {
-			return grove.SafeHTMLValue("<b>" + v.String() + "</b>"), nil
+	eng.RegisterFilter("bold", wispy.FilterFunc(
+		func(v wispy.Value, _ []wispy.Value) (wispy.Value, error) {
+			return wispy.SafeHTMLValue("<b>" + v.String() + "</b>"), nil
 		},
-		grove.FilterOutputsHTML(),
+		wispy.FilterOutputsHTML(),
 	))
-	got := render(t, eng, `{{ name | bold }}`, grove.Data{"name": "Grove"})
-	require.Equal(t, "<b>Grove</b>", got)
+	got := render(t, eng, `{{ name | bold }}`, wispy.Data{"name": "Wispy"})
+	require.Equal(t, "<b>Wispy</b>", got)
 }
 
 // ─── 4. AUTO-ESCAPING ────────────────────────────────────────────────────────
 
 func TestEscape_AutoEscapeByDefault(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ input }}`, grove.Data{
+	got := render(t, eng, `{{ input }}`, wispy.Data{
 		"input": `<script>alert("xss")</script>`,
 	})
 	require.Equal(t, `&lt;script&gt;alert(&#34;xss&#34;)&lt;/script&gt;`, got)
@@ -290,19 +290,19 @@ func TestEscape_AutoEscapeByDefault(t *testing.T) {
 
 func TestEscape_SafeFilterBypassesEscape(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{{ html | safe }}`, grove.Data{"html": "<b>bold</b>"})
+	got := render(t, eng, `{{ html | safe }}`, wispy.Data{"html": "<b>bold</b>"})
 	require.Equal(t, "<b>bold</b>", got)
 }
 
 func TestEscape_RawBlockBypassesEscape(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `{% raw %}{{ not_a_variable }}{% endraw %}`, grove.Data{})
+	got := render(t, eng, `{% raw %}{{ not_a_variable }}{% endraw %}`, wispy.Data{})
 	require.Equal(t, "{{ not_a_variable }}", got)
 }
 
 func TestEscape_NilValueNoOutput(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `[{{ val }}]`, grove.Data{"val": nil})
+	got := render(t, eng, `[{{ val }}]`, wispy.Data{"val": nil})
 	require.Equal(t, "[]", got)
 }
 
@@ -310,26 +310,26 @@ func TestEscape_NilValueNoOutput(t *testing.T) {
 
 func TestWhitespace_StripLeft(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, "  {{- name }}", grove.Data{"name": "Grove"})
-	require.Equal(t, "Grove", got)
+	got := render(t, eng, "  {{- name }}", wispy.Data{"name": "Wispy"})
+	require.Equal(t, "Wispy", got)
 }
 
 func TestWhitespace_StripRight(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, "{{ name -}}  ", grove.Data{"name": "Grove"})
-	require.Equal(t, "Grove", got)
+	got := render(t, eng, "{{ name -}}  ", wispy.Data{"name": "Wispy"})
+	require.Equal(t, "Wispy", got)
 }
 
 func TestWhitespace_StripBoth(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, "  {{- name -}}  extra", grove.Data{"name": "Grove"})
-	require.Equal(t, "Groveextra", got)
+	got := render(t, eng, "  {{- name -}}  extra", wispy.Data{"name": "Wispy"})
+	require.Equal(t, "Wispyextra", got)
 }
 
 func TestWhitespace_TagStrip(t *testing.T) {
 	eng := newEngine(t)
 	// Uses {% raw %} as the tag vehicle since control-flow tags are Plan 2
-	got := render(t, eng, "before\n{%- raw -%}\nhello\n{%- endraw -%}\nafter", grove.Data{})
+	got := render(t, eng, "before\n{%- raw -%}\nhello\n{%- endraw -%}\nafter", wispy.Data{})
 	require.Equal(t, "beforehelloafter", got)
 }
 
@@ -338,8 +338,8 @@ func TestWhitespace_TagStrip(t *testing.T) {
 func TestGlobalContext_AvailableInAllRenders(t *testing.T) {
 	eng := newEngine(t)
 	eng.SetGlobal("siteName", "Acme Corp")
-	got1 := render(t, eng, `{{ siteName }}`, grove.Data{})
-	got2 := render(t, eng, `Welcome to {{ siteName }}`, grove.Data{})
+	got1 := render(t, eng, `{{ siteName }}`, wispy.Data{})
+	got2 := render(t, eng, `Welcome to {{ siteName }}`, wispy.Data{})
 	require.Equal(t, "Acme Corp", got1)
 	require.Equal(t, "Welcome to Acme Corp", got2)
 }
@@ -347,14 +347,14 @@ func TestGlobalContext_AvailableInAllRenders(t *testing.T) {
 func TestGlobalContext_RenderContextOverridesGlobal(t *testing.T) {
 	eng := newEngine(t)
 	eng.SetGlobal("greeting", "Hello")
-	got := render(t, eng, `{{ greeting }}`, grove.Data{"greeting": "Hi"})
+	got := render(t, eng, `{{ greeting }}`, wispy.Data{"greeting": "Hi"})
 	require.Equal(t, "Hi", got)
 }
 
 func TestGlobalContext_LocalScopeOverridesRenderContext(t *testing.T) {
 	eng := newEngine(t)
 	eng.SetGlobal("x", "global")
-	got := render(t, eng, `{{ x }}`, grove.Data{"x": "render"})
+	got := render(t, eng, `{{ x }}`, wispy.Data{"x": "render"})
 	require.Equal(t, "render", got)
 }
 
@@ -362,22 +362,22 @@ func TestGlobalContext_LocalScopeOverridesRenderContext(t *testing.T) {
 
 func TestError_ParseError_LineNumber(t *testing.T) {
 	eng := newEngine(t)
-	_, err := eng.RenderTemplate(context.Background(), "line1\n{{ unclosed", grove.Data{})
+	_, err := eng.RenderTemplate(context.Background(), "line1\n{{ unclosed", wispy.Data{})
 	require.Error(t, err)
-	var pe *grove.ParseError
+	var pe *wispy.ParseError
 	require.ErrorAs(t, err, &pe)
 	require.Equal(t, 2, pe.Line)
 }
 
 func TestError_UndefinedFilterInStrictMode(t *testing.T) {
 	eng := newEngine(t)
-	_, err := eng.RenderTemplate(context.Background(), `{{ name | nonexistent }}`, grove.Data{"name": "x"})
+	_, err := eng.RenderTemplate(context.Background(), `{{ name | nonexistent }}`, wispy.Data{"name": "x"})
 	require.Error(t, err)
 }
 
 func TestError_DivisionByZero(t *testing.T) {
 	eng := newEngine(t)
-	_, err := eng.RenderTemplate(context.Background(), `{{ 10 / x }}`, grove.Data{"x": 0})
+	_, err := eng.RenderTemplate(context.Background(), `{{ 10 / x }}`, wispy.Data{"x": 0})
 	require.Error(t, err)
 }
 
@@ -385,18 +385,18 @@ func TestError_DivisionByZero(t *testing.T) {
 
 func TestRenderTemplate_ExtendsIsParseError(t *testing.T) {
 	eng := newEngine(t)
-	_, err := eng.RenderTemplate(context.Background(), `{% extends "base.html" %}`, grove.Data{})
+	_, err := eng.RenderTemplate(context.Background(), `{% extends "base.html" %}`, wispy.Data{})
 	require.Error(t, err)
-	var pe *grove.ParseError
+	var pe *wispy.ParseError
 	require.ErrorAs(t, err, &pe)
 	require.Contains(t, pe.Message, "extends not allowed in inline templates")
 }
 
 func TestRenderTemplate_ImportIsParseError(t *testing.T) {
 	eng := newEngine(t)
-	_, err := eng.RenderTemplate(context.Background(), `{% import "macros.html" as m %}`, grove.Data{})
+	_, err := eng.RenderTemplate(context.Background(), `{% import "macros.html" as m %}`, wispy.Data{})
 	require.Error(t, err)
-	var pe *grove.ParseError
+	var pe *wispy.ParseError
 	require.ErrorAs(t, err, &pe)
 	require.Contains(t, pe.Message, "import not allowed in inline templates")
 }
@@ -416,13 +416,13 @@ func TestEngine_ConcurrentRenders(t *testing.T) {
 			for i := 0; i < renders; i++ {
 				got, err := eng.RenderTemplate(context.Background(),
 					`Hello, {{ name }}! ({{ id }})`,
-					grove.Data{"name": "Grove", "id": id},
+					wispy.Data{"name": "Wispy", "id": id},
 				)
 				if err != nil {
 					errors <- err
 					return
 				}
-				expected := fmt.Sprintf("Hello, Grove! (%d)", id)
+				expected := fmt.Sprintf("Hello, Wispy! (%d)", id)
 				if got.Body != expected {
 					errors <- fmt.Errorf("goroutine %d: got %q, want %q", id, got.Body, expected)
 					return
@@ -440,8 +440,8 @@ func TestEngine_ConcurrentRenders(t *testing.T) {
 // ─── BENCHMARKS ──────────────────────────────────────────────────────────────
 
 func BenchmarkRender_SimpleSubstitution(b *testing.B) {
-	eng := grove.New()
-	data := grove.Data{"name": "World", "count": 42}
+	eng := wispy.New()
+	data := wispy.Data{"name": "World", "count": 42}
 	bgCtx := context.Background()
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -454,8 +454,8 @@ func BenchmarkRender_SimpleSubstitution(b *testing.B) {
 }
 
 func BenchmarkRender_Parallel(b *testing.B) {
-	eng := grove.New()
-	data := grove.Data{"name": "World"}
+	eng := wispy.New()
+	data := wispy.Data{"name": "World"}
 	bgCtx := context.Background()
 	b.ReportAllocs()
 	b.ResetTimer()
@@ -473,10 +473,10 @@ func BenchmarkRender_Parallel(b *testing.B) {
 - [ ] **Step 2: Verify it does not compile yet**
 
 ```bash
-cd /path/to/grove && go build ./pkg/grove/...
+cd /path/to/wispy && go build ./pkg/wispy/...
 ```
 
-Expected: errors about missing types (`grove.Engine`, `grove.Data`, etc.). This is correct — tests define the contract before implementation.
+Expected: errors about missing types (`wispy.Engine`, `wispy.Data`, etc.). This is correct — tests define the contract before implementation.
 
 
 ---
@@ -496,7 +496,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"grove/internal/lexer"
+	"wispy/internal/lexer"
 )
 
 func kinds(tokens []lexer.Token) []lexer.TokenKind {
@@ -742,7 +742,7 @@ func TestLexer_UnclosedComment_Error(t *testing.T) {
 go build ./internal/lexer/...
 ```
 
-Expected: `package grove/internal/lexer: cannot find package`. Correct — package doesn't exist yet.
+Expected: `package wispy/internal/lexer: cannot find package`. Correct — package doesn't exist yet.
 
 
 ---
@@ -751,14 +751,14 @@ Expected: `package grove/internal/lexer: cannot find package`. Correct — packa
 
 **Files:**
 - Modify: `go.mod`
-- Create: all `pkg/grove/*.go` and `internal/*/` stub files
+- Create: all `pkg/wispy/*.go` and `internal/*/` stub files
 
 Make tests compile (but fail) before writing any real implementation.
 
 - [ ] **Step 1: Update go.mod**
 
 ```
-module grove
+module wispy
 
 go 1.24
 
@@ -776,17 +776,17 @@ Run: `go mod tidy` (fetches testify).
 - [ ] **Step 2: Create directory structure**
 
 ```bash
-mkdir -p pkg/grove internal/groverrors internal/lexer internal/ast \
+mkdir -p pkg/wispy internal/wispyrrors internal/lexer internal/ast \
          internal/parser internal/compiler internal/vm internal/scope internal/coerce
 ```
 
-- [ ] **Step 3: Create `internal/groverrors/errors.go`**
+- [ ] **Step 3: Create `internal/wispyrrors/errors.go`**
 
-This package holds the shared error types so parser and vm can create them without importing pkg/grove.
+This package holds the shared error types so parser and vm can create them without importing pkg/wispy.
 
 ```go
-// internal/groverrors/errors.go
-package groverrors
+// internal/wispyrrors/errors.go
+package wispyrrors
 
 import "fmt"
 
@@ -818,42 +818,42 @@ func (e *RuntimeError) Error() string {
 }
 ```
 
-- [ ] **Step 4: Create `pkg/grove/errors.go`**
+- [ ] **Step 4: Create `pkg/wispy/errors.go`**
 
 ```go
-// pkg/grove/errors.go
-package grove
+// pkg/wispy/errors.go
+package wispy
 
-import "grove/internal/groverrors"
+import "wispy/internal/wispyrrors"
 
 // ParseError is returned for syntax errors. Template, Line, and Column identify the source location.
-type ParseError = groverrors.ParseError
+type ParseError = wispyrrors.ParseError
 
 // RuntimeError is returned for errors during template execution.
-type RuntimeError = groverrors.RuntimeError
+type RuntimeError = wispyrrors.RuntimeError
 ```
 
-- [ ] **Step 5: Create `pkg/grove/context.go`**
+- [ ] **Step 5: Create `pkg/wispy/context.go`**
 
 ```go
-// pkg/grove/context.go
-package grove
+// pkg/wispy/context.go
+package wispy
 
-import "grove/internal/vm"
+import "wispy/internal/vm"
 
 // Data is the map type passed to Render methods.
 type Data map[string]any
 
 // Resolvable is implemented by Go types that want to expose fields to templates.
-// Only keys returned by GroveResolve are accessible; all other fields are hidden.
+// Only keys returned by WispyResolve are accessible; all other fields are hidden.
 type Resolvable = vm.Resolvable
 ```
 
-- [ ] **Step 6: Create `pkg/grove/result.go`**
+- [ ] **Step 6: Create `pkg/wispy/result.go`**
 
 ```go
-// pkg/grove/result.go
-package grove
+// pkg/wispy/result.go
+package wispy
 
 import "strings"
 
@@ -892,13 +892,13 @@ func (r RenderResult) InjectAssets() string {
 }
 ```
 
-- [ ] **Step 7: Create `pkg/grove/value.go`**
+- [ ] **Step 7: Create `pkg/wispy/value.go`**
 
 ```go
-// pkg/grove/value.go
-package grove
+// pkg/wispy/value.go
+package wispy
 
-import "grove/internal/vm"
+import "wispy/internal/vm"
 
 // Value is the template runtime value type.
 type Value = vm.Value
@@ -916,13 +916,13 @@ func SafeHTMLValue(s string) Value { return vm.SafeHTMLVal(s) }
 func ArgInt(args []Value, i, def int) int { return vm.ArgInt(args, i, def) }
 ```
 
-- [ ] **Step 8: Create `pkg/grove/filter.go`**
+- [ ] **Step 8: Create `pkg/wispy/filter.go`**
 
 ```go
-// pkg/grove/filter.go
-package grove
+// pkg/wispy/filter.go
+package wispy
 
-import "grove/internal/vm"
+import "wispy/internal/vm"
 
 // FilterFn is the function signature for filter implementations.
 type FilterFn = vm.FilterFn
@@ -933,7 +933,7 @@ type FilterDef = vm.FilterDef
 // FilterFunc wraps a FilterFn with zero or more options.
 // Use FilterOutputsHTML() to mark filters that return trusted HTML.
 //
-//	eng.RegisterFilter("markdown", grove.FilterFunc(fn, grove.FilterOutputsHTML()))
+//	eng.RegisterFilter("markdown", wispy.FilterFunc(fn, wispy.FilterOutputsHTML()))
 func FilterFunc(fn FilterFn, opts ...vm.FilterOption) *FilterDef {
 	return vm.NewFilterDef(fn, opts...)
 }
@@ -948,20 +948,20 @@ func FilterOutputsHTML() vm.FilterOption {
 type FilterSet = vm.FilterSet
 ```
 
-- [ ] **Step 9: Create `pkg/grove/engine.go` (stub)**
+- [ ] **Step 9: Create `pkg/wispy/engine.go` (stub)**
 
 ```go
-// pkg/grove/engine.go
-package grove
+// pkg/wispy/engine.go
+package wispy
 
 import (
 	"context"
 
-	"grove/internal/compiler"
-	"grove/internal/groverrors"
-	"grove/internal/lexer"
-	"grove/internal/parser"
-	"grove/internal/vm"
+	"wispy/internal/compiler"
+	"wispy/internal/wispyrrors"
+	"wispy/internal/lexer"
+	"wispy/internal/parser"
+	"wispy/internal/vm"
 )
 
 // Option configures an Engine.
@@ -977,7 +977,7 @@ func WithStrictVariables(v bool) Option {
 	return func(c *engineCfg) { c.strictVariables = v }
 }
 
-// Engine is the Grove template engine. Safe for concurrent use.
+// Engine is the Wispy template engine. Safe for concurrent use.
 type Engine struct {
 	cfg     engineCfg
 	globals map[string]any
@@ -1015,17 +1015,17 @@ func (e *Engine) RegisterFilter(name string, fn any) {
 func (e *Engine) RenderTemplate(ctx context.Context, src string, data Data) (RenderResult, error) {
 	tokens, err := lexer.Tokenize(src)
 	if err != nil {
-		return RenderResult{}, &groverrors.ParseError{Message: err.Error(), Line: lexerErrLine(err)}
+		return RenderResult{}, &wispyrrors.ParseError{Message: err.Error(), Line: lexerErrLine(err)}
 	}
 
 	prog, err := parser.Parse(tokens, true /* inline */)
 	if err != nil {
-		return RenderResult{}, err // parser returns *groverrors.ParseError directly
+		return RenderResult{}, err // parser returns *wispyrrors.ParseError directly
 	}
 
 	bc, err := compiler.Compile(prog)
 	if err != nil {
-		return RenderResult{}, &groverrors.ParseError{Message: err.Error()}
+		return RenderResult{}, &wispyrrors.ParseError{Message: err.Error()}
 	}
 
 	body, err := vm.Execute(ctx, bc, map[string]any(data), e)
@@ -1085,15 +1085,15 @@ func Tokenize(src string) ([]Token, error) { panic("not implemented") }
 `internal/ast/node.go`:
 ```go
 package ast
-type Node interface{ groveNode() }
+type Node interface{ wispyNode() }
 type Program struct{ Body []Node }
 ```
 
 `internal/parser/parser.go`:
 ```go
 package parser
-import "grove/internal/ast"
-import "grove/internal/lexer"
+import "wispy/internal/ast"
+import "wispy/internal/lexer"
 func Parse(tokens []lexer.Token, inline bool) (*ast.Program, error) { panic("not implemented") }
 ```
 
@@ -1109,7 +1109,7 @@ type Bytecode struct{ Instrs []Instruction; Consts []any; Names []string }
 `internal/compiler/compiler.go`:
 ```go
 package compiler
-import "grove/internal/ast"
+import "wispy/internal/ast"
 func Compile(prog *ast.Program) (*Bytecode, error) { panic("not implemented") }
 ```
 
@@ -1119,7 +1119,7 @@ package vm
 type ValueType uint8
 type Value struct{ typ ValueType; ival int64; fval float64; sval string; oval any }
 var Nil = Value{}
-type Resolvable interface{ GroveResolve(key string) (any, bool) }
+type Resolvable interface{ WispyResolve(key string) (any, bool) }
 func StringVal(s string) Value { return Value{typ: 4, sval: s} }
 func SafeHTMLVal(s string) Value { return Value{typ: 5, sval: s} }
 func (v Value) String() string { return v.sval }
@@ -1148,7 +1148,7 @@ type EngineIface interface {
 `internal/vm/vm.go`:
 ```go
 package vm
-import ("context"; "grove/internal/compiler")
+import ("context"; "wispy/internal/compiler")
 func Execute(ctx context.Context, bc *compiler.Bytecode, data map[string]any, eng EngineIface) (string, error) {
     panic("not implemented")
 }
@@ -1173,7 +1173,7 @@ func ToBool(v any) bool { panic("not implemented") }
 - [ ] **Step 11: Run tests — should compile, all fail**
 
 ```bash
-go test ./pkg/grove/... ./internal/lexer/... 2>&1 | head -30
+go test ./pkg/wispy/... ./internal/lexer/... 2>&1 | head -30
 ```
 
 Expected: `panic: not implemented` — tests compile and run, all fail. This is the correct starting state.
@@ -1183,7 +1183,7 @@ Expected: `panic: not implemented` — tests compile and run, all fail. This is 
 ```bash
 git add -A
 git commit -m "$(cat <<'EOF'
-feat: bootstrap Grove module with failing tests
+feat: bootstrap Wispy module with failing tests
 
 All Plan 1 tests written; stubs in place so tests compile.
 Pipeline: lexer → parser → compiler → vm stubs all panic.
@@ -1765,7 +1765,7 @@ Expected: `PASS` for all lexer tests.
 ```bash
 git add internal/lexer/
 git commit -m "$(cat <<'EOF'
-feat: implement lexer — tokenizes Grove template syntax
+feat: implement lexer — tokenizes Wispy template syntax
 
 Handles {{ }}, {% %}, {# #}, whitespace control ({{- -}}),
 {% raw %}...{% endraw %}, string/int/float/bool literals,
@@ -1791,12 +1791,12 @@ EOF
 package ast
 
 // Node is the base interface for all AST nodes.
-type Node interface{ groveNode() }
+type Node interface{ wispyNode() }
 
 // Program is the root node.
 type Program struct{ Body []Node }
 
-func (*Program) groveNode() {}
+func (*Program) wispyNode() {}
 
 // ─── Statement nodes ──────────────────────────────────────────────────────────
 
@@ -1806,7 +1806,7 @@ type TextNode struct {
 	Line  int
 }
 
-func (*TextNode) groveNode() {}
+func (*TextNode) wispyNode() {}
 
 // OutputNode holds an {{ expression }} to be evaluated and printed.
 type OutputNode struct {
@@ -1816,7 +1816,7 @@ type OutputNode struct {
 	Line       int
 }
 
-func (*OutputNode) groveNode() {}
+func (*OutputNode) wispyNode() {}
 
 // RawNode holds content from {% raw %}...{% endraw %} — printed verbatim.
 type RawNode struct {
@@ -1824,7 +1824,7 @@ type RawNode struct {
 	Line  int
 }
 
-func (*RawNode) groveNode() {}
+func (*RawNode) wispyNode() {}
 
 // TagNode is an unrecognised or deferred tag (e.g. if/for/extends).
 // The parser uses this as a placeholder for tags handled in later plans,
@@ -1834,14 +1834,14 @@ type TagNode struct {
 	Line int
 }
 
-func (*TagNode) groveNode() {}
+func (*TagNode) wispyNode() {}
 
 // ─── Expression nodes ─────────────────────────────────────────────────────────
 
 // NilLiteral is the nil/null literal.
 type NilLiteral struct{ Line int }
 
-func (*NilLiteral) groveNode() {}
+func (*NilLiteral) wispyNode() {}
 
 // BoolLiteral is true or false.
 type BoolLiteral struct {
@@ -1849,7 +1849,7 @@ type BoolLiteral struct {
 	Line  int
 }
 
-func (*BoolLiteral) groveNode() {}
+func (*BoolLiteral) wispyNode() {}
 
 // IntLiteral is an integer literal.
 type IntLiteral struct {
@@ -1857,7 +1857,7 @@ type IntLiteral struct {
 	Line  int
 }
 
-func (*IntLiteral) groveNode() {}
+func (*IntLiteral) wispyNode() {}
 
 // FloatLiteral is a floating-point literal.
 type FloatLiteral struct {
@@ -1865,7 +1865,7 @@ type FloatLiteral struct {
 	Line  int
 }
 
-func (*FloatLiteral) groveNode() {}
+func (*FloatLiteral) wispyNode() {}
 
 // StringLiteral is a quoted string literal.
 type StringLiteral struct {
@@ -1873,7 +1873,7 @@ type StringLiteral struct {
 	Line  int
 }
 
-func (*StringLiteral) groveNode() {}
+func (*StringLiteral) wispyNode() {}
 
 // Identifier is a variable reference.
 type Identifier struct {
@@ -1881,7 +1881,7 @@ type Identifier struct {
 	Line int
 }
 
-func (*Identifier) groveNode() {}
+func (*Identifier) wispyNode() {}
 
 // AttributeAccess is obj.key — resolves key on obj.
 type AttributeAccess struct {
@@ -1890,7 +1890,7 @@ type AttributeAccess struct {
 	Line   int
 }
 
-func (*AttributeAccess) groveNode() {}
+func (*AttributeAccess) wispyNode() {}
 
 // IndexAccess is obj[key] — integer or string key.
 type IndexAccess struct {
@@ -1899,7 +1899,7 @@ type IndexAccess struct {
 	Line   int
 }
 
-func (*IndexAccess) groveNode() {}
+func (*IndexAccess) wispyNode() {}
 
 // BinaryExpr is left op right.
 // Op is one of: + - * / % ~ == != < <= > >= and or
@@ -1910,7 +1910,7 @@ type BinaryExpr struct {
 	Line  int
 }
 
-func (*BinaryExpr) groveNode() {}
+func (*BinaryExpr) wispyNode() {}
 
 // UnaryExpr is op operand.
 // Op is one of: not -
@@ -1920,10 +1920,10 @@ type UnaryExpr struct {
 	Line    int
 }
 
-func (*UnaryExpr) groveNode() {}
+func (*UnaryExpr) wispyNode() {}
 
 // TernaryExpr is: Consequence if Condition else Alternative
-// (Grove syntax: `value if cond else fallback`)
+// (Wispy syntax: `value if cond else fallback`)
 type TernaryExpr struct {
 	Condition   Node
 	Consequence Node
@@ -1931,7 +1931,7 @@ type TernaryExpr struct {
 	Line        int
 }
 
-func (*TernaryExpr) groveNode() {}
+func (*TernaryExpr) wispyNode() {}
 
 // FilterExpr applies Filter(Args...) to Value.
 // e.g. name | truncate(20, "…") → FilterExpr{Value: Identifier{name}, Filter: "truncate", Args: [20, "…"]}
@@ -1942,7 +1942,7 @@ type FilterExpr struct {
 	Line   int
 }
 
-func (*FilterExpr) groveNode() {}
+func (*FilterExpr) wispyNode() {}
 ```
 
 - [ ] **Step 2: Verify it compiles**
@@ -1958,7 +1958,7 @@ Expected: no output (success).
 ```bash
 git add internal/ast/
 git commit -m "$(cat <<'EOF'
-feat: define AST node types for Grove core
+feat: define AST node types for Wispy core
 
 Covers all expression nodes needed for Plan 1:
 literals, identifiers, access, binary/unary ops,
@@ -1988,9 +1988,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"grove/internal/ast"
-	"grove/internal/groverrors"
-	"grove/internal/lexer"
+	"wispy/internal/ast"
+	"wispy/internal/wispyrrors"
+	"wispy/internal/lexer"
 )
 
 // Parse converts a token stream into an AST.
@@ -2084,7 +2084,7 @@ func (p *parser) parseTag() (ast.Node, error) {
 
 	case "extends":
 		if p.inline {
-			return nil, &groverrors.ParseError{
+			return nil, &wispyrrors.ParseError{
 				Line:    name.Line,
 				Column:  name.Col,
 				Message: "extends not allowed in inline templates",
@@ -2094,7 +2094,7 @@ func (p *parser) parseTag() (ast.Node, error) {
 
 	case "import":
 		if p.inline {
-			return nil, &groverrors.ParseError{
+			return nil, &wispyrrors.ParseError{
 				Line:    name.Line,
 				Column:  name.Col,
 				Message: "import not allowed in inline templates",
@@ -2367,8 +2367,8 @@ func (p *parser) atEOF() bool {
 	return p.pos >= len(p.tokens) || p.tokens[p.pos].Kind == lexer.TK_EOF
 }
 
-func (p *parser) errorf(line, col int, format string, args ...any) *groverrors.ParseError {
-	return &groverrors.ParseError{
+func (p *parser) errorf(line, col int, format string, args ...any) *wispyrrors.ParseError {
+	return &wispyrrors.ParseError{
 		Line:    line,
 		Column:  col,
 		Message: fmt.Sprintf(format, args...),
@@ -2477,7 +2477,7 @@ package compiler
 import (
 	"fmt"
 
-	"grove/internal/ast"
+	"wispy/internal/ast"
 )
 
 // Compile walks prog and emits Bytecode.
@@ -2739,7 +2739,7 @@ var Nil = Value{}
 
 // Resolvable is implemented by Go types that expose specific fields to templates.
 type Resolvable interface {
-	GroveResolve(key string) (any, bool)
+	WispyResolve(key string) (any, bool)
 }
 
 // ─── Constructors ─────────────────────────────────────────────────────────────
@@ -2933,7 +2933,7 @@ func GetAttr(obj Value, name string, strict bool) (Value, error) {
 		return Nil, nil
 	case TypeResolvable:
 		r, _ := obj.oval.(Resolvable)
-		if v, ok := r.GroveResolve(name); ok {
+		if v, ok := r.WispyResolve(name); ok {
 			return FromAny(v), nil
 		}
 		if strict {
@@ -3166,8 +3166,8 @@ import (
 	"strings"
 	"sync"
 
-	"grove/internal/compiler"
-	"grove/internal/scope"
+	"wispy/internal/compiler"
+	"wispy/internal/scope"
 )
 
 // VM is a stack-based bytecode executor. Instances are pooled; do not hold references.
@@ -3558,13 +3558,13 @@ type runtimeErr struct {
 
 func (e *runtimeErr) Error() string { return e.msg }
 
-// WrapRuntimeError converts a vm-internal error to *groverrors.RuntimeError.
+// WrapRuntimeError converts a vm-internal error to *wispyrrors.RuntimeError.
 // Called in engine.go after Execute returns.
 func WrapRuntimeError(err error) error {
 	if err == nil {
 		return nil
 	}
-	// Import cycle prevention: engine.go wraps this into groverrors.RuntimeError
+	// Import cycle prevention: engine.go wraps this into wispyrrors.RuntimeError
 	return err
 }
 ```
@@ -3600,24 +3600,24 @@ EOF
 ## Task 10: Wire Up the Public API
 
 **Files:**
-- Modify: `pkg/grove/engine.go` — replace stub with full implementation
+- Modify: `pkg/wispy/engine.go` — replace stub with full implementation
 
-- [ ] **Step 1: Write the complete `pkg/grove/engine.go`**
+- [ ] **Step 1: Write the complete `pkg/wispy/engine.go`**
 
 The stub from Task 3 had `panic("not implemented")`. Replace it entirely:
 
 ```go
-// pkg/grove/engine.go
-package grove
+// pkg/wispy/engine.go
+package wispy
 
 import (
 	"context"
 
-	"grove/internal/compiler"
-	"grove/internal/groverrors"
-	"grove/internal/lexer"
-	"grove/internal/parser"
-	"grove/internal/vm"
+	"wispy/internal/compiler"
+	"wispy/internal/wispyrrors"
+	"wispy/internal/lexer"
+	"wispy/internal/parser"
+	"wispy/internal/vm"
 )
 
 // Option configures an Engine at creation time.
@@ -3633,7 +3633,7 @@ func WithStrictVariables(strict bool) Option {
 	return func(c *engineCfg) { c.strictVariables = strict }
 }
 
-// Engine is the Grove template engine. Create with New(). Safe for concurrent use.
+// Engine is the Wispy template engine. Create with New(). Safe for concurrent use.
 type Engine struct {
 	cfg     engineCfg
 	globals map[string]any
@@ -3664,7 +3664,7 @@ func (e *Engine) SetGlobal(key string, value any) {
 
 // RegisterFilter registers a custom filter function.
 // fn may be a vm.FilterFn, func(Value, []Value)(Value, error), or *vm.FilterDef
-// (created via grove.FilterFunc(fn, grove.FilterOutputsHTML())).
+// (created via wispy.FilterFunc(fn, wispy.FilterOutputsHTML())).
 func (e *Engine) RegisterFilter(name string, fn any) {
 	e.filters[name] = fn
 }
@@ -3682,7 +3682,7 @@ func (e *Engine) RenderTemplate(ctx context.Context, src string, data Data) (Ren
 		if le, ok := err.(liner); ok {
 			line = le.LexLine()
 		}
-		return RenderResult{}, &groverrors.ParseError{
+		return RenderResult{}, &wispyrrors.ParseError{
 			Message: err.Error(),
 			Line:    line,
 		}
@@ -3691,23 +3691,23 @@ func (e *Engine) RenderTemplate(ctx context.Context, src string, data Data) (Ren
 	// 2. Parse (inline=true — forbids extends/import)
 	prog, err := parser.Parse(tokens, true)
 	if err != nil {
-		return RenderResult{}, err // already *groverrors.ParseError
+		return RenderResult{}, err // already *wispyrrors.ParseError
 	}
 
 	// 3. Compile
 	bc, err := compiler.Compile(prog)
 	if err != nil {
-		return RenderResult{}, &groverrors.ParseError{Message: err.Error()}
+		return RenderResult{}, &wispyrrors.ParseError{Message: err.Error()}
 	}
 
 	// 4. Execute
 	body, err := vm.Execute(ctx, bc, map[string]any(data), e)
 	if err != nil {
 		// Wrap vm-internal error into RuntimeError
-		if _, ok := err.(*groverrors.RuntimeError); ok {
+		if _, ok := err.(*wispyrrors.RuntimeError); ok {
 			return RenderResult{}, err
 		}
-		return RenderResult{}, &groverrors.RuntimeError{Message: err.Error()}
+		return RenderResult{}, &wispyrrors.RuntimeError{Message: err.Error()}
 	}
 
 	return RenderResult{Body: body}, nil
@@ -3742,7 +3742,7 @@ func (e *Engine) GlobalData() map[string]any { return e.globals }
 - [ ] **Step 2: Run all tests**
 
 ```bash
-go test ./pkg/grove/... -v -count=1 2>&1 | grep -E "^(---|\=\=\=|FAIL|PASS|ok)"
+go test ./pkg/wispy/... -v -count=1 2>&1 | grep -E "^(---|\=\=\=|FAIL|PASS|ok)"
 ```
 
 Expected: most tests pass. Some may fail for edge cases — investigate and fix.
@@ -3753,7 +3753,7 @@ Expected: most tests pass. Some may fail for edge cases — investigate and fix.
 go test ./internal/lexer/... -v 2>&1 | tail -5
 ```
 
-Expected: `ok  grove/internal/lexer`
+Expected: `ok  wispy/internal/lexer`
 
 - [ ] **Step 4: Fix any failing tests**
 
@@ -3782,7 +3782,7 @@ The lexer must set `Line` on the `lexErr` for unclosed `{{`. Check that `lexInne
 - [ ] **Step 5: Run benchmarks**
 
 ```bash
-go test ./pkg/grove/... -bench=. -benchtime=3s -benchmem 2>&1
+go test ./pkg/wispy/... -bench=. -benchtime=3s -benchmem 2>&1
 ```
 
 Expected output (approximate):
@@ -3796,7 +3796,7 @@ If allocs are high, check that the VM pool is being used correctly (verify `vmPo
 - [ ] **Step 6: Commit**
 
 ```bash
-git add pkg/grove/engine.go
+git add pkg/wispy/engine.go
 git commit -m "$(cat <<'EOF'
 feat: wire public API — RenderTemplate end-to-end
 
@@ -3823,7 +3823,7 @@ Two edge-case fixes required for spec compliance.
 
 - [ ] **Step 2: Verify `FilterFunc` wrapping**
 
-`TestFilters_CustomHTMLFilter_SkipsEscape` passes a `*vm.FilterDef` via `grove.FilterFunc(fn, grove.FilterOutputsHTML())`. The engine's `LookupFilter` must handle `*vm.FilterDef` and return its `.Fn`. Verify this case is covered in `engine.go`.
+`TestFilters_CustomHTMLFilter_SkipsEscape` passes a `*vm.FilterDef` via `wispy.FilterFunc(fn, wispy.FilterOutputsHTML())`. The engine's `LookupFilter` must handle `*vm.FilterDef` and return its `.Fn`. Verify this case is covered in `engine.go`.
 
 The filter returns `SafeHTMLVal(...)`. When the VM executes `OP_FILTER`, the result (a SafeHTML Value) is pushed. Then `OP_OUTPUT` checks `val.typ == TypeSafeHTML` and writes raw — no escaping. ✓
 
@@ -3835,8 +3835,8 @@ go test ./... -count=1
 
 Expected:
 ```
-ok  grove/internal/lexer     0.003s
-ok  grove/pkg/grove          0.012s
+ok  wispy/internal/lexer     0.003s
+ok  wispy/pkg/wispy          0.012s
 ```
 
 - [ ] **Step 4: Final commit**
@@ -3844,7 +3844,7 @@ ok  grove/pkg/grove          0.012s
 ```bash
 git add -A
 git commit -m "$(cat <<'EOF'
-feat: Plan 1 complete — Grove core engine
+feat: Plan 1 complete — Wispy core engine
 
 All integration tests passing:
 - Variables (simple, nested, index, map, undefined, strict, Resolvable)
@@ -3885,11 +3885,11 @@ EOF
 ### Type Consistency Check
 
 - `vm.FilterFn` used in engine.go `LookupFilter` return type ✓  
-- `vm.Value` aliased as `grove.Value` in value.go ✓  
-- `groverrors.ParseError` aliased as `grove.ParseError` in errors.go ✓  
-- `vm.Resolvable` aliased as `grove.Resolvable` in context.go ✓  
-- `vm.FilterDef` aliased as `grove.FilterDef` in filter.go ✓  
-- `compiler.Bytecode` used by vm.Execute, not imported by pkg/grove directly ✓  
+- `vm.Value` aliased as `wispy.Value` in value.go ✓  
+- `wispyrrors.ParseError` aliased as `wispy.ParseError` in errors.go ✓  
+- `vm.Resolvable` aliased as `wispy.Resolvable` in context.go ✓  
+- `vm.FilterDef` aliased as `wispy.FilterDef` in filter.go ✓  
+- `compiler.Bytecode` used by vm.Execute, not imported by pkg/wispy directly ✓  
 
 ### Placeholder Scan
 
@@ -3897,7 +3897,7 @@ None — all steps include complete code.
 
 ---
 
-**Plan complete and saved to `docs/superpowers/plans/2026-03-28-grove-core-engine.md`.**
+**Plan complete and saved to `docs/superpowers/plans/2026-03-28-wispy-core-engine.md`.**
 
 **Two execution options:**
 

@@ -1,5 +1,5 @@
-// internal/groverrors/errors.go
-package groverrors
+// internal/wispyrrors/errors.go
+package wispyrrors
 
 import "fmt"
 

@@ -4,7 +4,7 @@
 
 Template engines in web applications need more than a rendered body string. Individual templates and components need to declare their own CSS/JS dependencies, contribute page metadata (title, OG tags), and inject arbitrary HTML into named page regions (head, scripts, analytics). Without this, all asset management must happen outside the template layer — defeating the purpose of component encapsulation.
 
-Grove's Plan 7 adds a "page primitives" layer: templates can declare what they need, the engine collects it, and the Go caller uses the structured result to assemble the final page.
+Wispy's Plan 7 adds a "page primitives" layer: templates can declare what they need, the engine collects it, and the Go caller uses the structured result to assemble the final page.
 
 ---
 
@@ -176,8 +176,8 @@ Content between `{% raw %}` and `{% endraw %}` is emitted as-is — no template 
 ## FileSystemStore
 
 ```go
-store := grove.NewFileSystemStore("/var/www/templates")
-eng := grove.New(grove.WithStore(store))
+store := wispy.NewFileSystemStore("/var/www/templates")
+eng := wispy.New(wispy.WithStore(store))
 ```
 
 ### Path Safety Contract
@@ -203,12 +203,12 @@ Compiled bytecodes are cached by template name in an LRU cache.
 - **Default capacity**: 512 entries
 - **Eviction**: least recently used entry evicted when over capacity
 - **No hot-reload**: cache entries live until evicted. Restarting the process re-compiles all templates. (Hot-reload is deferred to a future plan.)
-- **Configure**: `grove.WithCacheSize(n int)`
+- **Configure**: `wispy.WithCacheSize(n int)`
 
 ```go
-eng := grove.New(
-    grove.WithStore(store),
-    grove.WithCacheSize(256),
+eng := wispy.New(
+    wispy.WithStore(store),
+    wispy.WithCacheSize(256),
 )
 ```
 
@@ -217,8 +217,8 @@ eng := grove.New(
 ## Sandbox Mode
 
 ```go
-eng := grove.New(
-    grove.WithSandbox(grove.SandboxConfig{
+eng := wispy.New(
+    wispy.WithSandbox(wispy.SandboxConfig{
         AllowedTags:    []string{"if", "for", "set"},
         AllowedFilters: []string{"upcase", "downcase", "escape"},
         MaxLoopIter:    1000,
