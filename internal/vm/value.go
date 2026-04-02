@@ -23,7 +23,16 @@ const (
 	TypeMap                  // oval: map[string]any (Go map, accessed via key lookup)
 	TypeResolvable           // oval: Resolvable
 	TypeMacro                // oval: *compiler.MacroDef
+	TypeLoopVar              // oval: *loopVarData
 )
+
+// loopVarData holds loop metadata without map allocation.
+type loopVarData struct {
+	index  int
+	length int
+	depth  int
+	parent *loopVarData // nil if depth == 1
+}
 
 // Value is the runtime value type. Zero value is Nil.
 type Value struct {
@@ -60,6 +69,7 @@ func ListVal(items []Value) Value { return Value{typ: TypeList, oval: items} }
 func MapVal(m map[string]any) Value { return Value{typ: TypeMap, oval: m} }
 func ResolvableVal(r Resolvable) Value { return Value{typ: TypeResolvable, oval: r} }
 func MacroVal(m *compiler.MacroDef) Value { return Value{typ: TypeMacro, oval: m} }
+func LoopVarVal(d *loopVarData) Value      { return Value{typ: TypeLoopVar, oval: d} }
 
 // ─── String representation ────────────────────────────────────────────────────
 
@@ -85,6 +95,8 @@ func (v Value) String() string {
 		return fmt.Sprintf("%v", v.oval)
 	case TypeMap:
 		return fmt.Sprintf("%v", v.oval)
+	case TypeLoopVar:
+		return "[loop]"
 	}
 	return ""
 }
@@ -153,6 +165,8 @@ func Truthy(v Value) bool {
 		return false
 	case TypeResolvable:
 		return v.oval != nil
+	case TypeLoopVar:
+		return true
 	}
 	return false
 }
@@ -286,6 +300,31 @@ func GetAttr(obj Value, name string, strict bool) (Value, error) {
 		}
 		if strict {
 			return Nil, fmt.Errorf("undefined attribute %q", name)
+		}
+		return Nil, nil
+	case TypeLoopVar:
+		ld := obj.oval.(*loopVarData)
+		switch name {
+		case "index":
+			return IntVal(int64(ld.index + 1)), nil
+		case "index0":
+			return IntVal(int64(ld.index)), nil
+		case "first":
+			return BoolVal(ld.index == 0), nil
+		case "last":
+			return BoolVal(ld.index == ld.length-1), nil
+		case "length":
+			return IntVal(int64(ld.length)), nil
+		case "depth":
+			return IntVal(int64(ld.depth)), nil
+		case "parent":
+			if ld.parent != nil {
+				return LoopVarVal(ld.parent), nil
+			}
+			return Nil, nil
+		}
+		if strict {
+			return Nil, fmt.Errorf("undefined loop attribute %q", name)
 		}
 		return Nil, nil
 	case TypeNil:

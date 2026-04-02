@@ -102,6 +102,7 @@ type VM struct {
 	sc         *scope.Scope
 	out        strings.Builder
 	loops      [32]loopState
+	loopVars   [32]loopVarData
 	ldepth     int // current loop depth (0 = not in loop)
 	captures   [8]captureFrame
 	cdepth     int // current capture depth
@@ -404,7 +405,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			ls := &v.loops[v.ldepth-1]
 			varName := bc.Names[instr.A]
 			v.sc.Set(varName, ls.items[ls.idx])
-			v.sc.Set("loop", v.makeLoopMap())
+			v.sc.Set("loop", v.makeLoopVal())
 
 		case compiler.OP_FOR_BIND_KV:
 			ls := &v.loops[v.ldepth-1]
@@ -417,7 +418,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 				v.sc.Set(name1, IntVal(int64(ls.idx)))
 				v.sc.Set(name2, ls.items[ls.idx])
 			}
-			v.sc.Set("loop", v.makeLoopMap())
+			v.sc.Set("loop", v.makeLoopVal())
 
 		case compiler.OP_FOR_STEP:
 			ls := &v.loops[v.ldepth-1]
@@ -980,33 +981,19 @@ func (v *VM) makeLoopState(coll Value) (loopState, bool) {
 	return loopState{}, false
 }
 
-// makeLoopMap constructs the `loop` magic variable for the current iteration.
-func (v *VM) makeLoopMap() Value {
+// makeLoopVal constructs the `loop` magic variable without allocation.
+func (v *VM) makeLoopVal() Value {
 	ls := &v.loops[v.ldepth-1]
-	n := len(ls.items)
-	loopData := map[string]any{
-		"index":  int64(ls.idx + 1),
-		"index0": int64(ls.idx),
-		"first":  ls.idx == 0,
-		"last":   ls.idx == n-1,
-		"length": int64(n),
-		"depth":  int64(v.ldepth),
-	}
+	ld := &v.loopVars[v.ldepth-1]
+	ld.index = ls.idx
+	ld.length = len(ls.items)
+	ld.depth = v.ldepth
 	if v.ldepth > 1 {
-		pls := &v.loops[v.ldepth-2]
-		pn := len(pls.items)
-		loopData["parent"] = map[string]any{
-			"index":  int64(pls.idx + 1),
-			"index0": int64(pls.idx),
-			"first":  pls.idx == 0,
-			"last":   pls.idx == pn-1,
-			"length": int64(pn),
-			"depth":  int64(v.ldepth - 1),
-		}
+		ld.parent = &v.loopVars[v.ldepth-2]
 	} else {
-		loopData["parent"] = nil
+		ld.parent = nil
 	}
-	return FromAny(loopData)
+	return LoopVarVal(ld)
 }
 
 // buildRange implements range(stop), range(start, stop), range(start, stop, step).
