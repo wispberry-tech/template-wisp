@@ -1,7 +1,7 @@
 // pkg/wispy/value.go
-package wispy
+package grove
 
-import "wispy/internal/vm"
+import "grove/internal/vm"
 
 // Value is the template runtime value type.
 type Value = vm.Value

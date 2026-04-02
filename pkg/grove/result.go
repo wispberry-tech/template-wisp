@@ -1,5 +1,5 @@
 // pkg/wispy/result.go
-package wispy
+package grove
 
 import (
 	"fmt"

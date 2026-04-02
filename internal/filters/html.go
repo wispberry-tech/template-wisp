@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"wispy/internal/vm"
+	"grove/internal/vm"
 )
 
 var reStriptags = regexp.MustCompile(`<[^>]+>`)

@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"wispy/internal/compiler"
+	"grove/internal/compiler"
 )
 
 // ValueType identifies the runtime type of a Value.

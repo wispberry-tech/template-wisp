@@ -1,4 +1,4 @@
-module wispy
+module grove
 
 go 1.24
 

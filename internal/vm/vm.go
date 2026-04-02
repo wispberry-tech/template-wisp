@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"wispy/internal/compiler"
-	"wispy/internal/scope"
+	"grove/internal/compiler"
+	"grove/internal/scope"
 )
 
 // renderCtx accumulates page-level data (assets, meta, hoisted HTML, warnings)

@@ -4,7 +4,7 @@ package filters
 import (
 	"strings"
 
-	"wispy/internal/vm"
+	"grove/internal/vm"
 )
 
 func filterUpper(v vm.Value, _ []vm.Value) (vm.Value, error) {

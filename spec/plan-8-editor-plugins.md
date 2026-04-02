@@ -47,7 +47,7 @@ wispy-editor/
 ### File Association
 
 - Language ID: `wispy`
-- File extensions: `.wsp`
+- File extensions: `.grov`
 - Base language: HTML (`text.html.basic`)
 
 ### Scope Name
@@ -159,7 +159,7 @@ Key fields:
     "languages": [{
       "id": "wispy",
       "aliases": ["Wispy", "Wispy Template"],
-      "extensions": [".wsp"],
+      "extensions": [".grov"],
       "configuration": "./language-configuration.json"
     }],
     "grammars": [{
@@ -276,7 +276,7 @@ These cases need explicit handling in both grammars:
 ## Acceptance Criteria
 
 ### Phase 1 (VS Code)
-- [ ] `.wsp` files auto-detect as Wispy language
+- [ ] `.grov` files auto-detect as Wispy language
 - [ ] HTML syntax highlighting works unchanged inside Wispy files
 - [ ] All three delimiter pairs (`{{ }}`, `{% %}`, `{# #}`) are distinctly colored
 - [ ] Keywords inside `{% %}` tags are highlighted

@@ -1,7 +1,7 @@
 // pkg/wispy/filter.go
-package wispy
+package grove
 
-import "wispy/internal/vm"
+import "grove/internal/vm"
 
 // FilterFn is the function signature for filter implementations.
 type FilterFn = vm.FilterFn
@@ -12,7 +12,7 @@ type FilterDef = vm.FilterDef
 // FilterFunc wraps a FilterFn with zero or more options.
 // Use FilterOutputsHTML() to mark filters that return trusted HTML.
 //
-//	eng.RegisterFilter("markdown", wispy.FilterFunc(fn, wispy.FilterOutputsHTML()))
+//	eng.RegisterFilter("markdown", grove.FilterFunc(fn, grove.FilterOutputsHTML()))
 func FilterFunc(fn FilterFn, opts ...vm.FilterOption) *FilterDef {
 	return vm.NewFilterDef(fn, opts...)
 }

@@ -8,7 +8,7 @@ import (
 	"runtime"
 	"strings"
 
-	"wispy/pkg/wispy"
+	"grove/pkg/wispy"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -100,8 +100,8 @@ func main() {
 	_, thisFile, _, _ := runtime.Caller(0)
 	templateDir := filepath.Join(filepath.Dir(thisFile), "templates")
 
-	store := wispy.NewFileSystemStore(templateDir)
-	eng := wispy.New(wispy.WithStore(store))
+	store := grove.NewFileSystemStore(templateDir)
+	eng := grove.New(grove.WithStore(store))
 	eng.SetGlobal("site_name", "Wispy Blog")
 	eng.SetGlobal("current_year", "2026")
 
@@ -117,7 +117,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":3000", r))
 }
 
-func indexHandler(eng *wispy.Engine) http.HandlerFunc {
+func indexHandler(eng *grove.Engine) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Convert posts to []any for template iteration.
 		postsAny := make([]any, len(posts))
@@ -125,7 +125,7 @@ func indexHandler(eng *wispy.Engine) http.HandlerFunc {
 			postsAny[i] = p
 		}
 
-		result, err := eng.Render(r.Context(), "index.html", wispy.Data{
+		result, err := eng.Render(r.Context(), "index.grov", grove.Data{
 			"posts": postsAny,
 		})
 		if err != nil {
@@ -136,7 +136,7 @@ func indexHandler(eng *wispy.Engine) http.HandlerFunc {
 	}
 }
 
-func postHandler(eng *wispy.Engine) http.HandlerFunc {
+func postHandler(eng *grove.Engine) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		slug := chi.URLParam(r, "slug")
 		var found *Post
@@ -151,7 +151,7 @@ func postHandler(eng *wispy.Engine) http.HandlerFunc {
 			return
 		}
 
-		result, err := eng.Render(r.Context(), "post.html", wispy.Data{
+		result, err := eng.Render(r.Context(), "post.grov", grove.Data{
 			"post": *found,
 		})
 		if err != nil {
@@ -162,9 +162,9 @@ func postHandler(eng *wispy.Engine) http.HandlerFunc {
 	}
 }
 
-func styleguideHandler(eng *wispy.Engine) http.HandlerFunc {
+func styleguideHandler(eng *grove.Engine) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		result, err := eng.Render(r.Context(), "pages/styleguide.html", wispy.Data{
+		result, err := eng.Render(r.Context(), "pages/styleguide.grov", grove.Data{
 			"tag_colors": []any{"blue", "green", "red", "purple", "orange", "gray"},
 		})
 		if err != nil {
@@ -177,7 +177,7 @@ func styleguideHandler(eng *wispy.Engine) http.HandlerFunc {
 
 // writeResult assembles the final HTML response by injecting collected assets,
 // meta tags, and hoisted content into the placeholder markers in the rendered body.
-func writeResult(w http.ResponseWriter, result wispy.RenderResult) {
+func writeResult(w http.ResponseWriter, result grove.RenderResult) {
 	body := result.Body
 
 	// Inject stylesheet assets into <head>.

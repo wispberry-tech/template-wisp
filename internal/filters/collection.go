@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"wispy/internal/vm"
+	"grove/internal/vm"
 )
 
 func filterLength(v vm.Value, _ []vm.Value) (vm.Value, error) {

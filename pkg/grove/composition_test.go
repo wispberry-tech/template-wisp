@@ -1,18 +1,18 @@
 // pkg/wispy/composition_test.go
-package wispy_test
+package grove_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"wispy/pkg/wispy"
+	"grove/pkg/grove"
 )
 
 // renderStore creates an engine with the given store and renders the named template.
-func renderStore(t *testing.T, store *wispy.MemoryStore, name string, data wispy.Data) string {
+func renderStore(t *testing.T, store *grove.MemoryStore, name string, data grove.Data) string {
 	t.Helper()
-	eng := wispy.New(wispy.WithStore(store))
+	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), name, data)
 	require.NoError(t, err)
 	return result.Body
@@ -21,72 +21,72 @@ func renderStore(t *testing.T, store *wispy.MemoryStore, name string, data wispy
 // ─── MemoryStore + eng.Render() ──────────────────────────────────────────────
 
 func TestRender_NamedTemplate_Basic(t *testing.T) {
-	store := wispy.NewMemoryStore()
+	store := grove.NewMemoryStore()
 	store.Set("hello.html", `Hello, {{ name }}!`)
-	require.Equal(t, "Hello, Wispy!", renderStore(t, store, "hello.html", wispy.Data{"name": "Wispy"}))
+	require.Equal(t, "Hello, Wispy!", renderStore(t, store, "hello.html", grove.Data{"name": "Wispy"}))
 }
 
 func TestRender_NamedTemplate_NotFound(t *testing.T) {
-	store := wispy.NewMemoryStore()
-	eng := wispy.New(wispy.WithStore(store))
-	_, err := eng.Render(context.Background(), "missing.html", wispy.Data{})
+	store := grove.NewMemoryStore()
+	eng := grove.New(grove.WithStore(store))
+	_, err := eng.Render(context.Background(), "missing.html", grove.Data{})
 	require.Error(t, err)
 }
 
 // ─── INLINE MACROS ───────────────────────────────────────────────────────────
 
 func TestMacro_Positional(t *testing.T) {
-	eng := wispy.New()
+	eng := grove.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% macro greet(name) %}Hello, {{ name }}!{% endmacro %}{{ greet("World") }}`,
-		wispy.Data{})
+		grove.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "Hello, World!", result.Body)
 }
 
 func TestMacro_DefaultArg(t *testing.T) {
-	eng := wispy.New()
+	eng := grove.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% macro greet(name="stranger") %}Hi {{ name }}{% endmacro %}{{ greet() }}`,
-		wispy.Data{})
+		grove.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "Hi stranger", result.Body)
 }
 
 func TestMacro_NamedArg(t *testing.T) {
-	eng := wispy.New()
+	eng := grove.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% macro greet(name="stranger") %}Hi {{ name }}{% endmacro %}{{ greet(name="Wispy") }}`,
-		wispy.Data{})
+		grove.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "Hi Wispy", result.Body)
 }
 
 func TestMacro_MultipleParams(t *testing.T) {
-	eng := wispy.New()
+	eng := grove.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% macro link(href, text, target="_self") %}<a href="{{ href }}" target="{{ target }}">{{ text }}</a>{% endmacro %}{{ link("https://example.com", "Click", target="_blank") }}`,
-		wispy.Data{})
+		grove.Data{})
 	require.NoError(t, err)
 	require.Equal(t, `<a href="https://example.com" target="_blank">Click</a>`, result.Body)
 }
 
 func TestMacro_IsolatedScope(t *testing.T) {
 	// Macros cannot read outer template variables
-	eng := wispy.New()
+	eng := grove.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% set secret = "outer" %}{% macro peek() %}{{ secret }}{% endmacro %}[{{ peek() }}]`,
-		wispy.Data{})
+		grove.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "[]", result.Body) // secret is not visible inside macro
 }
 
 func TestMacro_OutputIsSafe(t *testing.T) {
 	// Macro output is SafeHTML — not double-escaped
-	eng := wispy.New()
+	eng := grove.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% macro bold(text) %}<b>{{ text }}</b>{% endmacro %}{{ bold("hi") }}`,
-		wispy.Data{})
+		grove.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "<b>hi</b>", result.Body)
 }
@@ -94,10 +94,10 @@ func TestMacro_OutputIsSafe(t *testing.T) {
 // ─── caller() ────────────────────────────────────────────────────────────────
 
 func TestMacro_Caller_Basic(t *testing.T) {
-	eng := wispy.New()
+	eng := grove.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% macro card(title) %}<div><h2>{{ title }}</h2>{{ caller() }}</div>{% endmacro %}{% call card("Orders") %}<p>3 orders</p>{% endcall %}`,
-		wispy.Data{})
+		grove.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "<div><h2>Orders</h2><p>3 orders</p></div>", result.Body)
 }
@@ -105,53 +105,53 @@ func TestMacro_Caller_Basic(t *testing.T) {
 // ─── INCLUDE ─────────────────────────────────────────────────────────────────
 
 func TestInclude_Basic(t *testing.T) {
-	store := wispy.NewMemoryStore()
+	store := grove.NewMemoryStore()
 	store.Set("page.html", `before {% include "nav.html" %} after`)
 	store.Set("nav.html", `<nav>{{ user }}</nav>`)
 	require.Equal(t, "before <nav>Alice</nav> after",
-		renderStore(t, store, "page.html", wispy.Data{"user": "Alice"}))
+		renderStore(t, store, "page.html", grove.Data{"user": "Alice"}))
 }
 
 func TestInclude_SharedScope(t *testing.T) {
 	// Include sees outer template's variables
-	store := wispy.NewMemoryStore()
+	store := grove.NewMemoryStore()
 	store.Set("page.html", `{% set greeting = "Hello" %}{% include "part.html" %}`)
 	store.Set("part.html", `{{ greeting }}`)
-	require.Equal(t, "Hello", renderStore(t, store, "page.html", wispy.Data{}))
+	require.Equal(t, "Hello", renderStore(t, store, "page.html", grove.Data{}))
 }
 
 func TestInclude_WithVars(t *testing.T) {
-	store := wispy.NewMemoryStore()
+	store := grove.NewMemoryStore()
 	store.Set("page.html", `{% include "part.html" with color="blue", size="lg" %}`)
 	store.Set("part.html", `{{ color }}-{{ size }}`)
-	require.Equal(t, "blue-lg", renderStore(t, store, "page.html", wispy.Data{}))
+	require.Equal(t, "blue-lg", renderStore(t, store, "page.html", grove.Data{}))
 }
 
 func TestInclude_Isolated(t *testing.T) {
 	// Isolated include cannot see outer scope variables
-	store := wispy.NewMemoryStore()
+	store := grove.NewMemoryStore()
 	store.Set("page.html", `{% set secret = "hidden" %}{% include "part.html" isolated %}`)
 	store.Set("part.html", `[{{ secret }}]`)
-	require.Equal(t, "[]", renderStore(t, store, "page.html", wispy.Data{}))
+	require.Equal(t, "[]", renderStore(t, store, "page.html", grove.Data{}))
 }
 
 // ─── RENDER ──────────────────────────────────────────────────────────────────
 
 func TestRender_Tag(t *testing.T) {
 	// render is always isolated; vars passed explicitly
-	store := wispy.NewMemoryStore()
+	store := grove.NewMemoryStore()
 	store.Set("page.html", `{% set secret = "hidden" %}{% render "card.html" with item="Widget" %}`)
 	store.Set("card.html", `[{{ item }}][{{ secret }}]`)
-	require.Equal(t, "[Widget][]", renderStore(t, store, "page.html", wispy.Data{}))
+	require.Equal(t, "[Widget][]", renderStore(t, store, "page.html", grove.Data{}))
 }
 
 // ─── IMPORT ──────────────────────────────────────────────────────────────────
 
 func TestImport_Basic(t *testing.T) {
-	store := wispy.NewMemoryStore()
+	store := grove.NewMemoryStore()
 	store.Set("page.html", `{% import "macros.html" as m %}{{ m.greet("Wispy") }}`)
 	store.Set("macros.html", `{% macro greet(name) %}Hello, {{ name }}!{% endmacro %}`)
-	require.Equal(t, "Hello, Wispy!", renderStore(t, store, "page.html", wispy.Data{}))
+	require.Equal(t, "Hello, Wispy!", renderStore(t, store, "page.html", grove.Data{}))
 }
 
 // ─── MACRO calling MACRO ──────────────────────────────────────────────────────
@@ -159,10 +159,10 @@ func TestImport_Basic(t *testing.T) {
 func TestMacro_IsolatedFromOtherMacros(t *testing.T) {
 	// Macros cannot see other macros defined in the outer scope — each macro
 	// executes in an isolated scope with only its declared parameters bound.
-	eng := wispy.New()
+	eng := grove.New()
 	_, err := eng.RenderTemplate(context.Background(),
 		`{% macro inner(x) %}[{{ x }}]{% endmacro %}{% macro outer(x) %}{{ inner(x) }}{% endmacro %}{{ outer("hi") }}`,
-		wispy.Data{})
+		grove.Data{})
 	// inner is not visible inside outer — expect an error
 	require.Error(t, err)
 }
@@ -171,10 +171,10 @@ func TestMacro_IsolatedFromOtherMacros(t *testing.T) {
 
 func TestMacro_CallerCalledTwice(t *testing.T) {
 	// caller() can be called multiple times; renders the body each time
-	eng := wispy.New()
+	eng := grove.New()
 	result, err := eng.RenderTemplate(context.Background(),
 		`{% macro wrap() %}{{ caller() }}|{{ caller() }}{% endmacro %}{% call wrap() %}body{% endcall %}`,
-		wispy.Data{})
+		grove.Data{})
 	require.NoError(t, err)
 	require.Equal(t, "body|body", result.Body)
 }
@@ -183,8 +183,8 @@ func TestMacro_CallerCalledTwice(t *testing.T) {
 
 func TestInclude_InsideForLoop(t *testing.T) {
 	// included template shares outer loop scope and sees loop variable
-	store := wispy.NewMemoryStore()
+	store := grove.NewMemoryStore()
 	store.Set("page.html", `{% for item in items %}{% include "row.html" %}{% endfor %}`)
 	store.Set("row.html", `{{ item }},`)
-	require.Equal(t, "a,b,c,", renderStore(t, store, "page.html", wispy.Data{"items": []string{"a", "b", "c"}}))
+	require.Equal(t, "a,b,c,", renderStore(t, store, "page.html", grove.Data{"items": []string{"a", "b", "c"}}))
 }

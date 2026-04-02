@@ -5,7 +5,7 @@ import (
 	"math"
 	"strconv"
 
-	"wispy/internal/vm"
+	"grove/internal/vm"
 )
 
 func filterAbs(v vm.Value, _ []vm.Value) (vm.Value, error) {

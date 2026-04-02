@@ -1,7 +1,7 @@
 // pkg/wispy/context.go
-package wispy
+package grove
 
-import "wispy/internal/vm"
+import "grove/internal/vm"
 
 // Data is the map type passed to Render methods.
 type Data map[string]any
