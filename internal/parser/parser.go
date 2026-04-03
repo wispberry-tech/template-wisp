@@ -175,7 +175,11 @@ func (p *parser) parseTag() (ast.Node, error) {
 		return p.parseIf(tagStart)
 
 	case "unless":
-		return p.parseUnless(tagStart)
+		return nil, &groverrors.ParseError{
+			Line:    tagStart.Line,
+			Column:  tagStart.Col,
+			Message: "unknown tag \"unless\": use {% if not ... %} instead",
+		}
 
 	case "for":
 		return p.parseFor(tagStart)
@@ -307,27 +311,6 @@ func (p *parser) parseIf(tagStart lexer.Token) (*ast.IfNode, error) {
 		return nil, err
 	}
 	return node, nil
-}
-
-// ─── {% unless %} ─────────────────────────────────────────────────────────────
-
-func (p *parser) parseUnless(tagStart lexer.Token) (*ast.UnlessNode, error) {
-	p.advance() // consume "unless"
-	cond, err := p.parseExpr(0)
-	if err != nil {
-		return nil, err
-	}
-	if err := p.expectTagEnd(); err != nil {
-		return nil, err
-	}
-	body, err := p.parseBody("endunless")
-	if err != nil {
-		return nil, err
-	}
-	if err := p.expectTag("endunless"); err != nil {
-		return nil, err
-	}
-	return &ast.UnlessNode{Condition: cond, Body: body, Line: tagStart.Line}, nil
 }
 
 // ─── {% for %} ────────────────────────────────────────────────────────────────
@@ -792,7 +775,7 @@ func (p *parser) errorf(line, col int, format string, args ...any) *groverrors.P
 // These are tags that are always needed as syntactic closers (e.g. endif, endfor, else, etc.).
 func isCloseTag(name string) bool {
 	switch name {
-	case "endif", "endfor", "endunless", "endwith", "endcapture", "endmacro", "endcall",
+	case "endif", "endfor", "endwith", "endcapture", "endmacro", "endcall",
 		"endblock", "endslot", "endcomponent", "endfill", "endhoist",
 		"else", "elif", "empty", "endraw":
 		return true

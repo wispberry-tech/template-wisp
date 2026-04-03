@@ -174,15 +174,6 @@ type IfNode struct {
 
 func (*IfNode) wispyNode() {}
 
-// UnlessNode is {% unless cond %}...{% endunless %} — equivalent to if not cond.
-type UnlessNode struct {
-	Condition Node
-	Body      []Node
-	Line      int
-}
-
-func (*UnlessNode) wispyNode() {}
-
 // ForNode is {% for var in iterable %}...{% empty %}...{% endfor %}.
 // If Var2 is non-empty, it's a two-variable form (for k,v in map / for i,item in list).
 type ForNode struct {

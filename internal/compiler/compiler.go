@@ -151,9 +151,6 @@ func (c *cmp) compileNode(node ast.Node) error {
 	case *ast.IfNode:
 		return c.compileIf(n)
 
-	case *ast.UnlessNode:
-		return c.compileUnless(n)
-
 	case *ast.ForNode:
 		return c.compileFor(n)
 
@@ -286,21 +283,6 @@ func (c *cmp) compileIf(n *ast.IfNode) error {
 		c.instrs[jIdx].A = end
 	}
 
-	return nil
-}
-
-// ─── {% unless %} compiler ────────────────────────────────────────────────────
-
-func (c *cmp) compileUnless(n *ast.UnlessNode) error {
-	if err := c.compileExpr(n.Condition); err != nil {
-		return err
-	}
-	c.emit(OP_NOT, 0, 0, 0)
-	jfIdx := c.emitPlaceholder(OP_JUMP_FALSE)
-	if err := c.compileBody(n.Body); err != nil {
-		return err
-	}
-	c.instrs[jfIdx].A = uint16(len(c.instrs))
 	return nil
 }
 

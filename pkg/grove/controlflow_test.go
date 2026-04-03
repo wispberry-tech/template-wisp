@@ -61,16 +61,12 @@ func TestIf_Nested(t *testing.T) {
 
 // ─── UNLESS ──────────────────────────────────────────────────────────────────
 
-func TestUnless(t *testing.T) {
+func TestUnless_Removed(t *testing.T) {
 	eng := grove.New()
-	tmpl := `{% unless banned %}Welcome!{% endunless %}`
-	result, err := eng.RenderTemplate(context.Background(), tmpl, grove.Data{"banned": false})
-	require.NoError(t, err)
-	require.Equal(t, "Welcome!", result.Body)
-
-	result, err = eng.RenderTemplate(context.Background(), tmpl, grove.Data{"banned": true})
-	require.NoError(t, err)
-	require.Equal(t, "", result.Body)
+	_, err := eng.RenderTemplate(context.Background(),
+		`{% unless banned %}Welcome!{% endunless %}`,
+		grove.Data{"banned": false})
+	require.Error(t, err)
 }
 
 // ─── FOR ─────────────────────────────────────────────────────────────────────
