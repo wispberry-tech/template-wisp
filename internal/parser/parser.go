@@ -594,9 +594,63 @@ func (p *parser) parsePrimary() (ast.Node, error) {
 		}
 		p.advance()
 		return expr, nil
+	case lexer.TK_LBRACKET:
+		return p.parseListLiteral(tk)
+	case lexer.TK_LBRACE:
+		return p.parseMapLiteral(tk)
 	default:
 		return nil, p.errorf(tk.Line, tk.Col, "unexpected token in expression: %q", tk.Value)
 	}
+}
+
+func (p *parser) parseListLiteral(openTok lexer.Token) (ast.Node, error) {
+	var elements []ast.Node
+	for p.peek().Kind != lexer.TK_RBRACKET && !p.atEOF() {
+		elem, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		elements = append(elements, elem)
+		if p.peek().Kind == lexer.TK_COMMA {
+			p.advance()
+		} else {
+			break
+		}
+	}
+	if p.peek().Kind != lexer.TK_RBRACKET {
+		return nil, p.errorf(p.peek().Line, p.peek().Col, "expected ] to close list literal")
+	}
+	p.advance()
+	return &ast.ListLiteral{Elements: elements, Line: openTok.Line}, nil
+}
+
+func (p *parser) parseMapLiteral(openTok lexer.Token) (ast.Node, error) {
+	var entries []ast.MapEntry
+	for p.peek().Kind != lexer.TK_RBRACE && !p.atEOF() {
+		keyTok := p.advance()
+		if keyTok.Kind != lexer.TK_IDENT {
+			return nil, p.errorf(keyTok.Line, keyTok.Col, "expected identifier key in map literal")
+		}
+		if p.peek().Kind != lexer.TK_COLON {
+			return nil, p.errorf(p.peek().Line, p.peek().Col, "expected ':' after map key")
+		}
+		p.advance()
+		val, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, ast.MapEntry{Key: keyTok.Value, Value: val})
+		if p.peek().Kind == lexer.TK_COMMA {
+			p.advance()
+		} else {
+			break
+		}
+	}
+	if p.peek().Kind != lexer.TK_RBRACE {
+		return nil, p.errorf(p.peek().Line, p.peek().Col, "expected } to close map literal")
+	}
+	p.advance()
+	return &ast.MapLiteral{Entries: entries, Line: openTok.Line}, nil
 }
 
 func (p *parser) parseFilter(value ast.Node) (ast.Node, error) {

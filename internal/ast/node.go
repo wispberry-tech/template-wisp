@@ -345,6 +345,30 @@ type SlotNode struct {
 
 func (*SlotNode) wispyNode() {}
 
+// ─── Literal collection nodes ─────────────────────────────────────────────────
+
+// ListLiteral is [expr, expr, ...].
+type ListLiteral struct {
+	Elements []Node
+	Line     int
+}
+
+func (*ListLiteral) wispyNode() {}
+
+// MapEntry is a single key: value pair in a map literal.
+type MapEntry struct {
+	Key   string // unquoted identifier
+	Value Node
+}
+
+// MapLiteral is { key: expr, key: expr, ... }.
+type MapLiteral struct {
+	Entries []MapEntry
+	Line    int
+}
+
+func (*MapLiteral) wispyNode() {}
+
 // ─── Plan 7 nodes ─────────────────────────────────────────────────────────────
 
 // AssetNode declares an asset (CSS/JS/other) to collect into RenderResult.Assets.

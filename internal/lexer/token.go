@@ -49,6 +49,8 @@ const (
 	TK_NOT  // not
 	TK_QUESTION // ?  (ternary)
 	TK_COLON    // :  (ternary)
+	TK_LBRACE   // { (map literal)
+	TK_RBRACE   // } (map literal)
 	TK_IN   // in   (for...in)
 )
 

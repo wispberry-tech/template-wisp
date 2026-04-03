@@ -451,6 +451,23 @@ func (c *cmp) compileExpr(node ast.Node) error {
 			return fmt.Errorf("compiler: unknown function %q", n.Name)
 		}
 
+	case *ast.ListLiteral:
+		for _, elem := range n.Elements {
+			if err := c.compileExpr(elem); err != nil {
+				return err
+			}
+		}
+		c.emit(OP_BUILD_LIST, uint16(len(n.Elements)), 0, 0)
+
+	case *ast.MapLiteral:
+		for _, entry := range n.Entries {
+			c.emitPushConst(entry.Key)
+			if err := c.compileExpr(entry.Value); err != nil {
+				return err
+			}
+		}
+		c.emit(OP_BUILD_MAP, uint16(len(n.Entries)), 0, 0)
+
 	default:
 		return fmt.Errorf("compiler: unknown expr type %T", node)
 	}

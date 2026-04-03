@@ -925,6 +925,24 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			}
 			v.rc.hoisted[target] = append(v.rc.hoisted[target], captured)
 
+		case compiler.OP_BUILD_LIST:
+			count := int(instr.A)
+			elems := make([]Value, count)
+			for i := count - 1; i >= 0; i-- {
+				elems[i] = v.pop()
+			}
+			v.push(ListVal(elems))
+
+		case compiler.OP_BUILD_MAP:
+			count := int(instr.A)
+			m := make(map[string]any, count)
+			for i := count - 1; i >= 0; i-- {
+				val := v.pop()
+				key := v.pop()
+				m[key.String()] = val
+			}
+			v.push(MapVal(m))
+
 		default:
 			return "", fmt.Errorf("vm: unknown opcode %d at ip=%d", instr.Op, ip-1)
 		}

@@ -309,6 +309,10 @@ func (l *lx) lexOneToken() error {
 		kind = TK_QUESTION
 	case ':':
 		kind = TK_COLON
+	case '{':
+		kind = TK_LBRACE
+	case '}':
+		kind = TK_RBRACE
 	default:
 		return &lexErr{line: line, msg: fmt.Sprintf("unexpected character: %q", ch)}
 	}

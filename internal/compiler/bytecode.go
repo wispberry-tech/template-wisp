@@ -99,6 +99,13 @@ const (
 	// OP_HOIST — render a body sub-bytecode and append output to hoisted[target].
 	// A = index into Consts for the target string; B = index into bc.Blocks for body.
 	OP_HOIST
+
+	// OP_BUILD_LIST — A = element count.
+	// Pops N values, builds []Value, pushes list Value.
+	OP_BUILD_LIST
+	// OP_BUILD_MAP — A = entry count.
+	// Pops N*2 values (key, val pairs), builds map, pushes map Value.
+	OP_BUILD_MAP
 )
 
 // MacroParam is a single parameter in a compiled macro.
