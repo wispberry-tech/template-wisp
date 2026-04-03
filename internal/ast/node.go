@@ -262,11 +262,10 @@ type CallNode struct {
 
 func (*CallNode) wispyNode() {}
 
-// IncludeNode is {% include "name" [with k=v, ...] [isolated] %}.
+// IncludeNode is {% include "name" [k=v ...] %}.
 type IncludeNode struct {
 	Name     string         // template name (string literal)
 	WithVars []NamedArgNode // extra variables (empty = no with clause)
-	Isolated bool
 	Line     int
 }
 

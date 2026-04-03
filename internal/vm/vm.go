@@ -576,7 +576,6 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 		case compiler.OP_INCLUDE:
 			tmplName := bc.Names[instr.A]
 			pairCount := int(instr.B)
-			isolated := instr.Flags&1 != 0
 
 			// Pop with-var pairs
 			withVars := make(map[string]any, pairCount)
@@ -592,14 +591,7 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			}
 
 			savedSC := v.sc
-			if isolated {
-				globalSc := scope.New(nil)
-				for k, val := range v.eng.GlobalData() {
-					globalSc.Set(k, FromAny(val))
-				}
-				v.sc = scope.New(globalSc)
-			}
-			if len(withVars) > 0 || isolated {
+			if len(withVars) > 0 {
 				v.sc = scope.New(v.sc)
 				for k, val := range withVars {
 					v.sc.Set(k, val.(Value))

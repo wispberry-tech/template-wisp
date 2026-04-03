@@ -122,15 +122,14 @@ func TestInclude_SharedScope(t *testing.T) {
 
 func TestInclude_WithVars(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("page.html", `{% include "part.html" with color="blue", size="lg" %}`)
+	store.Set("page.html", `{% include "part.html" color="blue" size="lg" %}`)
 	store.Set("part.html", `{{ color }}-{{ size }}`)
 	require.Equal(t, "blue-lg", renderStore(t, store, "page.html", grove.Data{}))
 }
 
-func TestInclude_Isolated(t *testing.T) {
-	// Isolated include cannot see outer scope variables
+func TestInclude_IsolatedRemoved(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("page.html", `{% set secret = "hidden" %}{% include "part.html" isolated %}`)
+	store.Set("page.html", `{% set secret = "hidden" %}{% render "part.html" %}`)
 	store.Set("part.html", `[{{ secret }}]`)
 	require.Equal(t, "[]", renderStore(t, store, "page.html", grove.Data{}))
 }
@@ -140,7 +139,7 @@ func TestInclude_Isolated(t *testing.T) {
 func TestRender_Tag(t *testing.T) {
 	// render is always isolated; vars passed explicitly
 	store := grove.NewMemoryStore()
-	store.Set("page.html", `{% set secret = "hidden" %}{% render "card.html" with item="Widget" %}`)
+	store.Set("page.html", `{% set secret = "hidden" %}{% render "card.html" item="Widget" %}`)
 	store.Set("card.html", `[{{ item }}][{{ secret }}]`)
 	require.Equal(t, "[Widget][]", renderStore(t, store, "page.html", grove.Data{}))
 }

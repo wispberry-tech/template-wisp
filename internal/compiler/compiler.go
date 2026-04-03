@@ -575,7 +575,7 @@ func (c *cmp) compileCallNode(n *ast.CallNode) error {
 	return nil
 }
 
-// compileInclude compiles {% include "name" [with k=v] [isolated] %}.
+// compileInclude compiles {% include "name" [k=v ...] %}.
 func (c *cmp) compileInclude(n *ast.IncludeNode) error {
 	for _, kv := range n.WithVars {
 		c.emitPushConst(kv.Key)
@@ -583,11 +583,7 @@ func (c *cmp) compileInclude(n *ast.IncludeNode) error {
 			return err
 		}
 	}
-	flags := uint8(0)
-	if n.Isolated {
-		flags = 1
-	}
-	c.emit(OP_INCLUDE, uint16(c.addName(n.Name)), uint16(len(n.WithVars)), flags)
+	c.emit(OP_INCLUDE, uint16(c.addName(n.Name)), uint16(len(n.WithVars)), 0)
 	return nil
 }
 

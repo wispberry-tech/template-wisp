@@ -896,68 +896,51 @@ func (p *parser) parseCall(tagStart lexer.Token) (*ast.CallNode, error) {
 	}, nil
 }
 
-// parseWithVars parses an optional "with key=val, key2=val2" clause.
-// Stops at tag end or "isolated" keyword.
-func (p *parser) parseWithVars() ([]ast.NamedArgNode, error) {
-	if p.peek().Kind != lexer.TK_IDENT || p.peek().Value != "with" {
-		return nil, nil
-	}
-	p.advance() // consume "with"
+// parseIncludeVars parses optional space-separated key=value pairs.
+func (p *parser) parseIncludeVars() ([]ast.NamedArgNode, error) {
 	var vars []ast.NamedArgNode
-	for p.peek().Kind != lexer.TK_TAG_END && !p.atEOF() {
-		if p.peek().Kind == lexer.TK_IDENT && p.peek().Value == "isolated" {
+	for p.peek().Kind == lexer.TK_IDENT && !p.atEOF() {
+		keyTok := p.peek()
+		if p.pos+1 < len(p.tokens) && p.tokens[p.pos+1].Kind == lexer.TK_ASSIGN {
+			p.advance() // consume key
+			p.advance() // consume =
+			val, err := p.parseExpr(0)
+			if err != nil {
+				return nil, err
+			}
+			vars = append(vars, ast.NamedArgNode{Key: keyTok.Value, Value: val, Line: keyTok.Line})
+		} else {
 			break
-		}
-		keyTok := p.advance()
-		if keyTok.Kind != lexer.TK_IDENT {
-			return nil, p.errorf(keyTok.Line, keyTok.Col, "expected variable name in with clause")
-		}
-		if p.peek().Kind != lexer.TK_ASSIGN {
-			return nil, p.errorf(p.peek().Line, p.peek().Col, "expected = after variable name in with clause")
-		}
-		p.advance() // consume =
-		val, err := p.parseExpr(0)
-		if err != nil {
-			return nil, err
-		}
-		vars = append(vars, ast.NamedArgNode{Key: keyTok.Value, Value: val, Line: keyTok.Line})
-		if p.peek().Kind == lexer.TK_COMMA {
-			p.advance()
 		}
 	}
 	return vars, nil
 }
 
-// parseInclude parses {% include "name" [with k=v, ...] [isolated] %}.
+// parseInclude parses {% include "name" [k=v ...] %}.
 func (p *parser) parseInclude(tagStart lexer.Token) (*ast.IncludeNode, error) {
 	p.advance() // consume "include"
 	nameTok := p.advance()
 	if nameTok.Kind != lexer.TK_STRING {
 		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected quoted template name after include")
 	}
-	withVars, err := p.parseWithVars()
+	withVars, err := p.parseIncludeVars()
 	if err != nil {
 		return nil, err
-	}
-	isolated := false
-	if p.peek().Kind == lexer.TK_IDENT && p.peek().Value == "isolated" {
-		p.advance()
-		isolated = true
 	}
 	if err := p.expectTagEnd(); err != nil {
 		return nil, err
 	}
-	return &ast.IncludeNode{Name: nameTok.Value, WithVars: withVars, Isolated: isolated, Line: tagStart.Line}, nil
+	return &ast.IncludeNode{Name: nameTok.Value, WithVars: withVars, Line: tagStart.Line}, nil
 }
 
-// parseRender parses {% render "name" [with k=v, ...] %} — always isolated.
+// parseRender parses {% render "name" [k=v ...] %} — always isolated.
 func (p *parser) parseRender(tagStart lexer.Token) (*ast.RenderNode, error) {
 	p.advance() // consume "render"
 	nameTok := p.advance()
 	if nameTok.Kind != lexer.TK_STRING {
 		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected quoted template name after render")
 	}
-	withVars, err := p.parseWithVars()
+	withVars, err := p.parseIncludeVars()
 	if err != nil {
 		return nil, err
 	}
