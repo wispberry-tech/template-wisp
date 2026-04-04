@@ -2,6 +2,108 @@
 
 Components are reusable templates with a declared interface. They accept data through **props** and allow callers to inject content through **slots**.
 
+## Component Architecture
+
+Grove uses a two-tier classification for components:
+
+### Primitives
+
+Leaf components with no child components. They accept props and render self-contained HTML. Primitives do not use `{% component %}` internally and do not define `{% slot %}` tags.
+
+Examples: buttons, badges, icons, inputs.
+
+### Composites
+
+Components that compose other components and/or use slots for flexible content injection. A composite uses `{% component %}` inside its template, defines `{% slot %}` tags, or both.
+
+Examples: cards, navigation bars, author profiles.
+
+**Decision rule:** If a component uses `{% component %}` or has `{% slot %}` tags, it's a composite. Otherwise it's a primitive.
+
+### Folder Structure
+
+Organize components into `primitives/` and `composites/` directories, with each component in its own folder:
+
+```
+templates/
+  primitives/
+    button/
+      button.grov
+      button.js          ← optional JS for progressive enhancement
+    tag-badge/
+      tag-badge.grov
+  composites/
+    card/
+      card.grov
+    nav/
+      nav.grov
+      nav.js
+```
+
+### Path Resolution
+
+When referencing components, use the short path without repeating the filename:
+
+```jinja2
+{% component "composites/card" %}
+  ...
+{% endcomponent %}
+```
+
+`FileSystemStore` resolves component paths in this order:
+
+1. **Exact match** — `composites/card` (file exists as-is)
+2. **Append .grov** — `composites/card.grov` (flat file without directory)
+3. **Directory fallback** — `composites/card/card.grov` (folder-per-component)
+
+This means flat-file components (without a directory) still work. The fallback only applies to names that don't already end in `.grov`.
+
+## JS Colocation
+
+Components can include a colocated JavaScript file for progressive enhancement. The JS file lives next to the `.grov` file with the same base name:
+
+```
+button/
+  button.grov
+  button.js
+```
+
+The JS file is always optional. Components without a `.js` file are perfectly valid.
+
+### Including JS
+
+Components declare their JS dependency using the `{% asset %}` tag:
+
+```jinja2
+{# primitives/button/button.grov #}
+{% props label, href="#" %}
+{% asset "/js/primitives/button/button.js" type="script" %}
+
+<a href="{{ href }}" class="btn" data-button>{{ label }}</a>
+```
+
+The `RenderResult` asset system handles deduplication — if a page renders 10 buttons, the script is included once. The Go server serves JS files statically from the component directories.
+
+### Progressive Enhancement
+
+Server-rendered HTML must be functional without JavaScript. The JS enhances existing markup with smoother interactions, animations, or keyboard navigation. If JS fails to load, the component still works.
+
+### Binding Convention
+
+Components use `data-*` attributes to connect JS to markup. The template renders a `data-*` attribute, and the JS file queries for those attributes:
+
+```js
+// button.js
+document.querySelectorAll('[data-button]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.classList.add('btn-loading');
+    btn.setAttribute('aria-busy', 'true');
+  });
+});
+```
+
+No IDs, no class-name coupling — `data-*` attributes are the contract between template and script.
+
 ## Using a Component
 
 ```jinja2
