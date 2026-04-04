@@ -1,0 +1,30 @@
+{% asset "/static/docs.css" type="stylesheet" priority=10 %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Grove Docs{% endblock %}</title>
+  <!-- HEAD_ASSETS -->
+  <!-- HEAD_META -->
+  <!-- HEAD_HOISTED -->
+</head>
+<body style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #f8f9fa; min-height: 100vh; display: flex; flex-direction: column;">
+  {% block nav %}
+  <nav style="background: #1a1a2e; padding: 1rem 2rem; display: flex; align-items: center; gap: 2rem;">
+    <a href="/" style="color: #e94560; font-size: 1.4rem; font-weight: bold; text-decoration: none;">{{ site_name }}</a>
+  </nav>
+  {% endblock %}
+  <div style="flex: 1; display: flex;">
+    {% block layout %}
+      <main style="max-width: 960px; width: 100%; margin: 0 auto; padding: 2rem 1rem;">
+        {% block content %}{% endblock %}
+      </main>
+    {% endblock %}
+  </div>
+  <footer style="background: #1a1a2e; color: #aaa; padding: 2rem; text-align: center;">
+    <p style="margin: 0;">© {{ current_year }} Grove Docs. Built with the Grove template engine.</p>
+  </footer>
+  <!-- FOOT_ASSETS -->
+</body>
+</html>

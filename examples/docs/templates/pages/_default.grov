@@ -1,0 +1,31 @@
+{% extends "docs-layout.grov" %}
+{% import "macros/admonitions.grov" as adm %}
+
+{% block title %}{{ page.title }} — Grove Docs{% endblock %}
+
+{% block content %}
+{% meta name="description" content=page.title ~ " — Grove documentation" %}
+
+{% let %}
+  title = page.title
+  section = page.section
+{% endlet %}
+
+<h1 style="margin: 0 0 0.5rem;">{{ title }}</h1>
+<p style="color: #888; margin: 0 0 2rem; font-size: 0.9rem;">{{ section }}</p>
+
+<article style="line-height: 1.7;">
+  {{ page.body | safe }}
+</article>
+
+<div style="display: flex; justify-content: space-between; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #eee;">
+  {% if prev %}
+    <a href="/docs/{{ prev.section | lower | replace(" ", "-") }}/{{ prev.slug }}" style="color: #e94560; text-decoration: none;">← {{ prev.title }}</a>
+  {% else %}
+    <span></span>
+  {% endif %}
+  {% if next %}
+    <a href="/docs/{{ next.section | lower | replace(" ", "-") }}/{{ next.slug }}" style="color: #e94560; text-decoration: none;">{{ next.title }} →</a>
+  {% endif %}
+</div>
+{% endblock %}

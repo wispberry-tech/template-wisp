@@ -1,0 +1,16 @@
+<nav style="width: 220px; padding: 1.5rem 1rem;">
+  {% for section in sections %}
+    <h3 style="margin: 1.5rem 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; color: #888; letter-spacing: 0.05em;">{{ section }}</h3>
+    {% for page in all_pages %}
+      {% if page.section == section %}
+        {% set section_slug = section | lower | replace(" ", "-") %}
+        {% set href = "/docs/" ~ section_slug ~ "/" ~ page.slug %}
+        {% if page.slug == current_slug %}
+          <a href="{{ href }}" style="display: block; padding: 0.4rem 0.75rem; margin: 2px 0; border-radius: 4px; background: #e94560; color: #fff; text-decoration: none; font-size: 0.9rem;">{{ page.title }}</a>
+        {% else %}
+          <a href="{{ href }}" style="display: block; padding: 0.4rem 0.75rem; margin: 2px 0; border-radius: 4px; color: #1a1a2e; text-decoration: none; font-size: 0.9rem;">{{ page.title }}</a>
+        {% endif %}
+      {% endif %}
+    {% endfor %}
+  {% endfor %}
+</nav>

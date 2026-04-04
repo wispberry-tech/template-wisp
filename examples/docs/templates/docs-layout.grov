@@ -1,0 +1,21 @@
+{% extends "base.grov" %}
+
+{% block nav %}
+  {{ super() }}
+  <div style="background: #16213e; padding: 0.5rem 2rem; font-size: 0.85rem;">
+    <span style="color: #aaa;">Documentation</span>
+    {% if page %}
+      <span style="color: #666;"> / </span>
+      <span style="color: #ccc;">{{ page.section }}</span>
+      <span style="color: #666;"> / </span>
+      <span style="color: #e94560;">{{ page.title }}</span>
+    {% endif %}
+  </div>
+{% endblock %}
+
+{% block layout %}
+  {% render "partials/sidebar.grov" sections=sections all_pages=all_pages current_slug=page.slug %}
+  <main style="flex: 1; padding: 2rem; max-width: 740px;">
+    {% block content %}{% endblock %}
+  </main>
+{% endblock %}

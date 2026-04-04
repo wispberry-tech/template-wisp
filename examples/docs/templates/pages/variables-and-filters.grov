@@ -1,0 +1,63 @@
+{% extends "docs-layout.grov" %}
+{% import "macros/admonitions.grov" as adm %}
+
+{% block title %}{{ page.title }} — Grove Docs{% endblock %}
+
+{% block content %}
+{% meta name="description" content="Variables and filters in Grove templates" %}
+
+{% let %}
+  title = page.title
+  section = page.section
+{% endlet %}
+
+<h1 style="margin: 0 0 0.5rem;">{{ title }}</h1>
+<p style="color: #888; margin: 0 0 2rem; font-size: 0.9rem;">{{ section }}</p>
+
+<article style="line-height: 1.7;">
+  {{ page.body | safe }}
+</article>
+
+{{ adm.tip("Filters can be chained: <code>{{ name | lower | truncate(20) }}</code>") }}
+
+<h2 style="margin-top: 2rem;">Built-in Filters by Category</h2>
+
+{% set filter_categories = [
+  {"name": "String", "filters": ["upper", "lower", "title", "trim", "truncate", "replace", "split", "join"]},
+  {"name": "Collection", "filters": ["length", "first", "last", "reverse", "sort", "unique", "map", "slice"]},
+  {"name": "Numeric", "filters": ["abs", "floor", "ceil", "round"]},
+  {"name": "HTML", "filters": ["escape", "safe", "nl2br", "striptags"]}
+] %}
+
+{% for category in filter_categories %}
+  <h3 style="margin-top: 1.5rem;">{{ category.name }}</h3>
+  <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+    {% for filter in category.filters %}
+      <code style="background: #f3f4f6; padding: 0.2rem 0.6rem; border-radius: 4px; font-size: 0.85rem;">{{ filter }}</code>
+    {% empty %}
+      <span style="color: #888;">No filters in this category.</span>
+    {% endfor %}
+  </div>
+{% endfor %}
+
+{{ adm.note("See the <a href='#'>API reference</a> for full filter documentation.") }}
+
+<h2 style="margin-top: 2rem;">Pagination Example</h2>
+<p>Here are pages 1 through 5:</p>
+<div style="display: flex; gap: 0.5rem; margin: 1rem 0;">
+  {% for n in range(1, 5) %}
+    <span style="display: inline-block; width: 2rem; height: 2rem; line-height: 2rem; text-align: center; border: 1px solid #ddd; border-radius: 4px; {{ n == 1 ? "background: #e94560; color: #fff; border-color: #e94560;" : "" }}">{{ n }}</span>
+  {% endfor %}
+</div>
+
+<div style="display: flex; justify-content: space-between; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #eee;">
+  {% if prev %}
+    <a href="/docs/{{ prev.section | lower | replace(" ", "-") }}/{{ prev.slug }}" style="color: #e94560; text-decoration: none;">← {{ prev.title }}</a>
+  {% else %}
+    <span></span>
+  {% endif %}
+  {% if next %}
+    <a href="/docs/{{ next.section | lower | replace(" ", "-") }}/{{ next.slug }}" style="color: #e94560; text-decoration: none;">{{ next.title }} →</a>
+  {% endif %}
+</div>
+{% endblock %}
