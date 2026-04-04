@@ -1,0 +1,64 @@
+{% extends "base.grov" %}
+{% import "macros/pricing.grov" as pricing %}
+
+{% block title %}{{ product.name }} — Grove Store{% endblock %}
+
+{% block content %}
+{% meta name="description" content=product.description | truncate(160) %}
+{% meta property="og:title" content=product.name %}
+
+<nav style="font-size: 0.9rem; color: #888; margin-bottom: 1.5rem;">
+  {% for crumb in breadcrumbs %}
+    {% if crumb.href %}
+      <a href="{{ crumb.href }}" style="color: #e94560; text-decoration: none;">{{ crumb.label }}</a> /
+    {% else %}
+      {{ crumb.label }}
+    {% endif %}
+  {% endfor %}
+</nav>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; background: #fff; border-radius: 8px; padding: 2rem;">
+  <img src="{{ product.image_url }}" alt="{{ product.name }}" style="width: 100%; border-radius: 8px;">
+  <div>
+    <h1 style="margin: 0 0 0.5rem;">{{ product.name }}</h1>
+    <div style="margin-bottom: 1rem;">
+      {{ pricing.star_rating(product.rating, product.review_count) }}
+    </div>
+    <div style="font-size: 1.5rem; margin-bottom: 1rem;">
+      {{ pricing.price(product.price, product.sale_price) }}
+    </div>
+
+    {% if product.on_sale %}
+      {% let %}
+        savings = product.price - product.sale_price
+      {% endlet %}
+      <p style="color: #065f46; font-weight: 600;">You save {{ savings | currency }}!</p>
+    {% endif %}
+
+    <p style="color: #555; line-height: 1.6;">{{ product.description }}</p>
+
+    {% if product.colors | length > 0 %}
+      <div style="margin: 1rem 0;">
+        <strong>Colors:</strong>
+        {% for color in product.colors %}
+          <span style="display: inline-block; padding: 0.2rem 0.6rem; border: 1px solid #ddd; border-radius: 4px; margin: 0.25rem; font-size: 0.85rem;">{{ color }}</span>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if product.in_stock %}
+      <div style="margin: 1rem 0;">
+        <label style="font-weight: 600;">Quantity:</label>
+        <select style="padding: 0.4rem; border-radius: 4px; border: 1px solid #ddd;">
+          {% for n in range(1, 10) %}
+            <option value="{{ n }}">{{ n }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button style="padding: 0.75rem 2rem; background: #e94560; color: #fff; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer;">Add to Cart</button>
+    {% else %}
+      <p style="color: #991b1b; font-weight: 600;">Out of stock</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

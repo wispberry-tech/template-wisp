@@ -1,0 +1,17 @@
+{% macro price(amount, sale_amount) %}
+  {% if sale_amount > 0 %}
+    <span style="text-decoration: line-through; color: #999;">{{ amount | currency }}</span>
+    <span style="color: #e94560; font-weight: bold;">{{ sale_amount | currency }}</span>
+  {% else %}
+    <span style="font-weight: bold;">{{ amount | currency }}</span>
+  {% endif %}
+{% endmacro %}
+
+{% macro star_rating(rating, count) %}
+  {% set full = rating | floor %}
+  {% set half = rating - full >= 0.5 ? 1 : 0 %}
+  <span style="color: #f59e0b; letter-spacing: 2px;">
+    {% for i in range(1, full) %}★{% endfor %}{% if half %}½{% endif %}
+  </span>
+  <span style="color: #888; font-size: 0.85rem;">({{ count }})</span>
+{% endmacro %}
