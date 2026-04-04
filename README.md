@@ -33,18 +33,70 @@ func main() {
 }
 ```
 
+## Template Language
+
+Grove templates mix HTML with expressions, control flow, and components:
+
+```jinja2
+{% extends "base.html" %}
+
+{% block content %}
+{% asset "/static/page.css" type="stylesheet" %}
+{% meta name="description" content="Latest posts" %}
+
+<h1>{{ title | upper }}</h1>
+
+{% for post in posts %}
+  {% component "components/card.html" title=post.title date=post.date %}
+    {% fill "tags" %}
+      {% for tag in post.tags %}
+        <span class="{{ tag.draft ? "muted" : "active" }}">{{ tag.name }}</span>
+      {% endfor %}
+    {% endfill %}
+  {% endcomponent %}
+{% empty %}
+  <p>No posts yet.</p>
+{% endfor %}
+{% endblock %}
+```
+
+### Syntax at a Glance
+
+| Category | Tags |
+|----------|------|
+| **Output** | `{{ expr }}`, `{{ value \| filter }}`, `{{ cond ? a : b }}` |
+| **Control flow** | `if` / `elif` / `else`, `for` / `empty`, `range` |
+| **Assignment** | `set`, `let` (multi-variable with conditionals), `capture` |
+| **Composition** | `include`, `render`, `macro` / `call` / `import` |
+| **Inheritance** | `extends`, `block`, `super()` |
+| **Components** | `component`, `props`, `slot`, `fill` |
+| **Web primitives** | `asset`, `meta`, `hoist` |
+| **Data literals** | `[1, 2, 3]`, `{key: "value"}` |
+| **Other** | `{# comment #}`, `{% raw %}`, whitespace control (`{%- -%}`) |
+
+### Built-in Filters
+
+42 filters across 5 categories:
+
+| Category | Filters |
+|----------|---------|
+| **String** | `upper` `lower` `title` `capitalize` `trim` `lstrip` `rstrip` `replace` `truncate` `center` `ljust` `rjust` `split` `wordcount` |
+| **Collection** | `length` `first` `last` `join` `sort` `reverse` `unique` `min` `max` `sum` `map` `batch` `flatten` `keys` `values` |
+| **Numeric** | `abs` `round` `ceil` `floor` `int` `float` |
+| **Logic / Type** | `default` `string` `bool` |
+| **HTML** | `escape` `safe` `striptags` `nl2br` |
+
 ## Features
 
-- **Bytecode compilation** — templates compile to bytecode and run on a stack-based VM. Compiled bytecode is immutable and shared across goroutines.
-- **Template inheritance** — `extends`, `block`, and `super()` for layered layouts.
-- **Components** — reusable templates with `props`, `slot`, and `fill`. Fills see the caller's scope, not the component's.
-- **Macros** — `macro`, `call`, `caller()`, and `import` for reusable template functions.
-- **40+ built-in filters** — string, collection, numeric, HTML, and type conversion filters with pipe syntax.
-- **Web primitives** — `asset`, `meta`, and `hoist` tags collect resources during rendering. `RenderResult` returns them for assembly into the final HTML response.
-- **Auto-escaping** — HTML output is escaped by default. Use the `safe` filter or `raw` blocks for trusted content.
-- **Sandboxing** — restrict allowed tags, filters, and loop iterations per engine.
-- **List and map literals** — `[1, 2, 3]` and `{key: "value"}` inline data structures.
-- **Ternary expressions** — `condition ? truthy : falsy` with right-to-left nesting.
+| Feature | Description |
+|---------|-------------|
+| **Bytecode compilation** | Templates compile to bytecode and run on a stack-based VM. Compiled bytecode is immutable and shared across goroutines. |
+| **Template inheritance** | `extends`, `block`, and `super()` for layered layouts with unlimited depth. |
+| **Components** | Reusable templates with `props`, `slot`, and `fill`. Fills see the caller's scope, not the component's. |
+| **Macros** | `macro`, `call`, `caller()`, and `import` for reusable template functions. |
+| **Web primitives** | `asset`, `meta`, and `hoist` tags collect resources during rendering. `RenderResult` returns them for assembly into the final HTML response. |
+| **Auto-escaping** | HTML output is escaped by default. `safe` filter and `raw` blocks bypass it for trusted content. |
+| **Sandboxing** | Restrict allowed tags, filters, and loop iterations per engine. |
 
 ## Documentation
 
