@@ -4,17 +4,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Wispy Blog{% endblock %}</title>
+  <title>{% block title %}Grove Blog{% endblock %}</title>
   <!-- HEAD_ASSETS -->
   <!-- HEAD_META -->
   <!-- HEAD_HOISTED -->
 </head>
 <body style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1a1a2e; background: #f8f9fa; min-height: 100vh; display: flex; flex-direction: column;">
-  {% component "components/nav.html" site_name=site_name %}{% endcomponent %}
+  {% component "components/nav.grov" site_name=site_name %}{% endcomponent %}
   <main style="max-width: 960px; width: 100%; margin: 0 auto; padding: 2rem 1rem; flex: 1;">
     {% block content %}{% endblock %}
   </main>
-  {% component "components/footer.html" year=current_year %}{% endcomponent %}
+  {% component "components/footer.grov" year=current_year %}{% endcomponent %}
   <!-- FOOT_ASSETS -->
 </body>
 </html>
