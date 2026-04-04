@@ -48,7 +48,7 @@ type Post struct {
     Tags    []Tag
 }
 
-func (p Post) WispyResolve(key string) (any, bool) {
+func (p Post) GroveResolve(key string) (any, bool) {
     switch key {
     case "title":
         return p.Title, true

@@ -7,5 +7,5 @@ import "grove/internal/vm"
 type Data map[string]any
 
 // Resolvable is implemented by Go types that want to expose fields to templates.
-// Only keys returned by WispyResolve are accessible; all other fields are hidden.
+// Only keys returned by GroveResolve are accessible; all other fields are hidden.
 type Resolvable = vm.Resolvable

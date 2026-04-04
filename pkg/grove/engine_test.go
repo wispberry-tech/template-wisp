@@ -38,7 +38,7 @@ type testProduct struct {
 	price float64
 }
 
-func (p testProduct) WispyResolve(key string) (any, bool) {
+func (p testProduct) GroveResolve(key string) (any, bool) {
 	switch key {
 	case "name":
 		return p.Name, true

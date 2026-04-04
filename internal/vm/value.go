@@ -79,7 +79,7 @@ var Nil = Value{}
 
 // Resolvable is implemented by Go types that expose specific fields to templates.
 type Resolvable interface {
-	WispyResolve(key string) (any, bool)
+	GroveResolve(key string) (any, bool)
 }
 
 // ─── Constructors ─────────────────────────────────────────────────────────────
@@ -363,7 +363,7 @@ func GetAttr(obj Value, name string, strict bool) (Value, error) {
 		return Nil, nil
 	case TypeResolvable:
 		r, _ := obj.oval.(Resolvable)
-		if v, ok := r.WispyResolve(name); ok {
+		if v, ok := r.GroveResolve(name); ok {
 			return FromAny(v), nil
 		}
 		if strict {

@@ -20,7 +20,7 @@ type Tag struct {
 	Color string
 }
 
-func (t Tag) WispyResolve(key string) (any, bool) {
+func (t Tag) GroveResolve(key string) (any, bool) {
 	switch key {
 	case "name":
 		return t.Name, true
@@ -41,7 +41,7 @@ type Post struct {
 	Tags    []Tag
 }
 
-func (p Post) WispyResolve(key string) (any, bool) {
+func (p Post) GroveResolve(key string) (any, bool) {
 	switch key {
 	case "title":
 		return p.Title, true
@@ -206,7 +206,7 @@ func writeResult(w http.ResponseWriter, result grove.RenderResult) {
 
 // Ensure types implement the Resolvable interface at compile time.
 var (
-	_ interface{ WispyResolve(string) (any, bool) } = Post{}
-	_ interface{ WispyResolve(string) (any, bool) } = Tag{}
+	_ interface{ GroveResolve(string) (any, bool) } = Post{}
+	_ interface{ GroveResolve(string) (any, bool) } = Tag{}
 )
 

@@ -114,7 +114,7 @@ The map type passed to render methods. Values can be any Go type: strings, numbe
 
 ```go
 type Resolvable interface {
-    WispyResolve(key string) (any, bool)
+    GroveResolve(key string) (any, bool)
 }
 ```
 
@@ -127,7 +127,7 @@ type User struct {
     password string
 }
 
-func (u User) WispyResolve(key string) (any, bool) {
+func (u User) GroveResolve(key string) (any, bool) {
     switch key {
     case "name":
         return u.Name, true

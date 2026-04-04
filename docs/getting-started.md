@@ -115,7 +115,7 @@ type User struct {
 	Internal int     // not exposed to templates
 }
 
-func (u User) WispyResolve(key string) (any, bool) {
+func (u User) GroveResolve(key string) (any, bool) {
 	switch key {
 	case "name":
 		return u.Name, true
@@ -126,10 +126,10 @@ func (u User) WispyResolve(key string) (any, bool) {
 
 ```jinja2
 {{ user.name }}   {# works — returns "Alice" #}
-{{ user.email }}  {# empty — not exposed by WispyResolve #}
+{{ user.email }}  {# empty — not exposed by GroveResolve #}
 ```
 
-Only keys returned by `WispyResolve` are accessible in templates. This lets you control exactly what data is visible to template authors.
+Only keys returned by `GroveResolve` are accessible in templates. This lets you control exactly what data is visible to template authors.
 
 ## Global Variables
 
