@@ -414,6 +414,7 @@ func authorHandler(eng *grove.Engine) http.HandlerFunc {
 			"posts":  postsToAny(filtered),
 			"breadcrumbs": []any{
 				map[string]any{"label": "Home", "href": "/"},
+				map[string]any{"label": "Authors", "href": "/posts"},
 				map[string]any{"label": author.Name, "href": ""},
 			},
 		})

@@ -8,7 +8,7 @@
 {% block layout %}
 <div class="docs-layout">
   <aside class="docs-sidebar">
-    {% render "partials/sidebar.grov" sections=sections all_pages=all_pages current_slug=page.slug %}
+    {% render "partials/sidebar.grov" sections=sections all_pages=all_pages current_slug=current_slug %}
   </aside>
   <main class="docs-content">
     {% block content %}{% endblock %}

@@ -258,6 +258,7 @@ func sectionHandler(eng *grove.Engine) http.HandlerFunc {
 		sp := sectionPages(slug)
 		result, err := eng.Render(r.Context(), "section.grov", grove.Data{
 			"section":       sec,
+			"current_slug":  "",
 			"section_pages": pagesToAny(sp),
 			"sections":      sectionsToAny(),
 			"all_pages":     pagesToAny(orderedPages),
@@ -295,13 +296,14 @@ func pageHandler(eng *grove.Engine) http.HandlerFunc {
 		}
 
 		result, err := eng.Render(r.Context(), templateName, grove.Data{
-			"page":         page,
-			"section":      sec,
-			"section_slug": sectionSlug,
-			"sections":     sectionsToAny(),
-			"all_pages":    pagesToAny(orderedPages),
-			"prev":         prev,
-			"next":         next,
+			"page":          page,
+			"current_slug":  page.Slug,
+			"section":       sec,
+			"section_slug":  sectionSlug,
+			"sections":      sectionsToAny(),
+			"all_pages":     pagesToAny(orderedPages),
+			"prev":          prev,
+			"next":          next,
 			"breadcrumbs": []any{
 				map[string]any{"label": "Docs", "href": "/"},
 				map[string]any{"label": sec.Name, "href": "/docs/" + sectionSlug},

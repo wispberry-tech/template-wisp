@@ -1,5 +1,4 @@
 {% extends "docs-layout.grov" %}
-{% import "macros/admonitions.grov" as adm %}
 
 {% block title %}{{ page.title }} &mdash; {{ site_name }}{% endblock %}
 

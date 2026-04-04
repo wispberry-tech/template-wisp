@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 
 	grove "grove/pkg/grove"
 
@@ -291,8 +292,12 @@ func previewHandler(eng *grove.Engine) http.HandlerFunc {
 			return
 		}
 
+		// Inject hoisted preheader content into the placeholder.
+		body := result.Body
+		body = strings.Replace(body, "<!-- PREHEADER -->", result.GetHoisted("preheader"), 1)
+
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, result.Body)
+		fmt.Fprint(w, body)
 	}
 }
 
@@ -326,6 +331,7 @@ func main() {
 	templateDir := filepath.Join(baseDir, "templates")
 	store := grove.NewFileSystemStore(templateDir)
 	eng := grove.New(grove.WithStore(store))
+	eng.SetGlobal("site_name", "Grove Cloud")
 	eng.SetGlobal("current_year", "2026")
 
 	eng.RegisterFilter("currency", grove.FilterFn(func(v grove.Value, args []grove.Value) (grove.Value, error) {
