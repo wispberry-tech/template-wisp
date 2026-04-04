@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"grove/internal/ast"
+	"github.com/wispberry-tech/grove/internal/ast"
 )
 
 // Compile walks prog and emits Bytecode.

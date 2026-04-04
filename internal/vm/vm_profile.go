@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"grove/internal/compiler"
+	"github.com/wispberry-tech/grove/internal/compiler"
 )
 
 // Opcode categories for profiling.

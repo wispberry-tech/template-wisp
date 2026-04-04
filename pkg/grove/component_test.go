@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"grove/pkg/grove"
+	"github.com/wispberry-tech/grove/pkg/grove"
 )
 
 // renderComponent creates an engine with a store and renders the named template.

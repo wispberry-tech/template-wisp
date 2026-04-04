@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"grove/pkg/grove"
+	"github.com/wispberry-tech/grove/pkg/grove"
 )
 
 // ─── {% raw %} tests ──────────────────────────────────────────────────────────

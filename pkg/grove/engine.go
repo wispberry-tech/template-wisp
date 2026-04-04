@@ -7,14 +7,14 @@ import (
 	"io"
 	"sync"
 
-	"grove/internal/ast"
-	"grove/internal/compiler"
-	"grove/internal/filters"
-	"grove/internal/groverrors"
-	"grove/internal/lexer"
-	"grove/internal/parser"
-	"grove/internal/store"
-	"grove/internal/vm"
+	"github.com/wispberry-tech/grove/internal/ast"
+	"github.com/wispberry-tech/grove/internal/compiler"
+	"github.com/wispberry-tech/grove/internal/filters"
+	"github.com/wispberry-tech/grove/internal/groverrors"
+	"github.com/wispberry-tech/grove/internal/lexer"
+	"github.com/wispberry-tech/grove/internal/parser"
+	"github.com/wispberry-tech/grove/internal/store"
+	"github.com/wispberry-tech/grove/internal/vm"
 )
 
 // Option configures an Engine at creation time.

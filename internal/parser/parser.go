@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"strings"
 
-	"grove/internal/ast"
-	"grove/internal/groverrors"
-	"grove/internal/lexer"
+	"github.com/wispberry-tech/grove/internal/ast"
+	"github.com/wispberry-tech/grove/internal/groverrors"
+	"github.com/wispberry-tech/grove/internal/lexer"
 )
 
 // Parse converts a token stream into an AST.

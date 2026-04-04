@@ -1,4 +1,4 @@
-module grove
+module github.com/wispberry-tech/grove
 
 go 1.24
 

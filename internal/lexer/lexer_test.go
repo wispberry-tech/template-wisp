@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"grove/internal/lexer"
+	"github.com/wispberry-tech/grove/internal/lexer"
 )
 
 func kinds(tokens []lexer.Token) []lexer.TokenKind {

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"grove/benchmarks"
+	"github.com/wispberry-tech/grove/benchmarks"
 )
 
 func main() {

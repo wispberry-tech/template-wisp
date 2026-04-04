@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"grove/pkg/grove"
+	"github.com/wispberry-tech/grove/pkg/grove"
 )
 
 // ─── IF / ELIF / ELSE ────────────────────────────────────────────────────────

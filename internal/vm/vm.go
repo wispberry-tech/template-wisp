@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"grove/internal/compiler"
-	"grove/internal/scope"
+	"github.com/wispberry-tech/grove/internal/compiler"
+	"github.com/wispberry-tech/grove/internal/scope"
 )
 
 // constCache maps compiled bytecode pointers to their pre-compiled Value slices.

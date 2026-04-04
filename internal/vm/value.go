@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strconv"
 
-	"grove/internal/compiler"
+	"github.com/wispberry-tech/grove/internal/compiler"
 )
 
 // ValueType identifies the runtime type of a Value.

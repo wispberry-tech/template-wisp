@@ -1,7 +1,7 @@
 // pkg/wispy/filter.go
 package grove
 
-import "grove/internal/vm"
+import "github.com/wispberry-tech/grove/internal/vm"
 
 // FilterFn is the function signature for filter implementations.
 type FilterFn = vm.FilterFn

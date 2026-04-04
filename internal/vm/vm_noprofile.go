@@ -2,7 +2,7 @@
 
 package vm
 
-import "grove/internal/compiler"
+import "github.com/wispberry-tech/grove/internal/compiler"
 
 // OpcodeStats is a no-op placeholder when profiling is disabled.
 type OpcodeStats struct{}

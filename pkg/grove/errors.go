@@ -1,7 +1,7 @@
 // pkg/wispy/errors.go
 package grove
 
-import "grove/internal/groverrors"
+import "github.com/wispberry-tech/grove/internal/groverrors"
 
 // ParseError is returned for syntax errors. Template, Line, and Column identify the source location.
 type ParseError = groverrors.ParseError

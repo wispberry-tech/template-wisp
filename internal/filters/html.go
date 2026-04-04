@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"grove/internal/vm"
+	"github.com/wispberry-tech/grove/internal/vm"
 )
 
 var reStriptags = regexp.MustCompile(`<[^>]+>`)

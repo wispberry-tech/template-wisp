@@ -3,7 +3,7 @@ package grove_test
 import (
 	"testing"
 
-	"grove/pkg/grove"
+	"github.com/wispberry-tech/grove/pkg/grove"
 
 	"github.com/stretchr/testify/require"
 )

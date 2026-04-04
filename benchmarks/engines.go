@@ -8,7 +8,7 @@ import (
 	"io"
 	texttemplate "text/template"
 
-	"grove/pkg/grove"
+	"github.com/wispberry-tech/grove/pkg/grove"
 
 	"github.com/CloudyKit/jet/v6"
 	"github.com/flosch/pongo2/v6"

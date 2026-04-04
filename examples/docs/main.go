@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"strings"
 
-	grove "grove/pkg/grove"
+	grove "github.com/wispberry-tech/grove/pkg/grove"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
