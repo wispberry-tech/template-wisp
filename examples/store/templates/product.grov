@@ -7,7 +7,7 @@
 {% meta name="description" content="Grove Store product" %}
 {% meta property="og:title" content="Grove Store" %}
 
-{% include "components/breadcrumbs.grov" %}
+{% include "composites/breadcrumbs/breadcrumbs.grov" %}
 
 <div class="product-detail">
   <div class="product-image">
@@ -84,7 +84,7 @@
         {% capture rp_price %}
           {{ pricing.price(rp.price, rp.sale_price) }}
         {% endcapture %}
-        {% component "components/product-card.grov" name=rp.name slug=rp.slug image_url=rp.image_url price_display=rp_price rating=rp.rating review_count=rp.review_count %}{% endcomponent %}
+        {% component "composites/product-card" name=rp.name slug=rp.slug image_url=rp.image_url price_display=rp_price rating=rp.rating review_count=rp.review_count %}{% endcomponent %}
       {% endfor %}
     </div>
   </section>

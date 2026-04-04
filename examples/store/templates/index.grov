@@ -18,7 +18,7 @@
       {% capture price_html %}
         {{ pricing.price(product.price, product.sale_price) }}
       {% endcapture %}
-      {% component "components/product-card.grov" name=product.name slug=product.slug image_url=product.image_url price_display=price_html rating=product.rating review_count=product.review_count %}
+      {% component "composites/product-card" name=product.name slug=product.slug image_url=product.image_url price_display=price_html rating=product.rating review_count=product.review_count %}
         {% fill "badge" %}
           {% if product.on_sale %}
             {{ pricing.discount_badge(product.price, product.sale_price) }}

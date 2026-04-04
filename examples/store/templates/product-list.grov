@@ -7,7 +7,7 @@
 {% block content %}
 {% meta name="description" content="Browse our full product catalog" %}
 
-{% include "components/breadcrumbs.grov" %}
+{% include "composites/breadcrumbs/breadcrumbs.grov" %}
 
 <h1>Products</h1>
 <p class="result-count">{{ result_count }} {{ result_count == 1 ? "product" : "products" }}</p>
@@ -25,7 +25,7 @@
         {% capture price_html %}
           {{ pricing.price(product.price, product.sale_price) }}
         {% endcapture %}
-        {% component "components/product-card.grov" name=product.name slug=product.slug image_url=product.image_url price_display=price_html rating=product.rating review_count=product.review_count %}
+        {% component "composites/product-card" name=product.name slug=product.slug image_url=product.image_url price_display=price_html rating=product.rating review_count=product.review_count %}
           {% fill "badge" %}
             {% if product.on_sale %}
               {{ pricing.discount_badge(product.price, product.sale_price) }}

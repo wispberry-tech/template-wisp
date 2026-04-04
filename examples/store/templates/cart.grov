@@ -6,7 +6,7 @@
 {% block content %}
 {% meta name="description" content="Your shopping cart" %}
 
-{% include "components/breadcrumbs.grov" %}
+{% include "composites/breadcrumbs/breadcrumbs.grov" %}
 
 <h1>Shopping Cart</h1>
 
