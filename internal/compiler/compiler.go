@@ -91,11 +91,15 @@ func (c *cmp) compileExtendsTemplate(prog *ast.Program, extendsIdx int) error {
 		}
 	}
 
-	// Compile only block definitions from the remaining nodes
+	// Compile only block definitions and imports from the remaining nodes
 	for _, node := range prog.Body[extendsIdx+1:] {
 		switch n := node.(type) {
 		case *ast.BlockNode:
 			if err := c.compileBlockDef(n); err != nil {
+				return err
+			}
+		case *ast.ImportNode:
+			if err := c.compileImport(n); err != nil {
 				return err
 			}
 		case *ast.TextNode:
