@@ -247,15 +247,15 @@ var LargePageTemplates = map[string]string{
 
 var LargeLoopTemplates = map[string]string{
 	EngGrove: `<div class="products">
-<For each={products} as="product">
-<div class="product"><If test={product.on_sale}> on-sale</If>">
+{% #each products as product %}
+<div class="product{% #if product.on_sale %} on-sale{% /if %}">
   <h3>{% product.name %}</h3>
   <p class="price">${% product.price %}</p>
   <p class="desc">{% product.description %}</p>
   <span class="category">{% product.category %}</span>
-  <If test={product.in_stock}><span class="badge">In Stock</span><Else /><span class="badge out">Out of Stock</span></If>
+  {% #if product.in_stock %}<span class="badge">In Stock</span>{% :else %}<span class="badge out">Out of Stock</span>{% /if %}
 </div>
-</For>
+{% /each %}
 </div>`,
 
 	EngHTMLTemplate: `<div class="products">
@@ -323,20 +323,20 @@ var LargeLoopTemplates = map[string]string{
 
 var NestedLoopTemplates = map[string]string{
 	EngGrove: `<div class="catalog">
-<For each={categories} as="cat">
+{% #each categories as cat %}
 <section class="category">
   <h2>{% cat.name %} ({% cat.count %} items)</h2>
   <div class="items">
-  <For each={cat.products} as="product">
-    <div class="product"><If test={product.featured}> featured</If>">
+  {% #each cat.products as product %}
+    <div class="product{% #if product.featured %} featured{% /if %}">
       <span class="name">{% product.name %}</span>
       <span class="price">${% product.price %}</span>
-      <If test={product.on_sale}><span class="sale">SALE</span></If>
+      {% #if product.on_sale %}<span class="sale">SALE</span>{% /if %}
     </div>
-  </For>
+  {% /each %}
   </div>
 </section>
-</For>
+{% /each %}
 </div>`,
 
 	EngHTMLTemplate: `<div class="catalog">
@@ -439,54 +439,54 @@ var ComplexPageTemplates = map[string]string{
   <header>
     <nav>
       <a href="/">{% site_name %}</a>
-      <If test={user_logged_in}>
+      {% #if user_logged_in %}
         <span>Welcome, {% user_name %}</span>
         <a href="/cart">Cart ({% cart_count %})</a>
-      <Else />
+      {% :else %}
         <a href="/login">Sign In</a>
-      </If>
+      {% /if %}
     </nav>
   </header>
   <main>
     <h1>{% page_title %}</h1>
     <p class="lead">{% lead_text %}</p>
 
-    <For each={categories} as="cat">
+    {% #each categories as cat %}
     <section class="category">
       <h2>{% cat.name %}</h2>
       <p>{% cat.description %}</p>
       <div class="products">
-      <For each={cat.products} as="product">
-        <div class="product"><If test={product.featured}> featured</If><If test={product.on_sale}> on-sale</If>">
+      {% #each cat.products as product %}
+        <div class="product{% #if product.featured %} featured{% /if %}{% #if product.on_sale %} on-sale{% /if %}">
           <h3>{% product.name %}</h3>
           <p>{% product.description %}</p>
           <div class="pricing">
             <span class="price">${% product.price %}</span>
-            <If test={product.on_sale}><span class="original">${% product.original_price %}</span></If>
+            {% #if product.on_sale %}<span class="original">${% product.original_price %}</span>{% /if %}
           </div>
           <span class="category-tag">{% cat.name %}</span>
-          <If test={product.in_stock}>
+          {% #if product.in_stock %}
             <button>Add to Cart</button>
-          <Else />
+          {% :else %}
             <button disabled>Out of Stock</button>
-          </If>
-          <If test={product.tags}>
+          {% /if %}
+          {% #if product.tags %}
           <div class="tags">
-            <For each={product.tags} as="tag"><span class="tag">{% tag %}</span></For>
+            {% #each product.tags as tag %}<span class="tag">{% tag %}</span>{% /each %}
           </div>
-          </If>
+          {% /if %}
         </div>
-      </For>
+      {% /each %}
       </div>
     </section>
-    </For>
+    {% /each %}
   </main>
   <footer>
     <p>&copy; {% copyright_year %} {% site_name %}</p>
     <ul class="links">
-    <For each={footer_links} as="link">
+    {% #each footer_links as link %}
       <li><a href="{% link.url %}">{% link.label %}</a></li>
-    </For>
+    {% /each %}
     </ul>
   </footer>
 </body>
