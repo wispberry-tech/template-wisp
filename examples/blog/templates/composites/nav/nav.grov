@@ -1,5 +1,5 @@
 <Component name="Nav" site_name>
-<ImportAsset src="/js/composites/nav/nav.js" type="script" />
+{% asset "/js/composites/nav/nav.js" type="script" %}
 
 <nav class="nav" data-nav>
   <a href="/" class="nav-brand">{% site_name %}</a>
@@ -7,7 +7,7 @@
   <div class="nav-links" data-nav-links>
     <a href="/" class="nav-link">Home</a>
     <a href="/tags" class="nav-link">Tags</a>
-    <Slot />
+    {% slot %}
   </div>
 </nav>
 </Component>

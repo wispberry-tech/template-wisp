@@ -1,18 +1,18 @@
-<Import src="base" name="Base" />
-<Import src="macros/pricing" name="Price" />
-<Import src="composites/breadcrumbs/breadcrumbs" name="Breadcrumbs" />
+{% import Base from "base" %}
+{% import Price from "macros/pricing" %}
+{% import Breadcrumbs from "composites/breadcrumbs/breadcrumbs" %}
 
 <Base>
-  <Fill slot="title">Cart &mdash; {% site_name %}</Fill>
+  {% #fill "title" %}Cart &mdash; {% site_name %}{% /fill %}
 
-  <Fill slot="content">
-    <SetMeta name="description" content="Your shopping cart" />
+  {% #fill "content" %}
+    {% meta name="description" content="Your shopping cart" %}
 
     <Breadcrumbs breadcrumbs={breadcrumbs} />
 
     <h1>Shopping Cart</h1>
 
-    <If test={items | length > 0}>
+    {% #if items | length > 0 %}
       <div class="table-wrap">
         <table class="table">
           <thead>
@@ -25,7 +25,7 @@
             </tr>
           </thead>
           <tbody>
-            <For each={items} as="item">
+            {% #each items as item %}
               <tr>
                 <td><a href="/product/{% item.product.slug %}">{% item.product.name %}</a></td>
                 <td><Price amount={item.product.price} sale_amount={item.product.sale_price} /></td>
@@ -33,17 +33,17 @@
                 <td style="text-align: right;">{% item.line_total | currency %}</td>
                 <td><a href="/cart/remove?product={% item.product.slug %}" class="remove-link">Remove</a></td>
               </tr>
-            </For>
+            {% /each %}
           </tbody>
         </table>
       </div>
 
-      {% let %}
+      {% #let %}
         subtotal = 0
-      {% endlet %}
-      <For each={items} as="item">
+      {% /let %}
+      {% #each items as item %}
         {% set subtotal = subtotal + item.line_total %}
-      </For>
+      {% /each %}
 
       <div class="cart-summary">
         <div class="cart-row">
@@ -61,9 +61,9 @@
           <span>{% total | currency %}</span>
         </div>
       </div>
-    <Else>
+    {% :else %}
       <p class="empty-state">Your cart is empty.</p>
       <a href="/products" class="btn btn-primary">Continue Shopping</a>
-    </If>
-  </Fill>
+    {% /if %}
+  {% /fill %}
 </Base>

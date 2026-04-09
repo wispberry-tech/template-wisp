@@ -1,23 +1,23 @@
-<Import src="base-email" name="BaseEmail" />
-<Import src="helpers" name="*" as="H" />
+{% import BaseEmail from "base-email" %}
+{% import * as H from "helpers" %}
 
 <BaseEmail>
-  <Fill slot="title">Plan Change Confirmation</Fill>
+  {% #fill "title" %}Plan Change Confirmation{% /fill %}
 
-  <Hoist target="preheader">Your Grove Cloud plan has been changed from {% old_plan | title %} to {% new_plan | title %}.</Hoist>
+  {% #hoist "preheader" %}Your Grove Cloud plan has been changed from {% old_plan | title %} to {% new_plan | title %}.{% /hoist %}
 
-  <Fill slot="body">
+  {% #fill "body" %}
     <p>Hi {% user.name | default("there") %},</p>
 
-    {% let %}
+    {% #let %}
       is_upgrade = (new_plan == "pro" and old_plan == "free") or (new_plan == "enterprise" and (old_plan == "free" or old_plan == "pro"))
-    {% endlet %}
+    {% /let %}
 
-    <If test={is_upgrade}>
+    {% #if is_upgrade %}
       <p>Great news! Your account has been <strong>upgraded</strong>.</p>
-    <Else>
+    {% :else %}
       <p>Your plan has been <strong>changed</strong>. The new plan takes effect at the end of your current billing period.</p>
-    </If>
+    {% /if %}
 
     <H.Divider />
     <H.Heading text="Plan Comparison" />
@@ -25,20 +25,20 @@
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse;">
       <H.InfoRow label="Previous Plan" value={old_plan | title} />
       <H.InfoRow label="New Plan" value={new_plan | title} />
-      <If test={user.team_name}>
+      {% #if user.team_name %}
         <H.InfoRow label="Team" value={user.team_name} />
-      </If>
+      {% /if %}
     </table>
 
     <H.Spacer height="16" />
 
-    <If test={is_upgrade}>
+    {% #if is_upgrade %}
       <H.Button text="Explore New Features" href="https://app.grovecloud.io/dashboard" />
-    <Else>
+    {% :else %}
       <H.Button text="View Plan Details" href="https://app.grovecloud.io/settings/billing" color="#666666" />
-    </If>
+    {% /if %}
 
     <H.Divider />
     <p style="color: #666; font-size: 14px;">Questions about your plan? <a href="https://app.grovecloud.io/help" style="color: #2E6740;">Contact support</a>.</p>
-  </Fill>
+  {% /fill %}
 </BaseEmail>

@@ -1,26 +1,26 @@
-<Import src="base" name="Base" />
-<Import src="composites/card" name="Card" />
-<Import src="primitives/tag-badge" name="TagBadge" />
+{% import Base from "base" %}
+{% import Card from "composites/card" %}
+{% import TagBadge from "primitives/tag-badge" %}
 
 <Base>
-  <Fill slot="title">Home &mdash; Grove Blog</Fill>
+  {% #fill "title" %}Home &mdash; Grove Blog{% /fill %}
 
-  <Fill slot="content">
-    <SetMeta name="description" content="A tech blog built with the Grove template engine" />
+  {% #fill "content" %}
+    {% meta name="description" content="A tech blog built with the Grove template engine" %}
 
     <h1>Latest Posts</h1>
     <div class="post-grid">
-      <For each={posts} as="post">
+      {% #each posts as post %}
         <Card title={post.title} summary={post.summary} href={"/post/" ~ post.slug} date={post.date} author_name={post.author.name} author_slug={post.author.slug}>
-          <Fill slot="tags">
-            <For each={post.tags} as="tag">
+          {% #fill "tags" %}
+            {% #each post.tags as tag %}
               <TagBadge label={tag.name} color={tag.color} slug={tag.slug} />
-            </For>
-          </Fill>
+            {% /each %}
+          {% /fill %}
         </Card>
-        <Empty>
+        {% :empty %}
         <p class="empty-state">No posts yet.</p>
-      </For>
+      {% /each %}
     </div>
-  </Fill>
+  {% /fill %}
 </Base>

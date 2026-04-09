@@ -1,28 +1,28 @@
-<Import src="base-email" name="BaseEmail" />
-<Import src="helpers" name="*" as="H" />
+{% import BaseEmail from "base-email" %}
+{% import * as H from "helpers" %}
 
 <BaseEmail>
-  <Fill slot="title">Usage Alert — Grove Cloud</Fill>
+  {% #fill "title" %}Usage Alert — Grove Cloud{% /fill %}
 
-  <Hoist target="preheader">You've used {% usage_pct %}% of your {% user.plan | title %} plan limits.</Hoist>
+  {% #hoist "preheader" %}You've used {% usage_pct %}% of your {% user.plan | title %} plan limits.{% /hoist %}
 
-  <Fill slot="body">
+  {% #fill "body" %}
     <p>Hi {% user.name | default("there") %},</p>
 
-    <If test={usage_pct >= 90}>
+    {% #if usage_pct >= 90 %}
       {% set urgency = "critical" %}
       <div style="background-color: #f8d7da; border: 1px solid #dc3545; border-radius: 6px; padding: 16px; margin: 0 0 16px;">
         <strong style="color: #dc3545;">Critical:</strong> You're approaching your plan limit. Services may be restricted once you reach 100%.
       </div>
-    <ElseIf test={usage_pct >= 75}>
+    {% :else if usage_pct >= 75 %}
       {% set urgency = "warning" %}
       <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 16px; margin: 0 0 16px;">
         <strong style="color: #856404;">Heads up:</strong> You're using a significant portion of your plan allocation.
       </div>
-    <Else>
+    {% :else %}
       {% set urgency = "info" %}
       <p>Here's a summary of your current usage:</p>
-    </If>
+    {% /if %}
 
     <H.Divider />
     <H.Heading text="Usage Summary" />
@@ -37,21 +37,21 @@
     <H.UsageBar pct={usage_pct} />
     <H.Spacer height="16" />
 
-    <Capture name="cta_block">
-      <If test={urgency == "critical"}>
+    {% #capture cta_block %}
+      {% #if urgency == "critical" %}
         <H.Button text="Upgrade Now" href="https://app.grovecloud.io/settings/billing" color="#dc3545" />
-      <ElseIf test={urgency == "warning"}>
+      {% :else if urgency == "warning" %}
         <H.Button text="Review Usage" href="https://app.grovecloud.io/usage" />
         <H.Spacer height="8" />
         <H.Button text="Upgrade Plan" href="https://app.grovecloud.io/settings/billing" color="#666666" />
-      <Else>
+      {% :else %}
         <H.Button text="View Details" href="https://app.grovecloud.io/usage" />
-      </If>
-    </Capture>
+      {% /if %}
+    {% /capture %}
 
     {% cta_block | safe %}
 
     <H.Divider />
     <p style="color: #666; font-size: 14px;">You're receiving this because usage alerts are enabled. <a href="https://app.grovecloud.io/settings/notifications" style="color: #2E6740;">Manage alert preferences</a>.</p>
-  </Fill>
+  {% /fill %}
 </BaseEmail>

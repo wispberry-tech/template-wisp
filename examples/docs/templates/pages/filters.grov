@@ -1,19 +1,19 @@
-<Import src="docs-layout" name="DocsLayout" />
+{% import DocsLayout from "docs-layout" %}
 
 <DocsLayout sections={sections} all_pages={all_pages} current_slug={current_slug} breadcrumbs={breadcrumbs}>
-  <Fill slot="content">
-    <SetMeta name="description" content="Complete reference of all built-in Grove template filters" />
+  {% #fill "content" %}
+    {% meta name="description" content="Complete reference of all built-in Grove template filters" %}
 
     <h1>Filter Reference</h1>
-    <p>{% result_count %} filters<If test={query}> matching "{% query %}"</If><If test={active_category}> in {% active_category %}</If></p>
+    <p>{% result_count %} filters{% #if query %} matching "{% query %}"{% /if %}{% #if active_category %} in {% active_category %}{% /if %}</p>
 
     <form action="/docs/filters" method="get" class="filter-search">
       <input type="text" name="q" value="{% query | default("") %}" placeholder="Search filters..." class="search-input">
       <select name="category" onchange="this.form.submit()">
         <option value="">All Categories</option>
-        <For each={filter_categories} as="cat">
+        {% #each filter_categories as cat %}
           <option value="{% cat %}" {% active_category == cat ? "selected" : "" %}>{% cat %}</option>
-        </For>
+        {% /each %}
       </select>
     </form>
 
@@ -28,20 +28,20 @@
           </tr>
         </thead>
         <tbody>
-          <For each={filters} as="f">
+          {% #each filters as f %}
             <tr>
               <td><code>{% f.name %}</code></td>
               <td><span class="filter-category">{% f.category %}</span></td>
               <td>{% f.description %}</td>
               <td><code>{% f.example_input %}</code> &rarr; <code>{% f.example_output %}</code></td>
             </tr>
-          <Empty>
+          {% :empty %}
             <tr>
               <td colspan="4">No filters match your search.</td>
             </tr>
-          </For>
+          {% /each %}
         </tbody>
       </table>
     </div>
-  </Fill>
+  {% /fill %}
 </DocsLayout>

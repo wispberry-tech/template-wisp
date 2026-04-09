@@ -1,8 +1,8 @@
 <Component name="Code" label="" content>
 <div class="code-example">
-  <If test={label}>
+  {% #if label %}
     <div class="code-label">{% label %}</div>
-  </If>
+  {% /if %}
   <pre><code>{% content %}</code></pre>
 </div>
 </Component>

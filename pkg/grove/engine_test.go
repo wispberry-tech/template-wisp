@@ -241,7 +241,7 @@ func TestEscape_SafeFilterBypassesEscape(t *testing.T) {
 
 func TestEscape_RawBlockBypassesEscape(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `<Verbatim>{{ not_a_variable }}</Verbatim>`, grove.Data{})
+	got := render(t, eng, `{% #verbatim %}{{ not_a_variable }}{% /verbatim %}`, grove.Data{})
 	require.Equal(t, "{{ not_a_variable }}", got)
 }
 
@@ -273,7 +273,7 @@ func TestWhitespace_StripBoth(t *testing.T) {
 
 func TestWhitespace_TagStrip(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, "before\n<Verbatim>\nhello\n</Verbatim>\nafter", grove.Data{})
+	got := render(t, eng, "before\n{%- #verbatim -%}\nhello\n{%- /verbatim -%}\nafter", grove.Data{})
 	require.Equal(t, "beforehelloafter", got)
 }
 
@@ -333,12 +333,12 @@ func TestRenderTemplate_ExtendsIsParseError(t *testing.T) {
 	require.Error(t, err)
 	var pe *grove.ParseError
 	require.ErrorAs(t, err, &pe)
-	require.Contains(t, pe.Message, "extends not allowed in inline templates")
+	require.Contains(t, pe.Message, "extends syntax has been removed")
 }
 
 func TestRenderTemplate_ImportIsParseError(t *testing.T) {
 	eng := newEngine(t)
-	_, err := eng.RenderTemplate(context.Background(), `{% import "macros.html" as m %}`, grove.Data{})
+	_, err := eng.RenderTemplate(context.Background(), `{% import * as m from "macros.html" %}`, grove.Data{})
 	require.Error(t, err)
 	var pe *grove.ParseError
 	require.ErrorAs(t, err, &pe)

@@ -83,7 +83,7 @@ func TestFilter_Rjust(t *testing.T) {
 
 func TestFilter_Split(t *testing.T) {
 	require.Equal(t, "a,b,c", renderFilter(t,
-		`<For each={s | split(",")} as="x">{% x %}<If test={not loop.last}>,</If></For>`,
+		`{% #each s | split(",") as x %}{% x %}{% #if not loop.last %},{% /if %}{% /each %}`,
 		grove.Data{"s": "a,b,c"}))
 }
 
@@ -123,13 +123,13 @@ func TestFilter_Join_NoSep(t *testing.T) {
 
 func TestFilter_Sort(t *testing.T) {
 	require.Equal(t, "a,b,c", renderFilter(t,
-		`<For each={items | sort} as="x">{% x %}<If test={not loop.last}>,</If></For>`,
+		`{% #each items | sort as x %}{% x %}{% #if not loop.last %},{% /if %}{% /each %}`,
 		grove.Data{"items": []string{"c", "a", "b"}}))
 }
 
 func TestFilter_Reverse_List(t *testing.T) {
 	require.Equal(t, "c,b,a", renderFilter(t,
-		`<For each={items | reverse} as="x">{% x %}<If test={not loop.last}>,</If></For>`,
+		`{% #each items | reverse as x %}{% x %}{% #if not loop.last %},{% /if %}{% /each %}`,
 		grove.Data{"items": []string{"a", "b", "c"}}))
 }
 
@@ -139,7 +139,7 @@ func TestFilter_Reverse_String(t *testing.T) {
 
 func TestFilter_Unique(t *testing.T) {
 	require.Equal(t, "a,b,c", renderFilter(t,
-		`<For each={items | unique} as="x">{% x %}<If test={not loop.last}>,</If></For>`,
+		`{% #each items | unique as x %}{% x %}{% #if not loop.last %},{% /if %}{% /each %}`,
 		grove.Data{"items": []string{"a", "b", "a", "c", "b"}}))
 }
 
@@ -168,28 +168,28 @@ func TestFilter_Map(t *testing.T) {
 func TestFilter_Batch(t *testing.T) {
 	// batch(2) groups items into pairs
 	result := renderFilter(t,
-		`<For each={items | batch(2)} as="row">[<For each={row} as="x">{% x %}</For>]</For>`,
+		`{% #each items | batch(2) as row %}[{% #each row as x %}{% x %}{% /each %}]{% /each %}`,
 		grove.Data{"items": []string{"a", "b", "c", "d", "e"}})
 	require.Equal(t, "[ab][cd][e]", result)
 }
 
 func TestFilter_Flatten(t *testing.T) {
 	result := renderFilter(t,
-		`<For each={nested | flatten} as="x">{% x %}</For>`,
+		`{% #each nested | flatten as x %}{% x %}{% /each %}`,
 		grove.Data{"nested": []any{[]any{"a", "b"}, []any{"c"}}})
 	require.Equal(t, "abc", result)
 }
 
 func TestFilter_Keys(t *testing.T) {
 	result := renderFilter(t,
-		`<For each={m | keys} as="k">{% k %}<If test={not loop.last}>,</If></For>`,
+		`{% #each m | keys as k %}{% k %}{% #if not loop.last %},{% /if %}{% /each %}`,
 		grove.Data{"m": map[string]any{"b": 2, "a": 1, "c": 3}})
 	require.Equal(t, "a,b,c", result)
 }
 
 func TestFilter_Values(t *testing.T) {
 	result := renderFilter(t,
-		`<For each={m | values} as="v">{% v %}<If test={not loop.last}>,</If></For>`,
+		`{% #each m | values as v %}{% v %}{% #if not loop.last %},{% /if %}{% /each %}`,
 		grove.Data{"m": map[string]any{"b": "2", "a": "1"}})
 	require.Equal(t, "1,2", result) // sorted by key: a→1, b→2
 }

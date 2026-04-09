@@ -1,20 +1,20 @@
-<Import src="docs-layout" name="DocsLayout" />
+{% import DocsLayout from "docs-layout" %}
 
 <DocsLayout sections={sections} all_pages={all_pages} current_slug={current_slug} breadcrumbs={breadcrumbs}>
-  <Fill slot="content">
-    <SetMeta name="description" content="Grove template engine documentation" />
+  {% #fill "content" %}
+    {% meta name="description" content="Grove template engine documentation" %}
 
     <h1>{% section.name %}</h1>
     <p class="section-description">{% section.description %}</p>
 
     <div class="page-list">
-      <For each={section_pages} as="pg">
+      {% #each section_pages as pg %}
         <a href="/docs/{% pg.section_slug %}/{% pg.slug %}" class="page-list-item">
           <h3>{% pg.title %}</h3>
         </a>
-      <Empty>
+      {% :empty %}
         <p>No pages in this section yet.</p>
-      </For>
+      {% /each %}
     </div>
-  </Fill>
+  {% /fill %}
 </DocsLayout>

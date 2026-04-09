@@ -1,30 +1,30 @@
-<Import src="base" name="Base" />
-<Import src="composites/breadcrumbs/breadcrumbs" name="Breadcrumbs" />
-<Import src="composites/author-card" name="AuthorCard" />
-<Import src="composites/card" name="Card" />
-<Import src="primitives/tag-badge" name="TagBadge" />
+{% import Base from "base" %}
+{% import Breadcrumbs from "composites/breadcrumbs/breadcrumbs" %}
+{% import AuthorCard from "composites/author-card" %}
+{% import Card from "composites/card" %}
+{% import TagBadge from "primitives/tag-badge" %}
 
 <Base>
-  <Fill slot="title">{% author.name %} &mdash; Grove Blog</Fill>
+  {% #fill "title" %}{% author.name %} &mdash; Grove Blog{% /fill %}
 
-  <Fill slot="content">
+  {% #fill "content" %}
     <Breadcrumbs />
 
     <AuthorCard name={author.name} slug={author.slug} bio={author.bio} avatar_url={author.avatar_url} role={author.role} />
 
     <h2>Posts by {% author.name %}</h2>
     <div class="post-grid">
-      <For each={posts} as="post">
+      {% #each posts as post %}
         <Card title={post.title} summary={post.summary} href={"/post/" ~ post.slug} date={post.date}>
-          <Fill slot="tags">
-            <For each={post.tags} as="tag">
+          {% #fill "tags" %}
+            {% #each post.tags as tag %}
               <TagBadge label={tag.name} color={tag.color} slug={tag.slug} />
-            </For>
-          </Fill>
+            {% /each %}
+          {% /fill %}
         </Card>
-        <Empty>
+        {% :empty %}
         <p class="empty-state">No posts by this author yet.</p>
-      </For>
+      {% /each %}
     </div>
-  </Fill>
+  {% /fill %}
 </Base>

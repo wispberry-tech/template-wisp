@@ -30,12 +30,10 @@ type parser struct {
 	imports     map[string]importEntry      // local name → {src, compName}
 }
 
-// builtinElements are PascalCase elements recognized by the parser (not user-defined components).
+// builtinElements are PascalCase elements reserved by the parser.
+// Only <Component> remains — all other server ops use {% %} tags.
 var builtinElements = map[string]bool{
-	"If": true, "ElseIf": true, "Else": true, "For": true, "Empty": true,
-	"Capture": true, "Slot": true, "Fill": true, "Hoist": true,
-	"ImportAsset": true, "SetMeta": true, "Set": true, "Component": true,
-	"Import": true, "Verbatim": true,
+	"Component": true,
 }
 
 type importEntry struct {
@@ -122,6 +120,7 @@ func (p *parser) peekTagName() (string, bool) {
 }
 
 // tokenTagName extracts the string tag name from a token (handles keywords used as tag names).
+// Sigil tokens are prefixed: "#if", ":else", "/each".
 func tokenTagName(tk lexer.Token) (string, bool) {
 	switch tk.Kind {
 	case lexer.TK_IDENT:
@@ -130,6 +129,12 @@ func tokenTagName(tk lexer.Token) (string, bool) {
 		return "not", true
 	case lexer.TK_IN:
 		return "in", true
+	case lexer.TK_BLOCK_OPEN:
+		return "#" + tk.Value, true
+	case lexer.TK_BLOCK_BRANCH:
+		return ":" + tk.Value, true
+	case lexer.TK_BLOCK_CLOSE:
+		return "/" + tk.Value, true
 	}
 	return "", false
 }
@@ -159,67 +164,76 @@ func (p *parser) parseOutput() (*ast.OutputNode, error) {
 
 func (p *parser) parseTag() (ast.Node, error) {
 	tagStart := p.advance() // consume TAG_START
+	tok := p.peek()
 
-	// Check if first token is a known control keyword
-	nameTok := p.peek()
-	name, ok := tokenTagName(nameTok)
-	if ok {
-		// Sandbox: check allowed tags whitelist
-		if p.allowedTags != nil && (name == "set" || name == "let") {
-			if !p.allowedTags[name] {
-				return nil, &groverrors.ParseError{
-					Line:    nameTok.Line,
-					Column:  nameTok.Col,
-					Message: fmt.Sprintf("sandbox: tag %q is not allowed", name),
-				}
-			}
+	// Dispatch on sigil tokens: #keyword, :keyword, /keyword
+	switch tok.Kind {
+	case lexer.TK_BLOCK_OPEN:
+		if p.allowedTags != nil && !p.allowedTags["#"+tok.Value] {
+			return nil, p.errorf(tok.Line, tok.Col, "sandbox: tag #%s is not allowed", tok.Value)
+		}
+		switch tok.Value {
+		case "if":
+			return p.parseIf(tagStart)
+		case "each":
+			return p.parseEach(tagStart)
+		case "fill":
+			return nil, p.errorf(tok.Line, tok.Col, "#fill must appear inside a component body")
+		case "slot":
+			return p.parseSlotBlock(tagStart)
+		case "capture":
+			return p.parseCapture(tagStart)
+		case "hoist":
+			return p.parseHoist(tagStart)
+		case "let":
+			return p.parseLet(tagStart)
+		default:
+			return nil, p.errorf(tok.Line, tok.Col, "unknown block tag #%s", tok.Value)
 		}
 
+	case lexer.TK_BLOCK_BRANCH:
+		return nil, p.errorf(tok.Line, tok.Col, "unexpected :%s outside of a block", tok.Value)
+
+	case lexer.TK_BLOCK_CLOSE:
+		return nil, p.errorf(tok.Line, tok.Col, "unexpected /%s outside of a block", tok.Value)
+	}
+
+	// Plain keyword tags (no sigil)
+	name, ok := tokenTagName(tok)
+	if ok {
+		if p.allowedTags != nil && (name == "set" || name == "import" || name == "asset" || name == "meta" || name == "slot") {
+			if !p.allowedTags[name] {
+				return nil, p.errorf(tok.Line, tok.Col, "sandbox: tag %q is not allowed", name)
+			}
+		}
 		switch name {
 		case "set":
 			return p.parseSet(tagStart)
-		case "let":
-			return p.parseLet(tagStart)
+		case "import":
+			if p.inline {
+				return nil, p.errorf(tagStart.Line, tagStart.Col, "import not allowed in inline templates")
+			}
+			return p.parseImport(tagStart)
+		case "slot":
+			return p.parseSlotInline(tagStart)
+		case "asset":
+			if p.inline {
+				return nil, p.errorf(tagStart.Line, tagStart.Col, "asset not allowed in inline templates")
+			}
+			return p.parseAsset(tagStart)
+		case "meta":
+			return p.parseMeta(tagStart)
 
 		// Removed syntax — produce clear errors
 		case "extends":
-			if p.inline {
-				return nil, &groverrors.ParseError{
-					Line:    tagStart.Line,
-					Column:  tagStart.Col,
-					Message: "extends not allowed in inline templates",
-				}
-			}
-			return nil, &groverrors.ParseError{
-				Line:    tagStart.Line,
-				Column:  tagStart.Col,
-				Message: "extends syntax has been removed; use component composition with <Slot>/<Fill>",
-			}
-		case "import":
-			if p.inline {
-				return nil, &groverrors.ParseError{
-					Line:    tagStart.Line,
-					Column:  tagStart.Col,
-					Message: "import not allowed in inline templates",
-				}
-			}
-			return nil, &groverrors.ParseError{
-				Line:    tagStart.Line,
-				Column:  tagStart.Col,
-				Message: "{% import %} syntax has been removed; use <Import> element",
-			}
+			return nil, p.errorf(tagStart.Line, tagStart.Col,
+				"extends syntax has been removed; use component composition with {%% #slot %%}/{%% #fill %%}")
 		case "unless":
-			return nil, &groverrors.ParseError{
-				Line:    tagStart.Line,
-				Column:  tagStart.Col,
-				Message: `unknown tag "unless": use <If test={not ...}> instead`,
-			}
+			return nil, p.errorf(tagStart.Line, tagStart.Col,
+				`unknown tag "unless": use {%% #if not ... %%} instead`)
 		case "with":
-			return nil, &groverrors.ParseError{
-				Line:    tagStart.Line,
-				Column:  tagStart.Col,
-				Message: `unknown tag "with": use {% let %} or {% set %} instead`,
-			}
+			return nil, p.errorf(tagStart.Line, tagStart.Col,
+				`unknown tag "with": use {%% #let %%} or {%% set %%} instead`)
 		}
 	}
 
@@ -246,52 +260,16 @@ func (p *parser) parseTag() (ast.Node, error) {
 func (p *parser) parseElement() (ast.Node, error) {
 	tk := p.peek()
 
-	// Sandbox: check allowed elements
-	if p.allowedTags != nil {
-		elemName := tk.Value
-		// Don't check component invocations against sandbox (they're user-defined)
-		if _, builtin := builtinElements[elemName]; builtin {
-			if !p.allowedTags[elemName] {
-				return nil, &groverrors.ParseError{
-					Line:    tk.Line,
-					Column:  tk.Col,
-					Message: fmt.Sprintf("sandbox: element <%s> is not allowed", elemName),
-				}
-			}
-		}
+	// <Component> for definition and dynamic invocation
+	if tk.Value == "Component" {
+		return p.parseComponentDefElement()
 	}
 
-	switch tk.Value {
-	case "If":
-		return p.parseIfElement()
-	case "For":
-		return p.parseForElement()
-	case "Capture":
-		return p.parseCaptureElement()
-	case "Slot":
-		return p.parseSlotElement()
-	case "Hoist":
-		return p.parseHoistElement()
-	case "ImportAsset":
-		if p.inline {
-			return nil, p.errorf(tk.Line, tk.Col, "<ImportAsset> not allowed in inline templates")
-		}
-		return p.parseImportAssetElement()
-	case "SetMeta":
-		return p.parseSetMetaElement()
-	case "Set":
-		return p.parseSetElement()
-	case "Component":
-		return p.parseComponentDefElement()
-	case "Import":
-		return p.parseImportElement()
-	default:
-		// Check if it's an imported component invocation
-		if p.resolveImport(tk.Value) != nil {
-			return p.parseComponentInvocation()
-		}
-		return nil, p.errorf(tk.Line, tk.Col, "unknown element <%s>; did you forget <Import>?", tk.Value)
+	// Everything else must be an imported component invocation
+	if p.resolveImport(tk.Value) != nil {
+		return p.parseComponentInvocation()
 	}
+	return nil, p.errorf(tk.Line, tk.Col, "unknown element <%s>; did you forget {%% import ... from ... %%}?", tk.Value)
 }
 
 // resolveImport returns the importEntry for a component name, or nil if not found.
@@ -889,7 +867,7 @@ func (p *parser) parseComponentInvocation() (ast.Node, error) {
 		return node, nil
 	}
 
-	// Parse body: separate <Fill> elements from default content
+	// Parse body: separate {% #fill %} tags from default content
 	var defaultFill []ast.Node
 	var fills []ast.FillNode
 
@@ -899,8 +877,11 @@ func (p *parser) parseComponentInvocation() (ast.Node, error) {
 			p.advance()
 			break
 		}
-		if tk.Kind == lexer.TK_ELEMENT_OPEN && tk.Value == "Fill" {
-			fill, err := p.parseFillElement()
+		// Detect {% #fill "name" %}...{% /fill %}
+		if tk.Kind == lexer.TK_TAG_START && p.pos+1 < len(p.tokens) &&
+			p.tokens[p.pos+1].Kind == lexer.TK_BLOCK_OPEN && p.tokens[p.pos+1].Value == "fill" {
+			tagStart := p.advance() // consume TAG_START
+			fill, err := p.parseFillTag(tagStart)
 			if err != nil {
 				return nil, err
 			}
@@ -1146,7 +1127,7 @@ func (p *parser) parseSetMetaElement() (*ast.MetaNode, error) {
 // ─── {% if %} ─────────────────────────────────────────────────────────────────
 
 func (p *parser) parseIf(tagStart lexer.Token) (*ast.IfNode, error) {
-	p.advance() // consume "if" token
+	p.advance() // consume TK_BLOCK_OPEN("if")
 	cond, err := p.parseExpr(0)
 	if err != nil {
 		return nil, err
@@ -1157,48 +1138,51 @@ func (p *parser) parseIf(tagStart lexer.Token) (*ast.IfNode, error) {
 
 	node := &ast.IfNode{Condition: cond, Line: tagStart.Line}
 
-	// Parse body until elif/else/endif
-	node.Body, err = p.parseBody("elif", "else", "endif")
+	// Parse body until :else or /if
+	node.Body, err = p.parseBody(":else", "/if")
 	if err != nil {
 		return nil, err
 	}
 
-	// Parse elif/else chains
+	// Parse :else if / :else chains
 	for {
 		tagName, _ := p.peekTagName()
-		if tagName == "elif" {
+		if tagName == ":else" {
 			p.advance() // TAG_START
-			p.advance() // "elif"
-			elifCond, err := p.parseExpr(0)
-			if err != nil {
-				return nil, err
+			p.advance() // TK_BLOCK_BRANCH("else")
+			// Check if this is {% :else if expr %} or just {% :else %}
+			if p.peek().Kind == lexer.TK_IDENT && p.peek().Value == "if" {
+				p.advance() // consume "if"
+				elifCond, err := p.parseExpr(0)
+				if err != nil {
+					return nil, err
+				}
+				if err := p.expectTagEnd(); err != nil {
+					return nil, err
+				}
+				body, err := p.parseBody(":else", "/if")
+				if err != nil {
+					return nil, err
+				}
+				node.Elifs = append(node.Elifs, ast.ElifClause{Condition: elifCond, Body: body})
+			} else {
+				// Plain {% :else %}
+				if err := p.expectTagEnd(); err != nil {
+					return nil, err
+				}
+				node.Else, err = p.parseBody("/if")
+				if err != nil {
+					return nil, err
+				}
+				break
 			}
-			if err := p.expectTagEnd(); err != nil {
-				return nil, err
-			}
-			body, err := p.parseBody("elif", "else", "endif")
-			if err != nil {
-				return nil, err
-			}
-			node.Elifs = append(node.Elifs, ast.ElifClause{Condition: elifCond, Body: body})
-		} else if tagName == "else" {
-			p.advance() // TAG_START
-			p.advance() // "else"
-			if err := p.expectTagEnd(); err != nil {
-				return nil, err
-			}
-			node.Else, err = p.parseBody("endif")
-			if err != nil {
-				return nil, err
-			}
-			break
 		} else {
 			break
 		}
 	}
 
-	// Consume {% endif %}
-	if err := p.expectTag("endif"); err != nil {
+	// Consume {% /if %}
+	if err := p.expectBlockClose("if"); err != nil {
 		return nil, err
 	}
 	return node, nil
@@ -1273,6 +1257,84 @@ func (p *parser) parseFor(tagStart lexer.Token) (*ast.ForNode, error) {
 	}, nil
 }
 
+// ─── {% #each %} ─────────────────────────────────────────────────────────────
+
+func (p *parser) parseEach(tagStart lexer.Token) (*ast.ForNode, error) {
+	p.advance() // consume TK_BLOCK_OPEN("each")
+
+	// Parse iterable expression first: {% #each items as item %}
+	iterable, err := p.parseExpr(0)
+	if err != nil {
+		return nil, err
+	}
+
+	// Expect "as" keyword
+	asTok := p.peek()
+	if asTok.Kind != lexer.TK_IDENT || asTok.Value != "as" {
+		return nil, p.errorf(asTok.Line, asTok.Col, "expected 'as' after iterable in #each")
+	}
+	p.advance() // consume "as"
+
+	// Read item variable name
+	itemTok := p.advance()
+	if itemTok.Kind != lexer.TK_IDENT {
+		return nil, p.errorf(itemTok.Line, itemTok.Col, "expected variable name after 'as' in #each")
+	}
+
+	// Optional: comma + index/key variable
+	// ForNode convention: Var1=key/index, Var2=value/item (matches OP_FOR_BIND_KV).
+	// Single var: Var1=item, Var2=""
+	// Two var: Var1=indexVar, Var2=itemVar
+	var1 := itemTok.Value
+	var var2 string
+	if p.peek().Kind == lexer.TK_COMMA {
+		p.advance() // consume comma
+		idxTok := p.advance()
+		if idxTok.Kind != lexer.TK_IDENT {
+			return nil, p.errorf(idxTok.Line, idxTok.Col, "expected index variable name after ',' in #each")
+		}
+		// Swap: first name after "as" is value, second is key/index
+		var1 = idxTok.Value
+		var2 = itemTok.Value
+	}
+
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+
+	body, err := p.parseBody(":empty", "/each")
+	if err != nil {
+		return nil, err
+	}
+
+	var emptyBody []ast.Node
+	tagName, _ := p.peekTagName()
+	if tagName == ":empty" {
+		p.advance() // TAG_START
+		p.advance() // TK_BLOCK_BRANCH("empty")
+		if err := p.expectTagEnd(); err != nil {
+			return nil, err
+		}
+		emptyBody, err = p.parseBody("/each")
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if err := p.expectBlockClose("each"); err != nil {
+		return nil, err
+	}
+
+	return &ast.ForNode{
+		Var1:     var1,
+		Var2:     var2,
+		Iterable: iterable,
+		Body:     body,
+		Empty:    emptyBody,
+		Line:     tagStart.Line,
+	}, nil
+}
+
 // ─── {% set %} ────────────────────────────────────────────────────────────────
 
 func (p *parser) parseSet(tagStart lexer.Token) (*ast.SetNode, error) {
@@ -1298,19 +1360,19 @@ func (p *parser) parseSet(tagStart lexer.Token) (*ast.SetNode, error) {
 // ─── {% capture %} ────────────────────────────────────────────────────────────
 
 func (p *parser) parseCapture(tagStart lexer.Token) (*ast.CaptureNode, error) {
-	p.advance() // consume "capture"
+	p.advance() // consume TK_BLOCK_OPEN("capture")
 	nameTok := p.advance()
 	if nameTok.Kind != lexer.TK_IDENT {
-		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected variable name after capture")
+		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected variable name after #capture")
 	}
 	if err := p.expectTagEnd(); err != nil {
 		return nil, err
 	}
-	body, err := p.parseBody("endcapture")
+	body, err := p.parseBody("/capture")
 	if err != nil {
 		return nil, err
 	}
-	if err := p.expectTag("endcapture"); err != nil {
+	if err := p.expectBlockClose("capture"); err != nil {
 		return nil, err
 	}
 	return &ast.CaptureNode{Name: nameTok.Value, Body: body, Line: tagStart.Line}, nil
@@ -1663,15 +1725,15 @@ func (p *parser) captureUntilEndTag(tagName string) (string, error) {
 }
 
 func (p *parser) parseLet(tagStart lexer.Token) (*ast.LetNode, error) {
-	p.advance() // consume "let"
+	p.advance() // consume TK_BLOCK_OPEN("let") or TK_IDENT("let")
 	if err := p.expectTagEnd(); err != nil {
 		return nil, err
 	}
-	raw, err := p.captureUntilEndTag("endlet")
+	raw, err := p.captureUntilEndTag("/let")
 	if err != nil {
 		return nil, err
 	}
-	if err := p.expectTag("endlet"); err != nil {
+	if err := p.expectBlockClose("let"); err != nil {
 		return nil, err
 	}
 	tokens, err := lexer.TokenizeLetBody(raw)
@@ -1870,11 +1932,28 @@ func (p *parser) errorf(line, col int, format string, args ...any) *groverrors.P
 	}
 }
 
+// expectBlockClose consumes {% /keyword %} and errors if it doesn't match.
+func (p *parser) expectBlockClose(keyword string) error {
+	if p.peek().Kind != lexer.TK_TAG_START {
+		return p.errorf(p.peek().Line, p.peek().Col, "expected {%% /%s %%}", keyword)
+	}
+	p.advance() // TAG_START
+	tok := p.peek()
+	if tok.Kind != lexer.TK_BLOCK_CLOSE || tok.Value != keyword {
+		return p.errorf(tok.Line, tok.Col, "expected /%s, got %q", keyword, tok.Value)
+	}
+	p.advance() // BLOCK_CLOSE
+	return p.expectTagEnd()
+}
+
 // isCloseTag returns true for closing/structural tags that should bypass the allowed-tags check.
-// These are tags that are always needed as syntactic closers (e.g. endif, endfor, else, etc.).
 func isCloseTag(name string) bool {
 	switch name {
-	case "endif", "endfor", "endcapture", "endmacro", "endcall",
+	// Sigil-style close/branch tags
+	case "/if", "/each", "/capture", "/slot", "/fill", "/hoist", "/let",
+		":else", ":empty",
+		// Legacy close tags (kept for backward compat during transition)
+		"endif", "endfor", "endcapture", "endmacro", "endcall",
 		"endblock", "endslot", "endcomponent", "endfill", "endhoist",
 		"endlet", "else", "elif", "empty", "endraw":
 		return true
@@ -2063,24 +2142,105 @@ func (p *parser) parseRender(tagStart lexer.Token) (*ast.RenderNode, error) {
 }
 
 // parseImport parses {% import "name" as alias %}.
-func (p *parser) parseImport(tagStart lexer.Token) (*ast.ImportNode, error) {
+// parseImport parses {% import Name from "path" %} and its variants:
+//   {% import Card from "components/cards" %}
+//   {% import Card as InfoCard from "components/cards" %}
+//   {% import Card, Badge from "components/ui" %}
+//   {% import * from "components/ui" %}
+//   {% import * as UI from "components/ui" %}
+func (p *parser) parseImport(tagStart lexer.Token) (ast.Node, error) {
 	p.advance() // consume "import"
-	nameTok := p.advance()
-	if nameTok.Kind != lexer.TK_STRING {
-		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected quoted template name after import")
+
+	if p.imports == nil {
+		p.imports = make(map[string]importEntry)
 	}
-	asTok := p.advance()
-	if asTok.Kind != lexer.TK_IDENT || asTok.Value != "as" {
-		return nil, p.errorf(asTok.Line, asTok.Col, "expected 'as' after template name in import")
+
+	// Check for wildcard: {% import * ... %}
+	if p.peek().Kind == lexer.TK_STAR {
+		p.advance() // consume *
+		var namespace string
+		if p.peek().Kind == lexer.TK_IDENT && p.peek().Value == "as" {
+			p.advance() // consume "as"
+			nsTok := p.advance()
+			if nsTok.Kind != lexer.TK_IDENT {
+				return nil, p.errorf(nsTok.Line, nsTok.Col, "expected namespace name after 'as' in wildcard import")
+			}
+			namespace = nsTok.Value
+		}
+		if p.peek().Kind != lexer.TK_IDENT || p.peek().Value != "from" {
+			return nil, p.errorf(p.peek().Line, p.peek().Col, "expected 'from' in import")
+		}
+		p.advance() // consume "from"
+		pathTok := p.advance()
+		if pathTok.Kind != lexer.TK_STRING {
+			return nil, p.errorf(pathTok.Line, pathTok.Col, "expected quoted path after 'from' in import")
+		}
+		if err := p.expectTagEnd(); err != nil {
+			return nil, err
+		}
+		key := "*"
+		if namespace != "" {
+			key = "*:" + namespace
+		}
+		p.imports[key] = importEntry{src: pathTok.Value, compName: "*", namespace: namespace}
+		return &ast.TextNode{Value: "", Line: tagStart.Line}, nil
 	}
-	aliasTok := p.advance()
-	if aliasTok.Kind != lexer.TK_IDENT {
-		return nil, p.errorf(aliasTok.Line, aliasTok.Col, "expected alias name after 'as' in import")
+
+	// Read name list: Name or Name, Name2, Name3
+	firstTok := p.advance()
+	if firstTok.Kind != lexer.TK_IDENT {
+		return nil, p.errorf(firstTok.Line, firstTok.Col, "expected component name after 'import'")
+	}
+	names := []string{firstTok.Value}
+	for p.peek().Kind == lexer.TK_COMMA {
+		p.advance() // consume comma
+		nextTok := p.advance()
+		if nextTok.Kind != lexer.TK_IDENT {
+			return nil, p.errorf(nextTok.Line, nextTok.Col, "expected component name after ',' in import")
+		}
+		names = append(names, nextTok.Value)
+	}
+
+	// Optional: "as" alias (only for single imports)
+	var alias string
+	if p.peek().Kind == lexer.TK_IDENT && p.peek().Value == "as" {
+		if len(names) > 1 {
+			return nil, p.errorf(p.peek().Line, p.peek().Col, "'as' cannot be used with comma-separated imports; use separate import statements")
+		}
+		p.advance() // consume "as"
+		aliasTok := p.advance()
+		if aliasTok.Kind != lexer.TK_IDENT {
+			return nil, p.errorf(aliasTok.Line, aliasTok.Col, "expected alias name after 'as' in import")
+		}
+		alias = aliasTok.Value
+	}
+
+	// Expect "from"
+	if p.peek().Kind != lexer.TK_IDENT || p.peek().Value != "from" {
+		return nil, p.errorf(p.peek().Line, p.peek().Col, "expected 'from' in import")
+	}
+	p.advance() // consume "from"
+	pathTok := p.advance()
+	if pathTok.Kind != lexer.TK_STRING {
+		return nil, p.errorf(pathTok.Line, pathTok.Col, "expected quoted path after 'from' in import")
 	}
 	if err := p.expectTagEnd(); err != nil {
 		return nil, err
 	}
-	return &ast.ImportNode{Name: nameTok.Value, Alias: aliasTok.Value, Line: tagStart.Line}, nil
+
+	// Register imports (check for duplicates)
+	for _, name := range names {
+		localName := name
+		if len(names) == 1 && alias != "" {
+			localName = alias
+		}
+		if _, exists := p.imports[localName]; exists {
+			return nil, p.errorf(tagStart.Line, tagStart.Col, "duplicate import: %q is already imported", localName)
+		}
+		p.imports[localName] = importEntry{src: pathTok.Value, compName: name}
+	}
+
+	return &ast.TextNode{Value: "", Line: tagStart.Line}, nil
 }
 
 // ─── Plan 5: Layout inheritance parser methods ────────────────────────────────
@@ -2167,24 +2327,115 @@ func (p *parser) parseProps(tagStart lexer.Token) (*ast.PropsNode, error) {
 	return &ast.PropsNode{Params: params, Line: tagStart.Line}, nil
 }
 
-// parseSlot parses {% slot ["name"] %}...{% endslot %}.
-func (p *parser) parseSlot(tagStart lexer.Token) (*ast.SlotNode, error) {
-	p.advance() // consume "slot"
+// parseSlotInline parses self-closing slot tags: {% slot %} or {% slot "name" data={expr} %}
+func (p *parser) parseSlotInline(tagStart lexer.Token) (*ast.SlotNode, error) {
+	p.advance() // consume "slot" ident
 	name := ""
 	if p.peek().Kind == lexer.TK_STRING {
 		name = p.advance().Value
 	}
+	// Optional scope data: key={expr} pairs
+	var scopeData []ast.NamedArgNode
+	for p.peek().Kind == lexer.TK_IDENT && p.peek().Kind != lexer.TK_TAG_END {
+		keyTok := p.advance()
+		if p.peek().Kind != lexer.TK_ASSIGN {
+			// Not a key=value, put it back conceptually — but we already consumed it.
+			// This shouldn't happen in well-formed templates.
+			return nil, p.errorf(keyTok.Line, keyTok.Col, "unexpected token %q in slot tag", keyTok.Value)
+		}
+		p.advance() // consume =
+		val, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		scopeData = append(scopeData, ast.NamedArgNode{Key: keyTok.Value, Value: val, Line: keyTok.Line})
+	}
 	if err := p.expectTagEnd(); err != nil {
 		return nil, err
 	}
-	body, err := p.parseBody("endslot")
+	return &ast.SlotNode{Name: name, ScopeData: scopeData, Line: tagStart.Line}, nil
+}
+
+// parseSlotBlock parses {% #slot "name" %}default content{% /slot %}
+func (p *parser) parseSlotBlock(tagStart lexer.Token) (*ast.SlotNode, error) {
+	p.advance() // consume TK_BLOCK_OPEN("slot")
+	name := ""
+	if p.peek().Kind == lexer.TK_STRING {
+		name = p.advance().Value
+	}
+	// Optional scope data
+	var scopeData []ast.NamedArgNode
+	for p.peek().Kind == lexer.TK_IDENT && p.peek().Kind != lexer.TK_TAG_END {
+		keyTok := p.advance()
+		if p.peek().Kind != lexer.TK_ASSIGN {
+			return nil, p.errorf(keyTok.Line, keyTok.Col, "unexpected token %q in #slot tag", keyTok.Value)
+		}
+		p.advance() // consume =
+		val, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		scopeData = append(scopeData, ast.NamedArgNode{Key: keyTok.Value, Value: val, Line: keyTok.Line})
+	}
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	body, err := p.parseBody("/slot")
 	if err != nil {
 		return nil, err
 	}
-	if err := p.expectTag("endslot"); err != nil {
+	if err := p.expectBlockClose("slot"); err != nil {
 		return nil, err
 	}
-	return &ast.SlotNode{Name: name, Default: body, Line: tagStart.Line}, nil
+	return &ast.SlotNode{Name: name, Default: body, ScopeData: scopeData, Line: tagStart.Line}, nil
+}
+
+// parseFillTag parses {% #fill "name" [let:key ...] %}...{% /fill %}
+func (p *parser) parseFillTag(tagStart lexer.Token) (*ast.FillNode, error) {
+	p.advance() // consume TK_BLOCK_OPEN("fill")
+	nameTok := p.advance()
+	if nameTok.Kind != lexer.TK_STRING {
+		return nil, p.errorf(nameTok.Line, nameTok.Col, "expected quoted slot name after #fill")
+	}
+
+	// Optional let: bindings
+	var letBindings map[string]string
+	for p.peek().Kind == lexer.TK_IDENT && p.peek().Value == "let" {
+		p.advance() // consume "let"
+		if p.peek().Kind != lexer.TK_COLON {
+			return nil, p.errorf(p.peek().Line, p.peek().Col, "expected ':' after 'let' in #fill tag")
+		}
+		p.advance() // consume ":"
+		scopeKeyTok := p.advance()
+		if scopeKeyTok.Kind != lexer.TK_IDENT {
+			return nil, p.errorf(scopeKeyTok.Line, scopeKeyTok.Col, "expected identifier after 'let:' in #fill tag")
+		}
+		scopeKey := scopeKeyTok.Value
+		localVar := scopeKey // default: same name
+		if p.peek().Kind == lexer.TK_ASSIGN {
+			p.advance() // consume =
+			aliasTok := p.advance()
+			if aliasTok.Kind == lexer.TK_STRING {
+				localVar = aliasTok.Value
+			}
+		}
+		if letBindings == nil {
+			letBindings = make(map[string]string)
+		}
+		letBindings[scopeKey] = localVar
+	}
+
+	if err := p.expectTagEnd(); err != nil {
+		return nil, err
+	}
+	body, err := p.parseBody("/fill")
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectBlockClose("fill"); err != nil {
+		return nil, err
+	}
+	return &ast.FillNode{Name: nameTok.Value, Body: body, LetBindings: letBindings, Line: tagStart.Line}, nil
 }
 
 // parseComponent parses {% component "name" k=v, ... %}...{% endcomponent %}.
@@ -2228,7 +2479,7 @@ func (p *parser) parseComponent(tagStart lexer.Token) (*ast.ComponentNode, error
 	return node, nil
 }
 
-// parseComponentBody parses until {% endcomponent %}, routing {% fill %} blocks
+// parseComponentBody parses until {% /component %}, routing {% #fill %} blocks
 // into node.Fills and everything else into node.DefaultFill.
 func (p *parser) parseComponentBody(node *ast.ComponentNode) error {
 	for !p.atEOF() {
@@ -2236,10 +2487,11 @@ func (p *parser) parseComponentBody(node *ast.ComponentNode) error {
 			tagName, ok := p.peekTagName()
 			if ok {
 				switch tagName {
-				case "endcomponent":
-					return p.expectTag("endcomponent")
-				case "fill":
-					fill, err := p.parseFill()
+				case "/component":
+					return p.expectBlockClose("component")
+				case "#fill":
+					tagStart := p.advance() // consume TAG_START
+					fill, err := p.parseFillTag(tagStart)
 					if err != nil {
 						return err
 					}
@@ -2256,7 +2508,7 @@ func (p *parser) parseComponentBody(node *ast.ComponentNode) error {
 			node.DefaultFill = append(node.DefaultFill, n)
 		}
 	}
-	return p.errorf(p.peek().Line, p.peek().Col, "unclosed component block — expected endcomponent")
+	return p.errorf(p.peek().Line, p.peek().Col, "unclosed component block — expected {%% /component %%}")
 }
 
 // parseFill parses {% fill "name" %}...{% endfill %}.
@@ -2374,41 +2626,24 @@ func (p *parser) parseMeta(tagStart lexer.Token) (*ast.MetaNode, error) {
 	return &ast.MetaNode{Key: metaKey, Value: metaContent, Line: tagStart.Line}, p.expectTagEnd()
 }
 
-// parseHoist parses {% hoist target="name" %}...{% endhoist %}.
+// parseHoist parses {% #hoist "target" %}...{% /hoist %}.
 func (p *parser) parseHoist(tagStart lexer.Token) (*ast.HoistNode, error) {
-	p.advance() // consume "hoist"
+	p.advance() // consume TK_BLOCK_OPEN("hoist")
 
-	var target string
-	for p.peek().Kind != lexer.TK_TAG_END && !p.atEOF() {
-		keyTok := p.advance()
-		if keyTok.Kind != lexer.TK_IDENT {
-			return nil, p.errorf(keyTok.Line, keyTok.Col, "expected attribute name in hoist tag")
-		}
-		if p.peek().Kind != lexer.TK_ASSIGN {
-			return nil, p.errorf(p.peek().Line, p.peek().Col, "expected = after %q in hoist tag", keyTok.Value)
-		}
-		p.advance() // consume =
-		valTok := p.advance()
-		if valTok.Kind != lexer.TK_STRING {
-			return nil, p.errorf(valTok.Line, valTok.Col, "hoist target must be a string literal")
-		}
-		if keyTok.Value == "target" {
-			target = valTok.Value
-		}
-	}
-	if target == "" {
-		return nil, p.errorf(tagStart.Line, tagStart.Col, "hoist tag requires target= attribute")
+	targetTok := p.advance()
+	if targetTok.Kind != lexer.TK_STRING {
+		return nil, p.errorf(targetTok.Line, targetTok.Col, "expected quoted target name after #hoist")
 	}
 	if err := p.expectTagEnd(); err != nil {
 		return nil, err
 	}
 
-	body, err := p.parseBody("endhoist")
+	body, err := p.parseBody("/hoist")
 	if err != nil {
 		return nil, err
 	}
-	if err := p.expectTag("endhoist"); err != nil {
+	if err := p.expectBlockClose("hoist"); err != nil {
 		return nil, err
 	}
-	return &ast.HoistNode{Target: target, Body: body, Line: tagStart.Line}, nil
+	return &ast.HoistNode{Target: targetTok.Value, Body: body, Line: tagStart.Line}, nil
 }

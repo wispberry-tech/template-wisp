@@ -1,15 +1,15 @@
 <Component name="AuthorCard" name slug bio="" avatar_url="" role="">
 <div class="author-card">
-  <If test={avatar_url}>
+  {% #if avatar_url %}
     <div class="author-avatar">
       <img src="{% avatar_url %}" alt="{% name %}">
     </div>
-  </If>
+  {% /if %}
   <div class="author-info">
     <h3><a href="/author/{% slug %}">{% name %}</a></h3>
-    <If test={role}><span class="author-role">{% role %}</span></If>
-    <If test={bio}><p class="author-bio">{% bio %}</p></If>
-    <Slot />
+    {% #if role %}<span class="author-role">{% role %}</span>{% /if %}
+    {% #if bio %}<p class="author-bio">{% bio %}</p>{% /if %}
+    {% slot %}
   </div>
 </div>
 </Component>

@@ -1,14 +1,14 @@
-<Import src="base" name="Base" />
-<Import src="macros/pricing" name="Price" />
-<Import src="macros/pricing" name="DiscountBadge" />
-<Import src="composites/breadcrumbs/breadcrumbs" name="Breadcrumbs" />
-<Import src="composites/product-card/product-card" name="ProductCard" />
+{% import Base from "base" %}
+{% import Price from "macros/pricing" %}
+{% import DiscountBadge from "macros/pricing" %}
+{% import Breadcrumbs from "composites/breadcrumbs/breadcrumbs" %}
+{% import ProductCard from "composites/product-card/product-card" %}
 
 <Base>
-  <Fill slot="title">{% category.name %} &mdash; {% site_name %}</Fill>
+  {% #fill "title" %}{% category.name %} &mdash; {% site_name %}{% /fill %}
 
-  <Fill slot="content">
-    <SetMeta name="description" content="Browse products in this category" />
+  {% #fill "content" %}
+    {% meta name="description" content="Browse products in this category" %}
 
     <Breadcrumbs breadcrumbs={breadcrumbs} />
 
@@ -18,20 +18,20 @@
     </div>
 
     <div class="product-grid">
-      <For each={products} as="product">
-        <Capture name="price_html">
+      {% #each products as product %}
+        {% #capture price_html %}
           <Price amount={product.price} sale_amount={product.sale_price} />
-        </Capture>
+        {% /capture %}
         <ProductCard name={product.name} slug={product.slug} image_url={product.image_url} price_display={price_html} rating={product.rating} review_count={product.review_count}>
-          <Fill slot="badge">
-            <If test={product.on_sale}>
+          {% #fill "badge" %}
+            {% #if product.on_sale %}
               <DiscountBadge price={product.price} sale_price={product.sale_price} />
-            </If>
-          </Fill>
+            {% /if %}
+          {% /fill %}
         </ProductCard>
-      <Empty>
+      {% :empty %}
         <p class="empty-state">No products in this category yet.</p>
-      </For>
+      {% /each %}
     </div>
-  </Fill>
+  {% /fill %}
 </Base>

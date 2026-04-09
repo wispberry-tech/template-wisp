@@ -1,32 +1,32 @@
 <Component name="Base" sections>
-<ImportAsset src="/static/docs.css" type="stylesheet" priority="10" />
+{% asset "/static/docs.css" type="stylesheet" priority=10 %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title><Slot name="title">{% site_name %}</Slot></title>
+  <title>{% #slot "title" %}{% site_name %}{% /slot %}</title>
   <!-- HEAD_ASSETS -->
   <!-- HEAD_META -->
   <!-- HEAD_HOISTED -->
 </head>
 <body>
-  <Slot name="nav">
+  {% #slot "nav" %}
   <nav class="nav">
     <a href="/" class="nav-brand">{% site_name %}</a>
     <div class="nav-links">
-      <For each={sections} as="section">
+      {% #each sections as section %}
         <a href="/docs/{% section.slug %}" class="nav-link">{% section.name %}</a>
-      </For>
+      {% /each %}
       <a href="/docs/filters" class="nav-link">Filter Reference</a>
     </div>
   </nav>
-  </Slot>
-  <Slot name="layout">
+  {% /slot %}
+  {% #slot "layout" %}
   <main class="container">
-    <Slot name="content" />
+    {% slot "content" %}
   </main>
-  </Slot>
+  {% /slot %}
   <footer class="footer">
     <p>&copy; {% current_year %} {% site_name %}. Built with the Grove template engine.</p>
   </footer>

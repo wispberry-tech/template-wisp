@@ -16,10 +16,10 @@ import (
 func TestIntegration_ComponentAndSlotFill(t *testing.T) {
 	// A component defined in one template, imported and used with slot fill in another.
 	store := grove.NewMemoryStore()
-	store.Set("card.html", `<Component name="Card"><div class="card"><Slot /></div></Component>`)
+	store.Set("card.html", `<Component name="Card"><div class="card">{% slot %}</div></Component>`)
 	// Badge is now a component defined in its own template.
 	store.Set("badge.html", `<Component name="Badge" label><span>{% label %}</span></Component>`)
-	store.Set("page.html", `<Import src="card" name="Card" /><Import src="badge" name="Badge" /><Card><Badge label="New" /></Card>`)
+	store.Set("page.html", `{% import Card from "card" %}{% import Badge from "badge" %}<Card><Badge label="New" /></Card>`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -33,8 +33,8 @@ func TestIntegration_ImportedComponentInSlotFill(t *testing.T) {
 	store := grove.NewMemoryStore()
 	// "tag" component renders a dynamic HTML element (replaces the macro)
 	store.Set("tags.html", `<Component name="Tag" name><{% name %}></Component>`)
-	store.Set("wrap.html", `<Component name="Wrap"><section><Slot /></section></Component>`)
-	store.Set("page.html", `<Import src="tags" name="Tag" /><Import src="wrap" name="Wrap" /><Wrap><Tag name="span" /></Wrap>`)
+	store.Set("wrap.html", `<Component name="Wrap"><section>{% slot %}</section></Component>`)
+	store.Set("page.html", `{% import Tag from "tags" %}{% import Wrap from "wrap" %}<Wrap><Tag name="span" /></Wrap>`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -48,8 +48,8 @@ func TestIntegration_ComponentBubblesAssetAndHoist(t *testing.T) {
 	// Asset declared and hoist emitted inside a component should appear in the
 	// top-level RenderResult, not in the component body.
 	store := grove.NewMemoryStore()
-	store.Set("widget.html", `<Component name="Widget"><ImportAsset src="widget.css" type="stylesheet" /><Hoist target="foot"><script>w()</script></Hoist><div>widget</div></Component>`)
-	store.Set("page.html", `<Import src="widget" name="Widget" /><Widget />`)
+	store.Set("widget.html", `<Component name="Widget">{% asset "widget.css" type="stylesheet" %}{% #hoist "foot" %}<script>w()</script>{% /hoist %}<div>widget</div></Component>`)
+	store.Set("page.html", `{% import Widget from "widget" %}<Widget />`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -65,8 +65,8 @@ func TestIntegration_ComponentBubblesAssetAndHoist(t *testing.T) {
 func TestIntegration_LayoutCompositionWithDataVars(t *testing.T) {
 	// Variables from render data are visible in both layout and fill content.
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base"><html><title><Slot name="title" /></title><body><Slot name="body" /></body></html></Component>`)
-	store.Set("page.html", `<Import src="base" name="Base" /><Base><Fill slot="title">{% site %} — {% page_title %}</Fill><Fill slot="body">{% content %}</Fill></Base>`)
+	store.Set("base.html", `<Component name="Base"><html><title>{% slot "title" %}</title><body>{% slot "body" %}</body></html></Component>`)
+	store.Set("page.html", `{% import Base from "base" %}<Base>{% #fill "title" %}{% site %} — {% page_title %}{% /fill %}{% #fill "body" %}{% content %}{% /fill %}</Base>`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{
@@ -84,8 +84,8 @@ func TestIntegration_ConcurrentRenders(t *testing.T) {
 	// Multiple goroutines render the same multi-template composition concurrently.
 	// Run with -race to detect data races: go test -race ./pkg/grove/...
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base">[<Slot name="title">base</Slot>|<Slot name="body" />]</Component>`)
-	store.Set("page.html", `<Import src="base" name="Base" /><Base><Fill slot="title">{% title %}</Fill><Fill slot="body">{% content %}</Fill></Base>`)
+	store.Set("base.html", `<Component name="Base">[{% #slot "title" %}base{% /slot %}|{% slot "body" %}]</Component>`)
+	store.Set("page.html", `{% import Base from "base" %}<Base>{% #fill "title" %}{% title %}{% /fill %}{% #fill "body" %}{% content %}{% /fill %}</Base>`)
 
 	eng := grove.New(grove.WithStore(store))
 	ctx := context.Background()
@@ -131,9 +131,9 @@ func TestIntegration_ConcurrentRenders(t *testing.T) {
 
 func TestIntegration_ComponentInsideLayoutFill(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base"><html><body><Slot name="content" /></body></html></Component>`)
-	store.Set("card.html", `<Component name="Card"><div><Slot /></div></Component>`)
-	store.Set("page.html", `<Import src="base" name="Base" /><Import src="card" name="Card" /><Base><Fill slot="content"><Card>hello</Card></Fill></Base>`)
+	store.Set("base.html", `<Component name="Base"><html><body>{% slot "content" %}</body></html></Component>`)
+	store.Set("card.html", `<Component name="Card"><div>{% slot %}</div></Component>`)
+	store.Set("page.html", `{% import Base from "base" %}{% import Card from "card" %}<Base>{% #fill "content" %}<Card>hello</Card>{% /fill %}</Base>`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -143,8 +143,8 @@ func TestIntegration_ComponentInsideLayoutFill(t *testing.T) {
 
 func TestIntegration_AssetInsideLayoutFill(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base"><body><Slot name="content" /></body></Component>`)
-	store.Set("child.html", `<Import src="base" name="Base" /><Base><Fill slot="content"><ImportAsset src="app.css" type="stylesheet" />content</Fill></Base>`)
+	store.Set("base.html", `<Component name="Base"><body>{% slot "content" %}</body></Component>`)
+	store.Set("child.html", `{% import Base from "base" %}<Base>{% #fill "content" %}{% asset "app.css" type="stylesheet" %}content{% /fill %}</Base>`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "child.html", grove.Data{})
@@ -155,8 +155,8 @@ func TestIntegration_AssetInsideLayoutFill(t *testing.T) {
 
 func TestIntegration_HoistInsideLayoutFill(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base"><body><Slot name="content" /></body></Component>`)
-	store.Set("child.html", `<Import src="base" name="Base" /><Base><Fill slot="content"><Hoist target="head"><style>.x{}</style></Hoist>content</Fill></Base>`)
+	store.Set("base.html", `<Component name="Base"><body>{% slot "content" %}</body></Component>`)
+	store.Set("child.html", `{% import Base from "base" %}<Base>{% #fill "content" %}{% #hoist "head" %}<style>.x{}</style>{% /hoist %}content{% /fill %}</Base>`)
 
 	eng := grove.New(grove.WithStore(store))
 	result, err := eng.Render(context.Background(), "child.html", grove.Data{})

@@ -6,14 +6,14 @@
   <div class="product-card-body">
     <h3><a href="/product/{% slug %}">{% name %}</a></h3>
     <div class="product-card-price">{% price_display | safe %}</div>
-    <If test={rating > 0}>
+    {% #if rating > 0 %}
       <div class="product-card-rating">
         {% set full = rating | floor %}
-        <For each={range(1, full)} as="i">&#9733;</For>
+        {% #each range(1, full) as i %}&#9733;{% /each %}
         <span class="text-muted">({% review_count %})</span>
       </div>
-    </If>
-    <Slot name="badge" />
+    {% /if %}
+    {% slot "badge" %}
   </div>
 </div>
 </Component>

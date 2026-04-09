@@ -1,9 +1,9 @@
 <Component name="Button" label href="#" variant="primary" type="link">
-<ImportAsset src="/js/primitives/button/button.js" type="script" />
+{% asset "/js/primitives/button/button.js" type="script" %}
 
-<If test={type == "link"}>
+{% #if type == "link" %}
   <a href="{% href %}" class="btn btn-{% variant %}" data-button>{% label %}</a>
-<Else>
+{% :else %}
   <button type="{% type %}" class="btn btn-{% variant %}" data-button>{% label %}</button>
-</If>
+{% /if %}
 </Component>

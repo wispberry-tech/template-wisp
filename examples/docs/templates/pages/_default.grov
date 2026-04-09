@@ -1,9 +1,9 @@
-<Import src="docs-layout" name="DocsLayout" />
-<Import src="partials/prev-next" name="PrevNext" />
+{% import DocsLayout from "docs-layout" %}
+{% import PrevNext from "partials/prev-next" %}
 
 <DocsLayout sections={sections} all_pages={all_pages} current_slug={current_slug} breadcrumbs={breadcrumbs}>
-  <Fill slot="content">
-    <SetMeta name="description" content="Grove template engine documentation" />
+  {% #fill "content" %}
+    {% meta name="description" content="Grove template engine documentation" %}
 
     <article class="doc-page">
       <h1>{% page.title %}</h1>
@@ -13,5 +13,5 @@
     </article>
 
     <PrevNext prev={prev} next={next} />
-  </Fill>
+  {% /fill %}
 </DocsLayout>

@@ -148,7 +148,7 @@ func (l *lx) lexTag() error {
 		l.stripLastTextRight()
 	}
 
-	// Peek at tag name to detect {% raw %}
+	// Peek at tag name to detect {% raw %} or {% #verbatim %}
 	savedPos, savedLine, savedCol := l.pos, l.line, l.col
 	l.skipSpaces()
 	if strings.HasPrefix(l.src[l.pos:], "raw") && !l.isIdentContinue(l.pos+3) {
@@ -164,10 +164,37 @@ func (l *lx) lexTag() error {
 		l.col += 2
 		return l.lexRawContent(line, stripLeft, stripTagRight)
 	}
-	// Restore: not a raw tag
+	if strings.HasPrefix(l.src[l.pos:], "#verbatim") && !l.isIdentContinue(l.pos+9) {
+		l.pos += 9
+		l.col += 9
+		l.skipSpaces()
+		stripTagRight := l.consumeIf('-')
+		if !l.hasPrefix("%}") {
+			return &lexErr{line: line, msg: "expected %} after #verbatim"}
+		}
+		l.pos += 2
+		l.col += 2
+		return l.lexVerbatimTagContent(line, stripLeft, stripTagRight)
+	}
+	// Restore: not a raw/verbatim tag
 	l.pos, l.line, l.col = savedPos, savedLine, savedCol
 
 	l.tokens = append(l.tokens, Token{Kind: TK_TAG_START, Value: "{%", Line: line, Col: col, StripLeft: stripLeft})
+
+	// Check for sigil as the FIRST token after {%: #keyword, :keyword, /keyword
+	l.skipSpaces()
+	if l.pos < len(l.src) {
+		ch := l.src[l.pos]
+		if (ch == '#' || ch == ':' || ch == '/') && l.pos+1 < len(l.src) {
+			next := l.src[l.pos+1]
+			if next == '_' || (next >= 'a' && next <= 'z') || (next >= 'A' && next <= 'Z') {
+				if err := l.lexSigil(ch, l.line, l.col); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
 	return l.lexInner("%}")
 }
 
@@ -401,6 +428,54 @@ func (l *lx) lexVerbatimContent(startLine int) error {
 		l.advance()
 	}
 	return &lexErr{line: startLine, msg: "unclosed <Verbatim> block"}
+}
+
+func (l *lx) lexVerbatimTagContent(startLine int, stripTagLeft, stripTagRight bool) error {
+	if stripTagRight {
+		l.stripNext = true
+	}
+	contentStart := l.pos
+	for l.pos < len(l.src) {
+		if l.hasPrefix("{%") {
+			saved := l.pos
+			savedLine := l.line
+			savedCol := l.col
+			l.pos += 2
+			l.col += 2
+			_ = l.consumeIf('-')
+			l.skipSpaces()
+			if strings.HasPrefix(l.src[l.pos:], "/verbatim") && !l.isIdentContinue(l.pos+9) {
+				content := l.src[contentStart:saved]
+				l.pos += 9
+				l.col += 9
+				l.skipSpaces()
+				stripR := l.consumeIf('-')
+				if !l.hasPrefix("%}") {
+					return &lexErr{line: l.line, msg: "expected %} after /verbatim"}
+				}
+				l.pos += 2
+				l.col += 2
+				if stripTagRight {
+					content = strings.TrimLeft(content, " \t\r\n")
+				}
+				if stripR {
+					content = strings.TrimRight(content, " \t\r\n")
+				}
+				if content != "" {
+					l.tokens = append(l.tokens, Token{Kind: TK_TEXT, Value: content, Line: startLine + 1})
+				}
+				if stripR {
+					l.stripNext = true
+				}
+				return nil
+			}
+			l.pos = saved
+			l.line = savedLine
+			l.col = savedCol
+		}
+		l.advance()
+	}
+	return &lexErr{line: startLine, msg: "unclosed verbatim block"}
 }
 
 // ─── Comment {# #} ────────────────────────────────────────────────────────────
@@ -641,6 +716,34 @@ func (l *lx) lexIdent() error {
 		kind = TK_IN
 	}
 	l.tokens = append(l.tokens, Token{Kind: kind, Value: val, Line: line, Col: col})
+	return nil
+}
+
+// ─── Sigil tokens ────────────────────────────────────────────────────────────
+
+func (l *lx) lexSigil(sigil byte, line, col int) error {
+	l.pos++ // consume sigil character
+	l.col++
+
+	// Read the keyword that follows
+	kwStart := l.pos
+	for l.pos < len(l.src) && l.isIdentChar(l.pos) {
+		l.pos++
+		l.col++
+	}
+	kw := l.src[kwStart:l.pos]
+
+	var kind TokenKind
+	switch sigil {
+	case '#':
+		kind = TK_BLOCK_OPEN
+	case ':':
+		kind = TK_BLOCK_BRANCH
+	case '/':
+		kind = TK_BLOCK_CLOSE
+	}
+
+	l.tokens = append(l.tokens, Token{Kind: kind, Value: kw, Line: line, Col: col})
 	return nil
 }
 

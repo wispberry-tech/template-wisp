@@ -1,34 +1,34 @@
 <Component name="Price" amount sale_amount>
-  <If test={sale_amount > 0}>
+  {% #if sale_amount > 0 %}
     <span class="price-strike">{% amount | currency %}</span>
     <span class="price-sale">{% sale_amount | currency %}</span>
-  <Else>
+  {% :else %}
     <span class="price-regular">{% amount | currency %}</span>
-  </If>
+  {% /if %}
 </Component>
 
 <Component name="StarRating" rating count>
   {% set full = rating | floor %}
   {% set half = rating - full >= 0.5 ? 1 : 0 %}
   <span class="stars">
-    <For each={range(1, full)} as="i">&#9733;</For><If test={half}>&#9734;</If>
+    {% #each range(1, full) as i %}&#9733;{% /each %}{% #if half %}&#9734;{% /if %}
   </span>
   <span class="review-count">({% count %} {% count == 1 ? "review" : "reviews" %})</span>
 </Component>
 
 <Component name="DiscountBadge" price sale_price>
-  <If test={sale_price > 0}>
-    {% let %}
+  {% #if sale_price > 0 %}
+    {% #let %}
       pct = ((price - sale_price) * 100) / price
-    {% endlet %}
+    {% /let %}
     <span class="badge badge-sale">{% pct | floor %}% off</span>
-  </If>
+  {% /if %}
 </Component>
 
 <Component name="StockBadge" in_stock>
-  <If test={in_stock}>
+  {% #if in_stock %}
     <span class="badge badge-in-stock">In Stock</span>
-  <Else>
+  {% :else %}
     <span class="badge badge-out-of-stock">Out of Stock</span>
-  </If>
+  {% /if %}
 </Component>

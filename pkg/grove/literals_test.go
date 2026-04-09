@@ -34,7 +34,7 @@ func TestListLiteral_TrailingComma(t *testing.T) {
 
 func TestListLiteral_InFor(t *testing.T) {
 	eng := newEngine(t)
-	got := render(t, eng, `<For each={["a","b","c"]} as="x">{% x %}</For>`, grove.Data{})
+	got := render(t, eng, `{% #each ["a","b","c"] as x %}{% x %}{% /each %}`, grove.Data{})
 	require.Equal(t, "abc", got)
 }
 
@@ -99,7 +99,7 @@ func TestListInMap(t *testing.T) {
 func TestMapLiteral_InsertionOrder(t *testing.T) {
 	eng := newEngine(t)
 	got := render(t, eng,
-		`<For each={{z: 1, a: 2, m: 3}} as="v" key="k">{% k %}={% v %},</For>`,
+		`{% #each {z: 1, a: 2, m: 3} as v, k %}{% k %}={% v %},{% /each %}`,
 		grove.Data{})
 	require.Equal(t, "z=1,a=2,m=3,", got)
 }

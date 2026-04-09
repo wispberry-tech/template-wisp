@@ -1,22 +1,22 @@
-<Import src="base" name="Base" />
+{% import Base from "base" %}
 
 <Base sections={sections}>
-  <Fill slot="title">{% site_name %} &mdash; Grove Template Engine Documentation</Fill>
-  <Fill slot="content">
-    <SetMeta name="description" content="Documentation for the Grove template engine for Go." />
+  {% #fill "title" %}{% site_name %} &mdash; Grove Template Engine Documentation{% /fill %}
+  {% #fill "content" %}
+    {% meta name="description" content="Documentation for the Grove template engine for Go." %}
 
     <div class="landing">
       <h1>Grove Documentation</h1>
       <p class="landing-subtitle">A bytecode-compiled template engine for Go with components, inheritance, and web primitives.</p>
 
       <div class="section-grid">
-        <For each={sections} as="section">
+        {% #each sections as section %}
           <a href="/docs/{% section.slug %}" class="section-card">
             <h2>{% section.name %}</h2>
             <p>{% section.description %}</p>
           </a>
-        </For>
+        {% /each %}
       </div>
     </div>
-  </Fill>
+  {% /fill %}
 </Base>

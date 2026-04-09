@@ -1,28 +1,28 @@
-<Import src="base" name="Base" />
-<Import src="macros/pricing" name="Price" />
-<Import src="composites/breadcrumbs/breadcrumbs" name="Breadcrumbs" />
-<Import src="composites/product-card/product-card" name="ProductCard" />
+{% import Base from "base" %}
+{% import Price from "macros/pricing" %}
+{% import Breadcrumbs from "composites/breadcrumbs/breadcrumbs" %}
+{% import ProductCard from "composites/product-card/product-card" %}
 
 <Base>
-  <Fill slot="title">Search: "{% query %}" &mdash; {% site_name %}</Fill>
+  {% #fill "title" %}Search: "{% query %}" &mdash; {% site_name %}{% /fill %}
 
-  <Fill slot="content">
+  {% #fill "content" %}
     <Breadcrumbs breadcrumbs={breadcrumbs} />
 
     <h1>Search Results</h1>
-    <If test={query}>
+    {% #if query %}
       <p class="result-count">{% result_count %} {% result_count == 1 ? "result" : "results" %} for "{% query %}"</p>
-    </If>
+    {% /if %}
 
     <div class="product-grid">
-      <For each={products} as="product">
-        <Capture name="price_html">
+      {% #each products as product %}
+        {% #capture price_html %}
           <Price amount={product.price} sale_amount={product.sale_price} />
-        </Capture>
+        {% /capture %}
         <ProductCard name={product.name} slug={product.slug} image_url={product.image_url} price_display={price_html} rating={product.rating} review_count={product.review_count} />
-      <Empty>
+      {% :empty %}
         <p class="empty-state">No products found. Try a different search term.</p>
-      </For>
+      {% /each %}
     </div>
-  </Fill>
+  {% /fill %}
 </Base>

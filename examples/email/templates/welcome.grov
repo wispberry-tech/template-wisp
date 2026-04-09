@@ -1,16 +1,16 @@
-<Import src="base-email" name="BaseEmail" />
-<Import src="helpers" name="*" as="H" />
+{% import BaseEmail from "base-email" %}
+{% import * as H from "helpers" %}
 
 <BaseEmail>
-  <Fill slot="title">Welcome to Grove Cloud</Fill>
+  {% #fill "title" %}Welcome to Grove Cloud{% /fill %}
 
-  <Hoist target="preheader">Welcome aboard, {% user.name | default("there") %}! Here's how to get started with Grove Cloud.</Hoist>
+  {% #hoist "preheader" %}Welcome aboard, {% user.name | default("there") %}! Here's how to get started with Grove Cloud.{% /hoist %}
 
-  <Fill slot="body">
-    <Capture name="greeting_block">
+  {% #fill "body" %}
+    {% #capture greeting_block %}
       <p style="font-size: 18px;">Hi {% user.name | default("there") %},</p>
       <p>Welcome to <strong>Grove Cloud</strong>! We're excited to have you on board.</p>
-    </Capture>
+    {% /capture %}
 
     {% greeting_block | safe %}
 
@@ -19,14 +19,14 @@
     <H.Heading text={"Get Started in 3 Steps"} />
 
     <table cellpadding="0" cellspacing="0" border="0" width="100%">
-      {% let %}
+      {% #let %}
         steps = [
           {num: "1", title: "Set up your workspace", desc: "Create your first project and invite your team."},
           {num: "2", title: "Connect your tools", desc: "Integrate with GitHub, Slack, and your CI pipeline."},
           {num: "3", title: "Deploy your first template", desc: "Use our CLI or API to push templates to production."}
         ]
-      {% endlet %}
-      <For each={steps} as="step">
+      {% /let %}
+      {% #each steps as step %}
         <tr>
           <td style="padding: 12px 0; vertical-align: top;">
             <span style="display: inline-block; width: 32px; height: 32px; background-color: #2E6740; color: #fff; border-radius: 50%; text-align: center; line-height: 32px; font-weight: bold; margin-right: 12px;">{% step.num %}</span>
@@ -36,7 +36,7 @@
             <span style="color: #666;">{% step.desc %}</span>
           </td>
         </tr>
-      </For>
+      {% /each %}
     </table>
 
     <H.Spacer height="8" />
@@ -44,5 +44,5 @@
 
     <H.Divider />
     <p style="color: #666; font-size: 14px;">Questions? Reply to this email or visit our <a href="https://app.grovecloud.io/help" style="color: #2E6740;">Help Center</a>.</p>
-  </Fill>
+  {% /fill %}
 </BaseEmail>

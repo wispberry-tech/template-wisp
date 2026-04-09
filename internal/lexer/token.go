@@ -52,7 +52,11 @@ const (
 	TK_LBRACE   // { (map literal)
 	TK_RBRACE   // } (map literal)
 	TK_IN   // in   (for...in)
-	// PascalCase element tokens (HTML-centric syntax)
+	// Svelte-style sigil tokens inside {% %}
+	TK_BLOCK_OPEN   // #keyword  (Value = keyword, e.g. "if", "each", "fill")
+	TK_BLOCK_BRANCH // :keyword  (Value = keyword, e.g. "else", "empty")
+	TK_BLOCK_CLOSE  // /keyword  (Value = keyword, e.g. "if", "each", "fill")
+	// PascalCase element tokens (components only)
 	TK_ELEMENT_OPEN  // <Name (Value = element name)
 	TK_ELEMENT_CLOSE // </Name> (Value = element name)
 	TK_ELEMENT_END   // >

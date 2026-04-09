@@ -4,14 +4,14 @@
     <a href="{% href %}">{% title %}</a>
   </h2>
   <div class="card-meta">
-    <If test={date}><time>{% date %}</time></If>
-    <If test={author_name}>
+    {% #if date %}<time>{% date %}</time>{% /if %}
+    {% #if author_name %}
       <span class="card-author">by <a href="/author/{% author_slug %}">{% author_name %}</a></span>
-    </If>
+    {% /if %}
   </div>
   <p class="card-summary">{% summary | truncate(150) %}</p>
   <div class="card-tags">
-    <Slot name="tags" />
+    {% slot "tags" %}
   </div>
 </article>
 </Component>

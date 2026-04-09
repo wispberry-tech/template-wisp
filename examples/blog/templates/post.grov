@@ -1,23 +1,23 @@
-<Import src="base" name="Base" />
-<Import src="composites/breadcrumbs/breadcrumbs" name="Breadcrumbs" />
-<Import src="composites/card" name="Card" />
-<Import src="composites/author-card" name="AuthorCard" />
-<Import src="primitives/tag-badge" name="TagBadge" />
+{% import Base from "base" %}
+{% import Breadcrumbs from "composites/breadcrumbs/breadcrumbs" %}
+{% import Card from "composites/card" %}
+{% import AuthorCard from "composites/author-card" %}
+{% import TagBadge from "primitives/tag-badge" %}
 
 <Base>
-  <Fill slot="title">{% post.title %} &mdash; Grove Blog</Fill>
+  {% #fill "title" %}{% post.title %} &mdash; Grove Blog{% /fill %}
 
-  <Fill slot="content">
-    <SetMeta name="description" content="A blog post on Grove Blog" />
-    <SetMeta property="og:title" content="Grove Blog Post" />
+  {% #fill "content" %}
+    {% meta name="description" content="A blog post on Grove Blog" %}
+    {% meta property="og:title" content="Grove Blog Post" %}
 
     <Breadcrumbs />
 
-    <If test={post.draft}>
+    {% #if post.draft %}
       <div class="notice notice-warning">
         This post is a <strong>draft</strong> and is not yet published.
       </div>
-    </If>
+    {% /if %}
 
     <article class="article">
       <header class="article-header">
@@ -29,9 +29,9 @@
           </span>
         </div>
         <div class="tag-list">
-          <For each={post.tags} as="tag">
+          {% #each post.tags as tag %}
             <TagBadge label={tag.name} color={tag.color} slug={tag.slug} />
-          </For>
+          {% /each %}
         </div>
       </header>
 
@@ -42,25 +42,25 @@
 
     <AuthorCard name={post.author.name} slug={post.author.slug} bio={post.author.bio} avatar_url={post.author.avatar_url} role={post.author.role} />
 
-    <If test={related_posts | length > 0}>
+    {% #if related_posts | length > 0 %}
       <section class="related-posts">
         <h2>Related Posts</h2>
         <div class="post-grid">
-          <For each={related_posts} as="rp">
+          {% #each related_posts as rp %}
             <Card title={rp.title} summary={rp.summary} href={"/post/" ~ rp.slug} date={rp.date}>
-              <Fill slot="tags">
-                <For each={rp.tags} as="tag">
+              {% #fill "tags" %}
+                {% #each rp.tags as tag %}
                   <TagBadge label={tag.name} color={tag.color} slug={tag.slug} />
-                </For>
-              </Fill>
+                {% /each %}
+              {% /fill %}
             </Card>
-          </For>
+          {% /each %}
         </div>
       </section>
-    </If>
+    {% /if %}
 
     <div class="back-link">
       <a href="/">&larr; Back to all posts</a>
     </div>
-  </Fill>
+  {% /fill %}
 </Base>

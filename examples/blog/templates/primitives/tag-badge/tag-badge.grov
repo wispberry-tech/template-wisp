@@ -1,7 +1,7 @@
 <Component name="TagBadge" label color="gray" slug="">
-<If test={slug}>
+{% #if slug %}
   <a href="/tag/{% slug %}" class="tag tag-{% color %}">{% label %}</a>
-<Else>
+{% :else %}
   <span class="tag tag-{% color %}">{% label %}</span>
-</If>
+{% /if %}
 </Component>

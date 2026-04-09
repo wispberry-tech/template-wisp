@@ -32,8 +32,8 @@ func renderLayoutErr(t *testing.T, store *grove.MemoryStore, name string, data g
 
 func TestLayout_ChildOverridesSlot(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base"><html><body><Slot name="content">base</Slot></body></html></Component>`)
-	store.Set("child.html", `<Import src="base" name="Base" /><Base><Fill slot="content">child</Fill></Base>`)
+	store.Set("base.html", `<Component name="Base"><html><body>{% #slot "content" %}base{% /slot %}</body></html></Component>`)
+	store.Set("child.html", `{% import Base from "base" %}<Base>{% #fill "content" %}child{% /fill %}</Base>`)
 	require.Equal(t, "<html><body>child</body></html>", renderLayout(t, store, "child.html", grove.Data{}))
 }
 
@@ -41,8 +41,8 @@ func TestLayout_ChildOverridesSlot(t *testing.T) {
 
 func TestLayout_MultipleSlots(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base">[<Slot name="a">A</Slot>|<Slot name="b">B</Slot>]</Component>`)
-	store.Set("child.html", `<Import src="base" name="Base" /><Base><Fill slot="a">X</Fill><Fill slot="b">Y</Fill></Base>`)
+	store.Set("base.html", `<Component name="Base">[{% #slot "a" %}A{% /slot %}|{% #slot "b" %}B{% /slot %}]</Component>`)
+	store.Set("child.html", `{% import Base from "base" %}<Base>{% #fill "a" %}X{% /fill %}{% #fill "b" %}Y{% /fill %}</Base>`)
 	require.Equal(t, "[X|Y]", renderLayout(t, store, "child.html", grove.Data{}))
 }
 
@@ -50,8 +50,8 @@ func TestLayout_MultipleSlots(t *testing.T) {
 
 func TestLayout_PartialSlotOverride(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base">[<Slot name="a">A</Slot>|<Slot name="b">B</Slot>]</Component>`)
-	store.Set("child.html", `<Import src="base" name="Base" /><Base><Fill slot="a">X</Fill></Base>`)
+	store.Set("base.html", `<Component name="Base">[{% #slot "a" %}A{% /slot %}|{% #slot "b" %}B{% /slot %}]</Component>`)
+	store.Set("child.html", `{% import Base from "base" %}<Base>{% #fill "a" %}X{% /fill %}</Base>`)
 	require.Equal(t, "[X|B]", renderLayout(t, store, "child.html", grove.Data{}))
 }
 
@@ -59,8 +59,8 @@ func TestLayout_PartialSlotOverride(t *testing.T) {
 
 func TestLayout_SlotFallback(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base"><Slot name="footer">Default Footer</Slot></Component>`)
-	store.Set("child.html", `<Import src="base" name="Base" /><Base></Base>`)
+	store.Set("base.html", `<Component name="Base">{% #slot "footer" %}Default Footer{% /slot %}</Component>`)
+	store.Set("child.html", `{% import Base from "base" %}<Base></Base>`)
 	require.Equal(t, "Default Footer", renderLayout(t, store, "child.html", grove.Data{}))
 }
 
@@ -70,14 +70,14 @@ func TestLayout_SlotFallback(t *testing.T) {
 
 func TestLayout_SlotFallbackContent(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base"><Slot name="title">Base Title</Slot></Component>`)
+	store.Set("base.html", `<Component name="Base">{% #slot "title" %}Base Title{% /slot %}</Component>`)
 
 	// Without a Fill, fallback renders.
-	store.Set("nofill.html", `<Import src="base" name="Base" /><Base></Base>`)
+	store.Set("nofill.html", `{% import Base from "base" %}<Base></Base>`)
 	require.Equal(t, "Base Title", renderLayout(t, store, "nofill.html", grove.Data{}))
 
 	// With a Fill, fallback is completely replaced (no way to "append" like super).
-	store.Set("withfill.html", `<Import src="base" name="Base" /><Base><Fill slot="title">Child Title</Fill></Base>`)
+	store.Set("withfill.html", `{% import Base from "base" %}<Base>{% #fill "title" %}Child Title{% /fill %}</Base>`)
 	require.Equal(t, "Child Title", renderLayout(t, store, "withfill.html", grove.Data{}))
 }
 
@@ -85,8 +85,8 @@ func TestLayout_SlotFallbackContent(t *testing.T) {
 
 func TestLayout_DataPassedThrough(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base"><title><Slot name="title"></Slot></title></Component>`)
-	store.Set("child.html", `<Import src="base" name="Base" /><Base><Fill slot="title">{% page %}</Fill></Base>`)
+	store.Set("base.html", `<Component name="Base"><title>{% slot "title" %}</title></Component>`)
+	store.Set("child.html", `{% import Base from "base" %}<Base>{% #fill "title" %}{% page %}{% /fill %}</Base>`)
 	require.Equal(t, "<title>Home</title>", renderLayout(t, store, "child.html", grove.Data{"page": "Home"}))
 }
 
@@ -94,8 +94,8 @@ func TestLayout_DataPassedThrough(t *testing.T) {
 
 func TestLayout_ContentOutsideSlotsRendered(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base">BEFORE<Slot name="x">default</Slot>AFTER</Component>`)
-	store.Set("child.html", `<Import src="base" name="Base" /><Base><Fill slot="x">override</Fill></Base>`)
+	store.Set("base.html", `<Component name="Base">BEFORE{% #slot "x" %}default{% /slot %}AFTER</Component>`)
+	store.Set("child.html", `{% import Base from "base" %}<Base>{% #fill "x" %}override{% /fill %}</Base>`)
 	require.Equal(t, "BEFOREoverrideAFTER", renderLayout(t, store, "child.html", grove.Data{}))
 }
 
@@ -103,9 +103,9 @@ func TestLayout_ContentOutsideSlotsRendered(t *testing.T) {
 
 func TestLayout_NestedComposition(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("root.html", `<Component name="Root">[<Slot name="a">root</Slot>]</Component>`)
-	store.Set("mid.html", `<Import src="root" name="Root" /><Component name="Mid"><Root><Fill slot="a"><Slot name="content">mid</Slot></Fill></Root></Component>`)
-	store.Set("leaf.html", `<Import src="mid" name="Mid" /><Mid><Fill slot="content">leaf</Fill></Mid>`)
+	store.Set("root.html", `<Component name="Root">[{% #slot "a" %}root{% /slot %}]</Component>`)
+	store.Set("mid.html", `{% import Root from "root" %}<Component name="Mid"><Root>{% #fill "a" %}{% #slot "content" %}mid{% /slot %}{% /fill %}</Root></Component>`)
+	store.Set("leaf.html", `{% import Mid from "mid" %}<Mid>{% #fill "content" %}leaf{% /fill %}</Mid>`)
 	require.Equal(t, "[leaf]", renderLayout(t, store, "leaf.html", grove.Data{}))
 }
 
@@ -113,9 +113,9 @@ func TestLayout_NestedComposition(t *testing.T) {
 
 func TestLayout_NestedCompositionWithWrapper(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("grandparent.html", `<Component name="Root"><html><Slot name="body">Root default</Slot></html></Component>`)
-	store.Set("parent.html", `<Import src="grandparent" name="Root" /><Component name="Mid"><Root><Fill slot="body"><div class="mid"><Slot name="content">Mid default</Slot></div></Fill></Root></Component>`)
-	store.Set("child.html", `<Import src="parent" name="Mid" /><Mid><Fill slot="content">Leaf content</Fill></Mid>`)
+	store.Set("grandparent.html", `<Component name="Root"><html>{% #slot "body" %}Root default{% /slot %}</html></Component>`)
+	store.Set("parent.html", `{% import Root from "grandparent" %}<Component name="Mid"><Root>{% #fill "body" %}<div class="mid">{% #slot "content" %}Mid default{% /slot %}</div>{% /fill %}</Root></Component>`)
+	store.Set("child.html", `{% import Mid from "parent" %}<Mid>{% #fill "content" %}Leaf content{% /fill %}</Mid>`)
 	require.Equal(t, `<html><div class="mid">Leaf content</div></html>`, renderLayout(t, store, "child.html", grove.Data{}))
 }
 
@@ -123,9 +123,9 @@ func TestLayout_NestedCompositionWithWrapper(t *testing.T) {
 
 func TestLayout_NestedCompositionFallback(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("root.html", `<Component name="Root">[<Slot name="a">root</Slot>]</Component>`)
-	store.Set("mid.html", `<Import src="root" name="Root" /><Component name="Mid"><Root><Fill slot="a"><Slot name="content">mid-default</Slot></Fill></Root></Component>`)
-	store.Set("leaf.html", `<Import src="mid" name="Mid" /><Mid></Mid>`)
+	store.Set("root.html", `<Component name="Root">[{% #slot "a" %}root{% /slot %}]</Component>`)
+	store.Set("mid.html", `{% import Root from "root" %}<Component name="Mid"><Root>{% #fill "a" %}{% #slot "content" %}mid-default{% /slot %}{% /fill %}</Root></Component>`)
+	store.Set("leaf.html", `{% import Mid from "mid" %}<Mid></Mid>`)
 	require.Equal(t, "[mid-default]", renderLayout(t, store, "leaf.html", grove.Data{}))
 }
 
@@ -133,8 +133,8 @@ func TestLayout_NestedCompositionFallback(t *testing.T) {
 
 func TestLayout_NestedSlots(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base"><Slot name="outer">[<Slot name="inner">inner-default</Slot>]</Slot></Component>`)
-	store.Set("child.html", `<Import src="base" name="Base" /><Base><Fill slot="inner">inner-override</Fill></Base>`)
+	store.Set("base.html", `<Component name="Base">{% #slot "outer" %}[{% #slot "inner" %}inner-default{% /slot %}]{% /slot %}</Component>`)
+	store.Set("child.html", `{% import Base from "base" %}<Base>{% #fill "inner" %}inner-override{% /fill %}</Base>`)
 	require.Equal(t, "[inner-override]", renderLayout(t, store, "child.html", grove.Data{}))
 }
 
@@ -158,7 +158,7 @@ func TestLayout_ExtendsInInlineTemplate(t *testing.T) {
 
 func TestLayout_MissingImportTarget(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("child.html", `<Import src="missing" name="Layout" /><Layout></Layout>`)
+	store.Set("child.html", `{% import Layout from "missing" %}<Layout></Layout>`)
 	err := renderLayoutErr(t, store, "child.html", grove.Data{})
 	require.Error(t, err)
 }
@@ -167,8 +167,8 @@ func TestLayout_MissingImportTarget(t *testing.T) {
 
 func TestLayout_StandaloneRender(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("base.html", `<Component name="Base"><nav>nav</nav><Slot name="content">default</Slot><footer>foot</footer></Component>`)
-	store.Set("page.html", `<Import src="base" name="Base" /><Base></Base>`)
+	store.Set("base.html", `<Component name="Base"><nav>nav</nav>{% #slot "content" %}default{% /slot %}<footer>foot</footer></Component>`)
+	store.Set("page.html", `{% import Base from "base" %}<Base></Base>`)
 	require.Equal(t, "<nav>nav</nav>default<footer>foot</footer>", renderLayout(t, store, "page.html", grove.Data{}))
 }
 
@@ -176,9 +176,9 @@ func TestLayout_StandaloneRender(t *testing.T) {
 
 func TestLayout_FourLevelChain(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("gp.html", `<Component name="GP">[<Slot name="x">gp</Slot>]</Component>`)
-	store.Set("p.html", `<Import src="gp" name="GP" /><Component name="P"><GP><Fill slot="x"><Slot name="x">p</Slot></Fill></GP></Component>`)
-	store.Set("c.html", `<Import src="p" name="P" /><Component name="C"><P><Fill slot="x"><Slot name="x">c</Slot></Fill></P></Component>`)
-	store.Set("gc.html", `<Import src="c" name="C" /><C><Fill slot="x">gc</Fill></C>`)
+	store.Set("gp.html", `<Component name="GP">[{% #slot "x" %}gp{% /slot %}]</Component>`)
+	store.Set("p.html", `{% import GP from "gp" %}<Component name="P"><GP>{% #fill "x" %}{% #slot "x" %}p{% /slot %}{% /fill %}</GP></Component>`)
+	store.Set("c.html", `{% import P from "p" %}<Component name="C"><P>{% #fill "x" %}{% #slot "x" %}c{% /slot %}{% /fill %}</P></Component>`)
+	store.Set("gc.html", `{% import C from "c" %}<C>{% #fill "x" %}gc{% /fill %}</C>`)
 	require.Equal(t, "[gc]", renderLayout(t, store, "gc.html", grove.Data{}))
 }

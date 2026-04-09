@@ -1,24 +1,24 @@
 <Component name="Sidebar" sections all_pages current_slug>
 <nav class="sidebar-nav">
-  <For each={sections} as="section">
+  {% #each sections as section %}
     {% set section_slug = section.slug %}
     <div class="sidebar-section">
       <h3 class="sidebar-section-title">
         <a href="/docs/{% section_slug %}">{% section.name %}</a>
       </h3>
       <ul class="sidebar-page-list">
-        <For each={all_pages} as="pg">
-          <If test={pg.section_slug == section_slug}>
+        {% #each all_pages as pg %}
+          {% #if pg.section_slug == section_slug %}
             {% set href = "/docs/" ~ section_slug ~ "/" ~ pg.slug %}
-            <If test={pg.slug == current_slug}>
+            {% #if pg.slug == current_slug %}
               <li><a href="{% href %}" class="sidebar-active">{% pg.title %}</a></li>
-            <Else>
+            {% :else %}
               <li><a href="{% href %}">{% pg.title %}</a></li>
-            </If>
-          </If>
-        </For>
+            {% /if %}
+          {% /if %}
+        {% /each %}
       </ul>
     </div>
-  </For>
+  {% /each %}
 </nav>
 </Component>
