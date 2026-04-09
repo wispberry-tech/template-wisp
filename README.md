@@ -39,31 +39,31 @@ func main() {
 
 ## Template Language
 
-Grove templates use `{% %}` as the single delimiter and PascalCase elements for control flow and composition:
+Grove templates use a single `{% %}` delimiter for server operations (control flow, assignment, composition) and PascalCase elements for components:
 
 ```html
-<Import src="base" name="Base" />
-<Import src="composites/card" name="Card" />
+{% import Base from "layouts/base" %}
+{% import Card from "composites/card" %}
 
 <Base>
-  <Fill slot="content">
-    <ImportAsset src="/static/page.css" type="stylesheet" />
-    <SetMeta name="description" content="Latest posts" />
+  {% #fill "content" %}
+    {% asset "/static/page.css" type="stylesheet" %}
+    {% meta name="description" content="Latest posts" %}
 
     <h1>{% title | upper %}</h1>
 
-    <For each={posts} as="post">
+    {% #each posts as post %}
       <Card title={post.title} date={post.date}>
-        <Fill slot="tags">
-          <For each={post.tags} as="tag">
+        {% #fill "tags" %}
+          {% #each post.tags as tag %}
             <span class="{% tag.draft ? "muted" : "active" %}">{% tag.name %}</span>
-          </For>
-        </Fill>
+          {% /each %}
+        {% /fill %}
       </Card>
-    <Empty />
+    {% :empty %}
       <p>No posts yet.</p>
-    </For>
-  </Fill>
+    {% /each %}
+  {% /fill %}
 </Base>
 ```
 
@@ -72,12 +72,12 @@ Grove templates use `{% %}` as the single delimiter and PascalCase elements for 
 | Category | Syntax |
 |----------|--------|
 | **Output** | `{% expr %}`, `{% value \| filter %}`, `{% cond ? a : b %}` |
-| **Control flow** | `<If>` / `<ElseIf>` / `<Else>`, `<For>` / `<Empty>`, `range()` |
-| **Assignment** | `{% set %}`, `{% let %}` (multi-variable with conditionals), `<Capture>` |
-| **Components** | `<Component>`, `<Import>`, `<Slot>`, `<Fill>` |
-| **Web primitives** | `<ImportAsset>`, `<SetMeta>`, `<Hoist>` |
+| **Control flow** | `{% #if %}`/`{% :else if %}`/`{% :else %}`/`{% /if %}`, `{% #each %}`/`{% :empty %}`/`{% /each %}` |
+| **Assignment** | `{% set %}`, `{% #let %}`/`{% /let %}` (multi-variable), `{% #capture %}`/`{% /capture %}` |
+| **Components** | `<Component>`, `{% import %}`, `{% slot %}`, `{% #fill %}`/`{% /fill %}` |
+| **Web primitives** | `{% asset %}`, `{% meta %}`, `{% #hoist %}`/`{% /hoist %}` |
 | **Data literals** | `[1, 2, 3]`, `{key: "value"}` |
-| **Other** | `{# comment #}`, `<Verbatim>`, whitespace control (`{%- -%}`) |
+| **Other** | `{# comment #}`, `{% #verbatim %}`/`{% /verbatim %}`, whitespace control (`{%- -%}`) |
 
 ### Built-in Filters
 
@@ -96,11 +96,11 @@ Grove templates use `{% %}` as the single delimiter and PascalCase elements for 
 | Feature | Description |
 |---------|-------------|
 | **Bytecode compilation** | Templates compile to bytecode and run on a stack-based VM. Compiled bytecode is immutable and shared across goroutines. |
-| **Components** | `<Component>` definitions with props, `<Slot>`, and `<Fill>`. Fills see the caller's scope, not the component's. Scoped slots pass data back to callers. |
+| **Components** | `<Component>` definitions with props, `{% slot %}`, and `{% #fill %}`. Fills see the caller's scope, not the component's. Scoped slots pass data back to callers. |
 | **Layouts** | Layouts are components with named slots — no special inheritance system. Compose layouts to any depth. |
-| **Imports** | `<Import>` brings components into scope. Supports multi-import, wildcard, aliases, and namespaces. |
-| **Web primitives** | `<ImportAsset>`, `<SetMeta>`, and `<Hoist>` collect resources during rendering. `RenderResult` returns them for assembly into the final HTML response. |
-| **Auto-escaping** | HTML output is escaped by default. `safe` filter and `<Verbatim>` blocks bypass it for trusted content. |
+| **Imports** | `{% import %}` brings components into scope. |
+| **Web primitives** | `{% asset %}`, `{% meta %}`, and `{% #hoist %}` collect resources during rendering. `RenderResult` returns them for assembly into the final HTML response. |
+| **Auto-escaping** | HTML output is escaped by default. `safe` filter and `{% #verbatim %}` blocks bypass it for trusted content. |
 | **Sandboxing** | Restrict allowed tags, filters, and loop iterations per engine. |
 
 ## Documentation

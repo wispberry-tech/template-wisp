@@ -9,16 +9,16 @@ See [Components — Layouts via Components](components.md#layouts-via-components
 Define a layout as a component:
 
 ```html
-{# base.html #}
+{# base.grov #}
 <Component name="Base">
   <!DOCTYPE html>
   <html>
   <head>
-    <title><Slot name="title">My Site</Slot></title>
+    <title>{% #slot "title" %}My Site{% /slot %}</title>
   </head>
   <body>
-    <main><Slot name="content" /></main>
-    <footer><Slot name="footer">&copy; 2026</Slot></footer>
+    <main>{% slot "content" %}</main>
+    <footer>{% #slot "footer" %}&copy; 2026{% /slot %}</footer>
   </body>
   </html>
 </Component>
@@ -27,13 +27,13 @@ Define a layout as a component:
 Pages import and fill slots:
 
 ```html
-{# home.html #}
-<Import src="base" name="Base" />
+{# home.grov #}
+{% import Base from "base" %}
 <Base>
-  <Fill slot="title">Home — My Site</Fill>
-  <Fill slot="content">
+  {% #fill "title" %}Home — My Site{% /fill %}
+  {% #fill "content" %}
     <h1>Welcome</h1>
-  </Fill>
+  {% /fill %}
 </Base>
 ```
 
@@ -42,24 +42,24 @@ Pages import and fill slots:
 Layouts can compose other layouts:
 
 ```html
-{# section.html #}
-<Import src="base" name="Base" />
+{# section.grov #}
+{% import Base from "base" %}
 <Component name="Section">
   <Base>
-    <Fill slot="content">
+    {% #fill "content" %}
       <div class="section">
-        <Slot name="inner">section default</Slot>
+        {% #slot "inner" %}section default{% /slot %}
       </div>
-    </Fill>
+    {% /fill %}
   </Base>
 </Component>
 ```
 
 ```html
-{# page.html #}
-<Import src="section" name="Section" />
+{# page.grov #}
+{% import Section from "section" %}
 <Section>
-  <Fill slot="inner">page content</Fill>
+  {% #fill "inner" %}page content{% /fill %}
 </Section>
 ```
 

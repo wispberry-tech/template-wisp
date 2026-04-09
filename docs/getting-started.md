@@ -65,7 +65,7 @@ result, err := eng.Render(
 
 Template names are forward-slash paths relative to the store root. `FileSystemStore` rejects absolute paths and `..` traversal for security.
 
-`Render` loads the template from the store by name, compiles it (with LRU caching), and executes it. Use `Render` instead of `RenderTemplate` when working with stored templates — it's required for `<Import>`, `<Component>`, and other composition features.
+`Render` loads the template from the store by name, compiles it (with LRU caching), and executes it. Use `Render` instead of `RenderTemplate` when working with stored templates — it's required for `{% import %}`, `<Component>`, and other composition features.
 
 ## In-Memory Templates
 
@@ -73,8 +73,8 @@ For testing or dynamic templates, use `MemoryStore`:
 
 ```go
 store := grove.NewMemoryStore()
-store.Set("greeting.html", `Hello, {% name %}!`)
-store.Set("base.html", `<Component name="Base"><html><Slot /></html></Component>`)
+store.Set("greeting.grov", `Hello, {% name %}!`)
+store.Set("base.grov", `<Component name="Base"><html>{% slot %}</html></Component>`)
 
 eng := grove.New(grove.WithStore(store))
 
@@ -145,7 +145,7 @@ eng.SetGlobal("current_year", "2026")
 <footer>&copy; {% current_year %} {% site_name %}</footer>
 ```
 
-Globals have the lowest priority. Render data overrides globals, and local variables (from `{% set %}`, `{% let %}`, `<For>`) override render data.
+Globals have the lowest priority. Render data overrides globals, and local variables (from `{% set %}`, `{% let %}`, `{% #each %}`) override render data.
 
 ## Engine Options
 
@@ -162,7 +162,7 @@ eng := grove.New(
 	grove.WithStrictVariables(true),
 	grove.WithCacheSize(1024),
 	grove.WithSandbox(grove.SandboxConfig{
-		AllowedTags:    []string{"If", "For", "Import", "Component"},
+		AllowedTags:    []string{"if", "each", "import", "set"},
 		AllowedFilters: []string{"upper", "lower", "escape", "safe"},
 		MaxLoopIter:    10000,
 	}),
@@ -178,7 +178,7 @@ Grove returns two error types:
 **`ParseError`** — syntax errors detected during compilation. Includes `Template`, `Line`, and `Column` fields:
 
 ```go
-result, err := eng.RenderTemplate(ctx, `<If>oops</If>`, nil)
+result, err := eng.RenderTemplate(ctx, `{% #if oops %}...{% /if %}`, nil)
 if err != nil {
 	var pe grove.ParseError
 	if errors.As(err, &pe) {

@@ -20,7 +20,7 @@ In Grove's HTML-centric syntax, macros, includes, and imports are all replaced b
 
 **After:**
 ```html
-{# user-card.html #}
+{# user-card.grov #}
 <Component name="UserCard" name role="member">
   <div class="card">
     <strong>{% name %}</strong>
@@ -28,8 +28,8 @@ In Grove's HTML-centric syntax, macros, includes, and imports are all replaced b
   </div>
 </Component>
 
-{# page.html #}
-<Import src="user-card" name="UserCard" />
+{# page.grov #}
+{% import UserCard from "user-card" %}
 <UserCard name="Alice" role="admin" />
 ```
 
@@ -43,8 +43,8 @@ In Grove's HTML-centric syntax, macros, includes, and imports are all replaced b
 
 **After:**
 ```html
-<Import src="partials/nav" name="Nav" />
-<Import src="partials/card" name="Card" />
+{% import Nav from "partials/nav" %}
+{% import Card from "partials/card" %}
 
 <Nav />
 <Card title="Widget" />
@@ -62,7 +62,7 @@ All components have isolated scope — there is no shared-scope include. Pass da
 
 **After:**
 ```html
-<Import src="macros/ui" name="*" as="UI" />
+{% import * from "macros/ui" as UI %}
 <UI.UserCard name="Alice" />
 ```
 
@@ -84,16 +84,16 @@ All components have isolated scope — there is no shared-scope include. Pass da
 
 **After:**
 ```html
-{# card.html #}
+{# card.grov #}
 <Component name="Card" title>
   <div class="card">
     <h2>{% title %}</h2>
-    <Slot />
+    {% slot %}
   </div>
 </Component>
 
-{# page.html #}
-<Import src="card" name="Card" />
+{# page.grov #}
+{% import Card from "card" %}
 <Card title="Orders">
   <p>3 pending orders</p>
 </Card>

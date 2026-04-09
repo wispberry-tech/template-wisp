@@ -40,7 +40,6 @@ No Makefile, linter config, or CI pipeline exists. Use `gofmt` for formatting.
 | `internal/scope/` | Variable lookup chain (scope stack with shadow handling) |
 | `internal/filters/` | 40+ built-in filters (string, collection, numeric, HTML) |
 | `internal/store/` | Template storage: `MemoryStore`, `FileSystemStore` |
-| `internal/coerce/` | Type coercion between template value types |
 | `internal/groverrors/` | Shared error types (`ParseError`, `RuntimeError`) |
 
 **Key design points:**

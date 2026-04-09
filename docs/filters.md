@@ -279,9 +279,9 @@ Extracts an attribute from each item in a list.
 Groups a list into batches (sub-lists) of the given size. Default size: 1.
 
 ```html
-<For each={[1,2,3,4,5] | batch(2)} as="row">
+{% #each [1,2,3,4,5] | batch(2) as row %}
   {% row | join(",") %}
-</For>
+{% /each %}
 {# 1,2 then 3,4 then 5 #}
 ```
 

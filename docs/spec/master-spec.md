@@ -73,7 +73,6 @@
 | `internal/scope/` | Variable lookup chain with scope-stack shadowing |
 | `internal/filters/` | Built-in filter implementations (string, collection, numeric, HTML) |
 | `internal/store/` | Template storage backends: `MemoryStore`, `FileSystemStore` |
-| `internal/coerce/` | Type coercion between Go and template value types |
 | `internal/groverrors/` | Shared error types: `ParseError`, `RuntimeError` |
 
 ### Data Flow
@@ -141,8 +140,6 @@ Template Source (string or []byte)
 ```
 TK_EOF             End of input
 TK_TEXT             Raw text between delimiters
-TK_OUTPUT_START     {{ or {{-
-TK_OUTPUT_END       }} or -}}
 TK_TAG_START        {% or {%-
 TK_TAG_END          %} or -%}
 TK_STRING           "..." or '...'
@@ -176,10 +173,16 @@ TK_AND              and
 TK_OR               or
 TK_NOT              not
 TK_QUESTION         ? (ternary)
-TK_COLON            : (ternary / map literal)
+TK_COLON            : (ternary / map literal / branch separator)
 TK_LBRACE           { (map literal)
 TK_RBRACE           } (map literal)
-TK_IN               in (for...in)
+TK_BLOCK_OPEN       #keyword (opens block: {% #if %}, {% #each %}, etc.)
+TK_BLOCK_BRANCH     :keyword (branch separator: {% :else %}, {% :empty %}, etc.)
+TK_BLOCK_CLOSE      /keyword (closes block: {% /if %}, {% /each %}, etc.)
+TK_ELEMENT_OPEN     <Name (PascalCase element start)
+TK_ELEMENT_CLOSE    </Name> (PascalCase element close)
+TK_ELEMENT_END      >
+TK_SELF_CLOSE       /> (self-closing element)
 ```
 
 ### Token Structure
@@ -190,16 +193,15 @@ type Token struct {
     Value      string  // raw text (identifier name, string content, number digits)
     Line       int     // 1-based line number
     Col        int     // 1-based column number
-    StripLeft  bool    // {{- or {%-: strip whitespace to the left
-    StripRight bool    // -}} or -%}: strip whitespace to the right
+    StripLeft  bool    // {%- or {%-: strip whitespace to the left
+    StripRight bool    // -%} or -%}: strip whitespace to the right
 }
 ```
 
 ### Whitespace Control
 
-- `{{- expr -}}` strips whitespace before and after the output tag
-- `{%- tag -%}` strips whitespace before and after the structural tag
-- The `-` must be adjacent to the delimiter (`{{-` not `{{ -`)
+- `{%- expr -%}` strips whitespace before and after a tag
+- The `-` must be adjacent to the delimiter (`{%-` not `{% -`)
 
 ---
 
@@ -231,7 +233,13 @@ Recursive-descent parser. Key entry points:
 
 ### Tag Dispatch
 
-The parser recognizes the following tag names: `if`, `for`, `set`, `capture`, `raw`, `macro`, `call`, `include`, `render`, `import`, `extends`, `block`, `component`, `props`, `slot`, `fill`, `asset`, `meta`, `hoist`, `let`.
+The parser recognizes the following tag names and sigil-based blocks:
+- **Block openers** (sigil `#`): `#if`, `#each`, `#let`, `#capture`, `#fill`, `#hoist`, `#verbatim`
+- **Branch separators** (sigil `:`): `:else`, `:else if`, `:empty`
+- **Block closers** (sigil `/`): `/if`, `/each`, `/let`, `/capture`, `/fill`, `/hoist`, `/verbatim`
+- **Standalone tags**: `set`, `import`, `asset`, `meta`, `slot`, `include`, `render`
+
+Sandbox `AllowedTags` whitelist is checked at parse time; banned tags produce a `ParseError`.
 
 Sandbox `AllowedTags` whitelist is checked at parse time; banned tags produce a `ParseError`.
 
@@ -271,26 +279,24 @@ All nodes implement the `Node` interface (`wispyNode()` marker method).
 |------|--------|-------------|
 | `Program` | `Body []Node` | Root node |
 | `TextNode` | `Value string`, `Line` | Raw text content |
-| `OutputNode` | `Expr Node`, `StripLeft`, `StripRight bool`, `Line` | `{{ expr }}` |
-| `RawNode` | `Value string`, `Line` | `{% raw %}...{% endraw %}` |
-| `IfNode` | `Condition`, `Body`, `Elifs []ElifClause`, `Else []Node`, `Line` | Full if/elif/else/endif |
-| `ForNode` | `Var1`, `Var2 string`, `Iterable Node`, `Body`, `Empty []Node`, `Line` | for/empty/endfor |
+| `OutputNode` | `Expr Node`, `StripLeft`, `StripRight bool`, `Line` | `{% expr %}` |
+| `RawNode` | `Value string`, `Line` | `{% #verbatim %}...{% /verbatim %}` |
+| `IfNode` | `Condition`, `Body`, `Elifs []ElifClause`, `Else []Node`, `Line` | `{% #if %}...{% :else if %}...{% :else %}...{% /if %}` |
+| `ForNode` | `Var1`, `Var2 string`, `Iterable Node`, `Body`, `Empty []Node`, `Line` | `{% #each items as x %}...{% :empty %}...{% /each %}` |
 | `SetNode` | `Name string`, `Expr Node`, `Line` | `{% set x = expr %}` |
-| `LetNode` | `Body []LetStmt`, `Line` | `{% let %}...{% endlet %}` |
-| `CaptureNode` | `Name string`, `Body []Node`, `Line` | `{% capture x %}...{% endcapture %}` |
-| `MacroNode` | `Name`, `Params []MacroParam`, `Body []Node`, `Line` | Macro definition |
-| `CallNode` | `Callee`, `PosArgs`, `NamedArgs`, `Body []Node`, `Line` | `{% call %}...{% endcall %}` |
+| `LetNode` | `Body []LetStmt`, `Line` | `{% #let %}...{% /let %}` |
+| `CaptureNode` | `Name string`, `Body []Node`, `Line` | `{% #capture x %}...{% /capture %}` |
 | `IncludeNode` | `Name string`, `WithVars []NamedArgNode`, `Line` | `{% include %}` |
 | `RenderNode` | `Name string`, `WithVars []NamedArgNode`, `Line` | `{% render %}` (always isolated) |
-| `ImportNode` | `Name string`, `Alias string`, `Line` | `{% import "x" as ns %}` |
-| `ExtendsNode` | `Name string`, `Line` | `{% extends "parent" %}` |
-| `BlockNode` | `Name string`, `Body []Node`, `Line` | `{% block name %}...{% endblock %}` |
-| `PropsNode` | `Params []MacroParam`, `Line` | `{% props name, key="default" %}` |
-| `ComponentNode` | `Name`, `Props []NamedArgNode`, `DefaultFill`, `Fills []FillNode`, `Line` | Component call |
-| `SlotNode` | `Name string`, `Default []Node`, `Line` | `{% slot %}` / `{% slot "name" %}` |
+| `ImportNode` | `Name string`, `Alias string`, `Line` | `{% import Name from "path" %}` |
 | `AssetNode` | `Src`, `AssetType string`, `Attrs`, `Priority int`, `Line` | `{% asset %}` |
 | `MetaNode` | `Key`, `Value string`, `Line` | `{% meta %}` |
-| `HoistNode` | `Target string`, `Body []Node`, `Line` | `{% hoist %}...{% endhoist %}` |
+| `HoistNode` | `Target string`, `Body []Node`, `Line` | `{% #hoist %}...{% /hoist %}` |
+| `SlotNode` | `Name string`, `Default []Node`, `Line` | `{% slot %}` or `{% #slot "name" %}...{% /slot %}` |
+
+**Legacy nodes** (kept for compatibility but not part of current spec):
+- `MacroNode`, `CallNode` — Macros removed from element-based parser
+- `ExtendsNode`, `BlockNode`, `PropsNode`, `ComponentNode` — Template inheritance/components migrated to `<PascalCase>` elements
 
 ### Let Block Sub-Nodes
 
@@ -698,7 +704,7 @@ type Scope struct {
 
 ## 11. Type Coercion
 
-**File:** `internal/coerce/coerce.go`
+Type coercion is now inline within the VM value system (`internal/vm/`). The standalone `internal/coerce/` package was removed.
 
 ### ToBool
 
@@ -735,7 +741,7 @@ type Scope struct {
 ### Delimiters
 
 ```
-{{ expression }}      Output — evaluate and print
+{% expression %}      Output — evaluate and print
 {% tag %}             Structural tags — control flow, assignment, composition
 {# comment #}         Comments — stripped at parse time, zero runtime cost
 ```
@@ -743,40 +749,39 @@ type Scope struct {
 ### Whitespace Control
 
 ```
-{{- expr -}}          Strip whitespace before and after output
-{%- tag -%}           Strip whitespace before and after tag
+{%- expr -%}          Strip whitespace before and after tag
 ```
 
 ### Variables & Access
 
 ```
-{{ user.name }}               Attribute access
-{{ items[0].title }}          Index + attribute
-{{ config["debug"] }}         String key index
-{{ user.address.city }}       Nested access
+{% user.name %}               Attribute access
+{% items[0].title %}          Index + attribute
+{% config["debug"] %}         String key index
+{% user.address.city %}       Nested access
 ```
 
 ### Expressions
 
 ```
-{{ count + 1 }}               Arithmetic
-{{ price * 1.2 }}
-{{ "Hello, " ~ user.name }}   String concatenation
-{{ price * 1.2 | round(2) }}  Filter after expression
-{{ user.role == "admin" }}     Comparison
-{{ a > b and c != d }}         Logical operators
-{{ not user.banned }}          Negation
-{{ active ? name : "Guest" }} Ternary conditional
+{% count + 1 %}               Arithmetic
+{% price * 1.2 %}
+{% "Hello, " ~ user.name %}   String concatenation
+{% price * 1.2 | round(2) %}  Filter after expression
+{% user.role == "admin" %}     Comparison
+{% a > b and c != d %}         Logical operators
+{% not user.banned %}          Negation
+{% active ? name : "Guest" %} Ternary conditional
 ```
 
 ### Filters
 
 ```
-{{ name | upper }}
-{{ bio | truncate(120, "…") }}
-{{ items | sort | reverse | first }}
-{{ price | round(2) }}
-{{ user_input | safe }}        Bypass auto-escape (explicit trust)
+{% name | upper %}
+{% bio | truncate(120, "…") %}
+{% items | sort | reverse | first %}
+{% price | round(2) %}
+{% user_input | safe %}        Bypass auto-escape (explicit trust)
 ```
 
 ### Assignment
@@ -789,48 +794,47 @@ type Scope struct {
 ### Let Block (multi-variable assignment)
 
 ```
-{% let %}
+{% #let %}
   bg = "#d1ecf1"
   border = "#bee5eb"
   fg = "#0c5460"
 
-  if type == "warning"
+  {% :else if type == "warning" %}
     bg = "#fff3cd"
     fg = "#856404"
-  elif type == "error"
+  {% :else if type == "error" %}
     bg = "#f8d7da"
     fg = "#721c24"
-  end
-{% endlet %}
+  {% /let %}
 ```
 
 Rules:
 - Bare `name = expression` per line (no delimiters)
 - Full expression syntax on right-hand side
-- `if/elif/else/end` conditionals (no `{% %}` wrapping, `end` not `endif`)
 - All assigned variables written to outer scope
 - No HTML output inside the block
 
 ### Control Flow
 
 ```
-{% if condition %}
+{% #if condition %}
   ...
-{% elif condition %}
+{% :else if condition %}
   ...
-{% else %}
+{% :else %}
   ...
-{% endif %}
+{% /if %}
 
-{% for item in items %}
-  {{ loop.index }}: {{ item.name }}
-{% empty %}
+{% #each items as item %}
+  {% loop.index %}: {% item.name %}
+{% :empty %}
   No items found.
-{% endfor %}
+{% /each %}
 
-{% for i, item in items %}     Two-variable form (index + value)
-{% for key, value in map %}    Two-variable form (key + value for maps)
-{% for i in range(1, 11) %}    Range iteration
+{% #each items as i, item %}     Two-variable form (index + value)
+{% #each map as key, value %}    Two-variable form (key + value for maps)
+{% #each range(1, 11) as i %}    Range iteration
+{% /each %}
 ```
 
 ### Loop Variable (`loop`)
@@ -869,18 +873,18 @@ Rules:
 ### Capture
 
 ```
-{% capture nav %}
-  {% for item in menu %}{{ item.label }}{% endfor %}
-{% endcapture %}
-{{ nav }}
+{% #capture nav %}
+  {% #each menu as item %}{% item.label %}{% /each %}
+{% /capture %}
+{% nav %}
 ```
 
-### Raw Block
+### Verbatim Block
 
 ```
-{% raw %}
-  {{ this is not evaluated }}
-{% endraw %}
+{% #verbatim %}
+  {% this is not evaluated %}
+{% /verbatim %}
 ```
 
 ### Comments
@@ -1006,50 +1010,56 @@ eng.RegisterFilter("markdown", grove.FilterFunc(
 - **Always** creates an isolated scope — only passed parameters and engine globals are visible
 - Equivalent to `include ... isolated` from the original design
 
-### Import (macro namespace)
+### Import (component import)
 
 ```
-{% import "macros/forms.grov" as forms %}
-{{ forms.input("email", type="email") }}
+{% import Card from "components/card" %}
+{% import Badge from "components/badge" %}
+
+<Card title="My Card">
+  <Badge label="New" />
+</Card>
 ```
 
-- Executes the imported template's macro definitions
-- Macros are accessible under the namespace alias via attribute access
+- Brings named components into scope
+- Components are now the primary unit of composition (no macros in current system)
 
 ---
 
-## 15. Template Inheritance
+## 15. Layouts & Composition
 
-### Extends & Block
+Grove does not use template inheritance (`extends`/`block`). Instead, layouts are components with named slots.
+
+### Layout as Component
 
 ```
 {# layouts/base.grov #}
-<!DOCTYPE html>
-<html>
-<head><title>{% block title %}Default{% endblock %}</title></head>
-<body>{% block content %}{% endblock %}</body>
-</html>
-
-{# pages/about.grov #}
-{% extends "layouts/base.grov" %}
-{% block title %}About — {{ super() }}{% endblock %}
-{% block content %}<h1>About Us</h1>{% endblock %}
+<Component name="Base" title>
+  <!DOCTYPE html>
+  <html>
+  <head><title>{% title %}</title></head>
+  <body>
+    {% slot "content" %}
+  </body>
+  </html>
+</Component>
 ```
 
-### Super()
+### Using a Layout
 
-`super()` renders the parent's version of the current block. The VM maintains a per-block super-chain (stack of block bodies from deepest child to root parent).
+```
+{% import Base from "layouts/base" %}
 
-### Multi-Level Inheritance
+<Base title="About">
+  {% #fill "content" %}
+    <h1>About Us</h1>
+  {% /fill %}
+</Base>
+```
 
-Chained inheritance (grandchild → child → parent) works naturally. Each `OP_EXTENDS` layer accumulates block overrides before delegating to its parent. `super()` walks one level up the chain at each call.
+### Multi-Level Layouts
 
-### Runtime Resolution
-
-- `OP_EXTENDS` loads the parent bytecode via `EngineIface.LoadTemplate`
-- Merges block slot tables (child overrides win)
-- Executes the parent's bytecode
-- Block bodies are compiled into `Bytecode.Blocks` and referenced by index
+Layouts compose naturally — a layout component can itself use another layout component as its base, creating hierarchies without special syntax.
 
 ---
 
@@ -1059,82 +1069,49 @@ Chained inheritance (grandchild → child → parent) works naturally. Each `OP_
 
 ```
 {# components/card.grov #}
-{% props title, variant="default", elevated=false %}
-
-<div class="card card--{{ variant }}">
-  <h2>{{ title }}</h2>
-  {% slot "actions" %}{% endslot %}
-  <div class="body">{% slot %}{% endslot %}</div>
-  <footer>{% slot "footer" %}Default footer{% endslot %}</footer>
-</div>
+<Component name="Card" title variant="default">
+  <div class="card card--{% variant %}">
+    <h2>{% title %}</h2>
+    {% slot "actions" %}
+    <div class="body">{% slot %}</div>
+    <footer>{% slot "footer" %}Default footer{% /slot %}</footer>
+  </div>
+</Component>
 ```
 
-### Component Usage
+### Component Invocation
 
 ```
-{% component "components/card" title="Orders" variant="primary" %}
+{% import Card from "components/card" %}
+
+<Card title="Orders" variant="primary">
   <p>Main content goes in the default slot.</p>
 
-  {% fill "actions" %}
+  {% #fill "actions" %}
     <button>View All</button>
-  {% endfill %}
-{% endcomponent %}
+  {% /fill %}
+</Card>
 ```
 
 ### Props
 
-- `{% props name, key="default" %}` declares accepted props with optional defaults
-- Required props (no default) cause a `RuntimeError` if missing
+- Declared as attributes on `<Component>` definition tag
+- Required props (no default value) cause a `RuntimeError` if missing
 - Unknown props (not declared) cause a `RuntimeError`
-- If no `{% props %}` declaration exists, all passed props are accepted (permissive mode)
 
 ### Slots
 
-- `{% slot %}` — default (unnamed) slot
-- `{% slot "name" %}fallback{% endslot %}` — named slot with fallback content
-- `{% fill "name" %}content{% endfill %}` — provides content for a named slot
-- Content outside `{% fill %}` blocks feeds the default slot
+- `{% slot %}` — default (unnamed) slot (self-closing)
+- `{% #slot "name" %}fallback{% /slot %}` — named slot with fallback content
+- `{% #fill "name" %}content{% /fill %}` — provides content for a named slot
+- Content outside `{% #fill %}` blocks feeds the default slot
 - Fills are rendered in the **caller's scope** (not the component's scope)
 
 ---
 
 ## 17. Macros
 
-### Definition
-
-```
-{% macro input(name, value="", type="text", required=false) %}
-  <input type="{{ type }}" name="{{ name }}" value="{{ value }}"
-         {{ required ? "required" : "" }}>
-{% endmacro %}
-```
-
-### Calling
-
-```
-{{ input("email", type="email", required=true) }}
-```
-
-- Supports positional and named arguments
-- Default values for optional parameters
-- Macros render to SafeHTML (auto-escape bypassed on output)
-
-### Caller Body
-
-```
-{% macro card(title) %}
-  <div class="card">
-    <h2>{{ title }}</h2>
-    {{ caller() }}
-  </div>
-{% endmacro %}
-
-{% call card("News") %}
-  <p>Body content passed via caller().</p>
-{% endcall %}
-```
-
----
+**Status: Removed.** Macros are no longer part of the Grove template language. Use components (`<Component>`) instead — they provide the same composition capabilities with better clarity and type safety.
 
 ## 18. Web Primitives
 
@@ -1170,14 +1147,14 @@ result.FootHTML()  // <script> tags for script assets
 ### Hoisting
 
 ```
-{% hoist "analytics" %}
-  <script>trackPage("{{ page.title }}");</script>
-{% endhoist %}
+{% #hoist %}
+  <script>trackPage("{% page.title %}");</script>
+{% /hoist %}
 ```
 
-- Target is a user-defined string
+- Target is implicitly the named section (e.g., "head", "foot")
 - Body is rendered and appended to `RenderResult.Hoisted[target]`
-- Retrieved via `result.GetHoisted("analytics")`
+- Retrieved via `result.GetHoisted(target)`
 
 ---
 
