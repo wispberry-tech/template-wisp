@@ -29,7 +29,7 @@
             </If>
           </Fill>
         </ProductCard>
-      <Empty />
+      <Empty>
         <p class="empty-state">No products in this category yet.</p>
       </For>
     </div>

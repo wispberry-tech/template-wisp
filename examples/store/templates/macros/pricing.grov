@@ -2,7 +2,7 @@
   <If test={sale_amount > 0}>
     <span class="price-strike">{% amount | currency %}</span>
     <span class="price-sale">{% sale_amount | currency %}</span>
-  <Else />
+  <Else>
     <span class="price-regular">{% amount | currency %}</span>
   </If>
 </Component>
@@ -28,7 +28,7 @@
 <Component name="StockBadge" in_stock>
   <If test={in_stock}>
     <span class="badge badge-in-stock">In Stock</span>
-  <Else />
+  <Else>
     <span class="badge badge-out-of-stock">Out of Stock</span>
   </If>
 </Component>

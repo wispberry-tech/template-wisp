@@ -14,16 +14,16 @@
 
     {% greeting_block | safe %}
 
-    <Divider />
+    <H.Divider />
 
-    <Heading text={"Get Started in 3 Steps"} />
+    <H.Heading text={"Get Started in 3 Steps"} />
 
     <table cellpadding="0" cellspacing="0" border="0" width="100%">
       {% let %}
         steps = [
-          {"num": "1", "title": "Set up your workspace", "desc": "Create your first project and invite your team."},
-          {"num": "2", "title": "Connect your tools", "desc": "Integrate with GitHub, Slack, and your CI pipeline."},
-          {"num": "3", "title": "Deploy your first template", "desc": "Use our CLI or API to push templates to production."}
+          {num: "1", title: "Set up your workspace", desc: "Create your first project and invite your team."},
+          {num: "2", title: "Connect your tools", desc: "Integrate with GitHub, Slack, and your CI pipeline."},
+          {num: "3", title: "Deploy your first template", desc: "Use our CLI or API to push templates to production."}
         ]
       {% endlet %}
       <For each={steps} as="step">
@@ -39,10 +39,10 @@
       </For>
     </table>
 
-    <Spacer height="8" />
-    <Button text="Go to Dashboard" href="https://app.grovecloud.io/dashboard" />
+    <H.Spacer height="8" />
+    <H.Button text="Go to Dashboard" href="https://app.grovecloud.io/dashboard" />
 
-    <Divider />
+    <H.Divider />
     <p style="color: #666; font-size: 14px;">Questions? Reply to this email or visit our <a href="https://app.grovecloud.io/help" style="color: #2E6740;">Help Center</a>.</p>
   </Fill>
 </BaseEmail>

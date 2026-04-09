@@ -18,7 +18,7 @@
             </For>
           </Fill>
         </Card>
-        <Empty />
+        <Empty>
         <p class="empty-state">No posts yet.</p>
       </For>
     </div>

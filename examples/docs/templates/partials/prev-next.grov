@@ -4,14 +4,14 @@
     <a href="/docs/{% prev.section_slug %}/{% prev.slug %}" class="prev-next-link prev-link">
       &larr; {% prev.title %}
     </a>
-  <Else />
+  <Else>
     <span></span>
   </If>
   <If test={next}>
     <a href="/docs/{% next.section_slug %}/{% next.slug %}" class="prev-next-link next-link">
       {% next.title %} &rarr;
     </a>
-  <Else />
+  <Else>
     <span></span>
   </If>
 </nav>

@@ -14,44 +14,44 @@
       <div style="background-color: #f8d7da; border: 1px solid #dc3545; border-radius: 6px; padding: 16px; margin: 0 0 16px;">
         <strong style="color: #dc3545;">Critical:</strong> You're approaching your plan limit. Services may be restricted once you reach 100%.
       </div>
-    <ElseIf test={usage_pct >= 75} />
+    <ElseIf test={usage_pct >= 75}>
       {% set urgency = "warning" %}
       <div style="background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 16px; margin: 0 0 16px;">
         <strong style="color: #856404;">Heads up:</strong> You're using a significant portion of your plan allocation.
       </div>
-    <Else />
+    <Else>
       {% set urgency = "info" %}
       <p>Here's a summary of your current usage:</p>
     </If>
 
-    <Divider />
-    <Heading text="Usage Summary" />
+    <H.Divider />
+    <H.Heading text="Usage Summary" />
 
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse;">
-      <InfoRow label="Plan" value={user.plan | title} />
-      <InfoRow label="Current Usage" value={usage_current ~ " / " ~ usage_limit ~ " requests"} />
-      <InfoRow label="Usage" value={usage_pct ~ "%"} />
+      <H.InfoRow label="Plan" value={user.plan | title} />
+      <H.InfoRow label="Current Usage" value={usage_current ~ " / " ~ usage_limit ~ " requests"} />
+      <H.InfoRow label="Usage" value={usage_pct ~ "%"} />
     </table>
 
-    <Spacer height="8" />
-    <UsageBar pct={usage_pct} />
-    <Spacer height="16" />
+    <H.Spacer height="8" />
+    <H.UsageBar pct={usage_pct} />
+    <H.Spacer height="16" />
 
     <Capture name="cta_block">
       <If test={urgency == "critical"}>
-        <Button text="Upgrade Now" href="https://app.grovecloud.io/settings/billing" color="#dc3545" />
-      <ElseIf test={urgency == "warning"} />
-        <Button text="Review Usage" href="https://app.grovecloud.io/usage" />
-        <Spacer height="8" />
-        <Button text="Upgrade Plan" href="https://app.grovecloud.io/settings/billing" color="#666666" />
-      <Else />
-        <Button text="View Details" href="https://app.grovecloud.io/usage" />
+        <H.Button text="Upgrade Now" href="https://app.grovecloud.io/settings/billing" color="#dc3545" />
+      <ElseIf test={urgency == "warning"}>
+        <H.Button text="Review Usage" href="https://app.grovecloud.io/usage" />
+        <H.Spacer height="8" />
+        <H.Button text="Upgrade Plan" href="https://app.grovecloud.io/settings/billing" color="#666666" />
+      <Else>
+        <H.Button text="View Details" href="https://app.grovecloud.io/usage" />
       </If>
     </Capture>
 
     {% cta_block | safe %}
 
-    <Divider />
+    <H.Divider />
     <p style="color: #666; font-size: 14px;">You're receiving this because usage alerts are enabled. <a href="https://app.grovecloud.io/settings/notifications" style="color: #2E6740;">Manage alert preferences</a>.</p>
   </Fill>
 </BaseEmail>

@@ -1,5 +1,4 @@
-<Component name="Button" text href color>
-  <If test={not color}>{% set color = "#2E6740" %}</If>
+<Component name="Button" text href color="#2E6740">
   <table cellpadding="0" cellspacing="0" border="0" style="margin: 16px 0;">
     <tr>
       <td style="background-color: {% color %}; border-radius: 6px; padding: 12px 24px;">
@@ -13,8 +12,7 @@
   <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 24px 0;">
 </Component>
 
-<Component name="Spacer" height>
-  <If test={not height}>{% set height = 16 %}</If>
+<Component name="Spacer" height="16">
   <div style="height: {% height %}px;"></div>
 </Component>
 
@@ -22,13 +20,13 @@
   <h2 style="color: #2E6740; margin: 0 0 16px; font-size: 20px;">{% text %}</h2>
 </Component>
 
-<Component name="UsageBar" pct color>
+<Component name="UsageBar" pct color="">
   <If test={not color}>
     <If test={pct >= 90}>
       {% set color = "#dc3545" %}
-    <ElseIf test={pct >= 75} />
+    <ElseIf test={pct >= 75}>
       {% set color = "#ffc107" %}
-    <Else />
+    <Else>
       {% set color = "#2E6740" %}
     </If>
   </If>

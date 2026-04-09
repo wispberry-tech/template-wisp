@@ -12,7 +12,7 @@
         <a href="/docs/{% pg.section_slug %}/{% pg.slug %}" class="page-list-item">
           <h3>{% pg.title %}</h3>
         </a>
-      <Empty />
+      <Empty>
         <p>No pages in this section yet.</p>
       </For>
     </div>

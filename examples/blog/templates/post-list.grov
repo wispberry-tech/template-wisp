@@ -19,7 +19,7 @@
             </For>
           </Fill>
         </Card>
-        <Empty />
+        <Empty>
         <p class="empty-state">No posts found.</p>
       </For>
     </div>

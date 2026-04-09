@@ -3,7 +3,7 @@
 
 <If test={type == "link"}>
   <a href="{% href %}" class="btn btn-{% variant %}" data-button>{% label %}</a>
-<Else />
+<Else>
   <button type="{% type %}" class="btn btn-{% variant %}" data-button>{% label %}</button>
 </If>
 </Component>

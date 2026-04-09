@@ -700,8 +700,9 @@ func (p *parser) parseComponentDefElement() (ast.Node, error) {
 		if name == "name" {
 			if s, ok := value.(*ast.StringLiteral); ok {
 				compName = s.Value
+				continue
 			}
-			continue
+			// bare `name` or `name={expr}` after `name="X"` is a prop declaration
 		}
 		// For definitions: other attributes are props
 		// For dynamic: other attributes are passed props

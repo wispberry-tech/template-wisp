@@ -15,30 +15,30 @@
 
     <If test={is_upgrade}>
       <p>Great news! Your account has been <strong>upgraded</strong>.</p>
-    <Else />
+    <Else>
       <p>Your plan has been <strong>changed</strong>. The new plan takes effect at the end of your current billing period.</p>
     </If>
 
-    <Divider />
-    <Heading text="Plan Comparison" />
+    <H.Divider />
+    <H.Heading text="Plan Comparison" />
 
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse;">
-      <InfoRow label="Previous Plan" value={old_plan | title} />
-      <InfoRow label="New Plan" value={new_plan | title} />
+      <H.InfoRow label="Previous Plan" value={old_plan | title} />
+      <H.InfoRow label="New Plan" value={new_plan | title} />
       <If test={user.team_name}>
-        <InfoRow label="Team" value={user.team_name} />
+        <H.InfoRow label="Team" value={user.team_name} />
       </If>
     </table>
 
-    <Spacer height="16" />
+    <H.Spacer height="16" />
 
     <If test={is_upgrade}>
-      <Button text="Explore New Features" href="https://app.grovecloud.io/dashboard" />
-    <Else />
-      <Button text="View Plan Details" href="https://app.grovecloud.io/settings/billing" color="#666666" />
+      <H.Button text="Explore New Features" href="https://app.grovecloud.io/dashboard" />
+    <Else>
+      <H.Button text="View Plan Details" href="https://app.grovecloud.io/settings/billing" color="#666666" />
     </If>
 
-    <Divider />
+    <H.Divider />
     <p style="color: #666; font-size: 14px;">Questions about your plan? <a href="https://app.grovecloud.io/help" style="color: #2E6740;">Contact support</a>.</p>
   </Fill>
 </BaseEmail>

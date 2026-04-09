@@ -4,7 +4,7 @@
     <If test={crumb.href}>
       <a href="{% crumb.href %}">{% crumb.label %}</a>
       <span class="breadcrumb-sep">/</span>
-    <Else />
+    <Else>
       <span class="breadcrumb-current">{% crumb.label %}</span>
     </If>
   </For>

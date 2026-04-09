@@ -61,7 +61,7 @@
           <span>{% total | currency %}</span>
         </div>
       </div>
-    <Else />
+    <Else>
       <p class="empty-state">Your cart is empty.</p>
       <a href="/products" class="btn btn-primary">Continue Shopping</a>
     </If>

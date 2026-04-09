@@ -1,4 +1,4 @@
-<Component name="Base" title site_name sections current_year>
+<Component name="Base" sections>
 <ImportAsset src="/static/docs.css" type="stylesheet" priority="10" />
 <!DOCTYPE html>
 <html lang="en">

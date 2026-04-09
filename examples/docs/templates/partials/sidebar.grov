@@ -12,7 +12,7 @@
             {% set href = "/docs/" ~ section_slug ~ "/" ~ pg.slug %}
             <If test={pg.slug == current_slug}>
               <li><a href="{% href %}" class="sidebar-active">{% pg.title %}</a></li>
-            <Else />
+            <Else>
               <li><a href="{% href %}">{% pg.title %}</a></li>
             </If>
           </If>

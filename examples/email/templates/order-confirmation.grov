@@ -10,9 +10,9 @@
     <p>Hi {% user.name | default("Customer") %},</p>
     <p>Thank you for your order! Here's your receipt:</p>
 
-    <Divider />
+    <H.Divider />
 
-    <Heading text={"Order " ~ order.id | upper} />
+    <H.Heading text={"Order " ~ order.id | upper} />
 
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse;">
       <thead>
@@ -31,7 +31,7 @@
             <td style="padding: 12px 0; text-align: right;">{% item.price | currency %}</td>
             <td style="padding: 12px 0; text-align: right; font-weight: bold;">{% item.line_total | currency %}</td>
           </tr>
-        <Empty />
+        <Empty>
           <tr>
             <td colspan="4" style="padding: 12px 0; text-align: center; color: #666;">No items in this order.</td>
           </tr>
@@ -39,7 +39,7 @@
       </tbody>
     </table>
 
-    <Spacer height="8" />
+    <H.Spacer height="8" />
 
     <table cellpadding="0" cellspacing="0" border="0" width="100%">
       <tr>
@@ -49,8 +49,8 @@
       </tr>
     </table>
 
-    <Divider />
-    <Button text="View Order" href={"https://app.grovecloud.io/orders/" ~ order.id} />
+    <H.Divider />
+    <H.Button text="View Order" href={"https://app.grovecloud.io/orders/" ~ order.id} />
 
     <p style="color: #666; font-size: 14px;">A receipt has been sent to {% user.email %}.</p>
   </Fill>

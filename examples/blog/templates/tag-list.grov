@@ -14,7 +14,7 @@
           <span class="tag-card-name">{% item.tag.name %}</span>
           <span class="tag-card-count">{% item.count %} {% item.count == 1 ? "post" : "posts" %}</span>
         </a>
-        <Empty />
+        <Empty>
         <p class="empty-state">No tags yet.</p>
       </For>
     </div>

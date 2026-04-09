@@ -71,7 +71,7 @@
             </select>
             <a href="/cart/add?product={% product.slug %}&qty=1" class="btn btn-primary">Add to Cart</a>
           </div>
-        <Else />
+        <Else>
           <p class="out-of-stock">Out of Stock</p>
         </If>
       </div>

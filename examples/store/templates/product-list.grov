@@ -41,7 +41,7 @@
                 </If>
               </Fill>
             </ProductCard>
-          <Empty />
+          <Empty>
             <p class="empty-state">No products match your filters.</p>
           </For>
         </div>

@@ -20,7 +20,7 @@
           <Price amount={product.price} sale_amount={product.sale_price} />
         </Capture>
         <ProductCard name={product.name} slug={product.slug} image_url={product.image_url} price_display={price_html} rating={product.rating} review_count={product.review_count} />
-      <Empty />
+      <Empty>
         <p class="empty-state">No products found. Try a different search term.</p>
       </For>
     </div>
