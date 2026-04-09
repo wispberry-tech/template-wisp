@@ -1,229 +1,307 @@
 # Components
 
-Components are reusable templates with a declared interface. They accept data through **props** and allow callers to inject content through **slots**.
+Components are reusable templates with a declared interface. They accept data through **props** and allow callers to inject content through **slots**. In Grove, components replace macros, includes, and template inheritance — one composition model for everything.
 
-## Component Architecture
+## Defining a Component
 
-Grove uses a two-tier classification for components:
+Wrap a template in `<Component>` to define a named, reusable unit:
 
-### Primitives
-
-Leaf components with no child components. They accept props and render self-contained HTML. Primitives do not use `{% component %}` internally and do not define `{% slot %}` tags.
-
-Examples: buttons, badges, icons, inputs.
-
-### Composites
-
-Components that compose other components and/or use slots for flexible content injection. A composite uses `{% component %}` inside its template, defines `{% slot %}` tags, or both.
-
-Examples: cards, navigation bars, author profiles.
-
-**Decision rule:** If a component uses `{% component %}` or has `{% slot %}` tags, it's a composite. Otherwise it's a primitive.
-
-### Folder Structure
-
-Organize components into `primitives/` and `composites/` directories, with each component in its own folder:
-
-```
-templates/
-  primitives/
-    button/
-      button.grov
-      button.js          ← optional JS for progressive enhancement
-    tag-badge/
-      tag-badge.grov
-  composites/
-    card/
-      card.grov
-    nav/
-      nav.grov
-      nav.js
+```html
+{# button.html #}
+<Component name="Button" label href="/" variant="primary">
+  <a href="{% href %}" class="btn btn-{% variant %}">{% label %}</a>
+</Component>
 ```
 
-### Path Resolution
+- `name` is required — it's the name callers use after importing
+- Props are declared as attributes: bare names are required (`label`), names with values have defaults (`href="/"`)
+- The component body is the template rendered when the component is called
 
-When referencing components, use the short path without repeating the filename:
+### Props
 
-```jinja2
-{% component "composites/card" %}
-  ...
-{% endcomponent %}
+```html
+<Component name="Card" title summary>
+  <article>
+    <h2>{% title %}</h2>
+    <p>{% summary %}</p>
+  </article>
+</Component>
 ```
 
-`FileSystemStore` resolves component paths in this order:
-
-1. **Exact match** — `composites/card` (file exists as-is)
-2. **Append .grov** — `composites/card.grov` (flat file without directory)
-3. **Directory fallback** — `composites/card/card.grov` (folder-per-component)
-
-This means flat-file components (without a directory) still work. The fallback only applies to names that don't already end in `.grov`.
-
-## JS Colocation
-
-Components can include a colocated JavaScript file for progressive enhancement. The JS file lives next to the `.grov` file with the same base name:
-
-```
-button/
-  button.grov
-  button.js
-```
-
-The JS file is always optional. Components without a `.js` file are perfectly valid.
-
-### Including JS
-
-Components declare their JS dependency using the `{% asset %}` tag:
-
-```jinja2
-{# primitives/button/button.grov #}
-{% props label, href="#" %}
-{% asset "/js/primitives/button/button.js" type="script" %}
-
-<a href="{{ href }}" class="btn" data-button>{{ label }}</a>
-```
-
-The `RenderResult` asset system handles deduplication — if a page renders 10 buttons, the script is included once. The Go server serves JS files statically from the component directories.
-
-### Progressive Enhancement
-
-Server-rendered HTML must be functional without JavaScript. The JS enhances existing markup with smoother interactions, animations, or keyboard navigation. If JS fails to load, the component still works.
-
-### Binding Convention
-
-Components use `data-*` attributes to connect JS to markup. The template renders a `data-*` attribute, and the JS file queries for those attributes:
-
-```js
-// button.js
-document.querySelectorAll('[data-button]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    btn.classList.add('btn-loading');
-    btn.setAttribute('aria-busy', 'true');
-  });
-});
-```
-
-No IDs, no class-name coupling — `data-*` attributes are the contract between template and script.
-
-## Using a Component
-
-```jinja2
-{% component "components/card.grov" title="Hello" summary="A card" %}
-  <p>This goes into the default slot.</p>
-{% endcomponent %}
-```
-
-The first argument is the template path (loaded from the store). Remaining arguments are space-separated `key=value` props passed to the component.
-
-`component` requires a template store — it does not work with inline `RenderTemplate`.
-
-## Defining Props
-
-Declare accepted props at the top of a component template with `{% props %}`:
-
-```jinja2
-{# components/button.grov #}
-{% props label, href="/", variant="primary" %}
-
-<a href="{{ href }}" class="btn btn-{{ variant }}">{{ label }}</a>
-```
-
-- Props with a default value (like `href` and `variant`) are optional
-- Props without a default (like `label`) are required — passing no value causes a `RuntimeError`
+- Props without defaults (like `title`, `summary`) are required — omitting them causes a `RuntimeError`
+- Props with defaults (like `variant="primary"`) are optional
 - Passing an unknown prop causes a `RuntimeError`
-- If a component has no `{% props %}` declaration, it accepts any props without restriction
+- Components have **isolated scope** — they cannot see the caller's variables, only their declared props
 
-## Default Slot
+## Importing Components
 
-Content between `{% component %}` and `{% endcomponent %}` fills the default slot:
+Use `<Import>` to bring components into scope before using them:
 
-```jinja2
-{# components/box.grov #}
-<div class="box">
-  {% slot %}No content provided{% endslot %}
-</div>
+```html
+{# page.html #}
+<Import src="button" name="Button" />
+
+<Button label="Click me" href="/action" />
 ```
 
-```jinja2
+- `src` is the template path **without** the `.html` extension
+- `name` specifies which component to import from that file
+
+### Import variants
+
+**Multiple components from one file:**
+
+```html
+<Import src="ui" name="Card, Badge, Button" />
+```
+
+**Wildcard — import all components:**
+
+```html
+<Import src="ui" name="*" />
+```
+
+**Alias — rename locally:**
+
+```html
+<Import src="cards" name="Card" as="InfoCard" />
+<InfoCard title="Details" />
+```
+
+**Namespaced wildcard:**
+
+```html
+<Import src="ui" name="*" as="UI" />
+<UI.Card title="X" />
+<UI.Badge label="Y" />
+```
+
+### Multi-component files
+
+A single file can define multiple components:
+
+```html
+{# ui.html #}
+<Component name="Card" title>
+  <div class="card">{% title %}</div>
+</Component>
+
+<Component name="Badge" label>
+  <span class="badge">{% label %}</span>
+</Component>
+
+<Component name="Button" text>
+  <button>{% text %}</button>
+</Component>
+```
+
+## Slots
+
+Slots let callers inject content into specific points of a component.
+
+### Default slot
+
+```html
+{# box.html #}
+<Component name="Box">
+  <div class="box">
+    <Slot>No content provided</Slot>
+  </div>
+</Component>
+```
+
+```html
 {# Using it: #}
-{% component "components/box.grov" %}
+<Import src="box" name="Box" />
+<Box>
   <p>This replaces "No content provided"</p>
-{% endcomponent %}
+</Box>
 ```
 
-The text inside `{% slot %}...{% endslot %}` is fallback content, rendered when the caller doesn't provide any.
+The content inside `<Slot>...</Slot>` is fallback content, rendered when the caller doesn't provide any.
 
-## Named Slots
+### Named slots
 
-Components can define multiple injection points with named slots:
+Components can define multiple injection points:
 
-```jinja2
-{# components/card.grov #}
-{% props title, summary %}
-
-<article>
-  <h2>{{ title }}</h2>
-  <p>{{ summary }}</p>
-  <div class="tags">
-    {% slot "tags" %}{% endslot %}
-  </div>
-  <div class="actions">
-    {% slot "actions" %}<a href="#">Read more</a>{% endslot %}
-  </div>
-</article>
+```html
+{# card.html #}
+<Component name="Card" title summary>
+  <article>
+    <h2>{% title %}</h2>
+    <p>{% summary %}</p>
+    <div class="tags">
+      <Slot name="tags" />
+    </div>
+    <div class="actions">
+      <Slot name="actions"><a href="#">Read more</a></Slot>
+    </div>
+  </article>
+</Component>
 ```
 
-Callers fill named slots with `{% fill %}`:
+Callers fill named slots with `<Fill>`:
 
-```jinja2
-{% component "components/card.grov" title="My Post" summary="A summary" %}
-  {% fill "tags" %}
+```html
+<Import src="card" name="Card" />
+<Card title="My Post" summary="A summary">
+  <Fill slot="tags">
     <span class="tag">Go</span>
     <span class="tag">Templates</span>
-  {% endfill %}
-  {% fill "actions" %}
+  </Fill>
+  <Fill slot="actions">
     <a href="/post/1">Read</a>
     <a href="/post/1/edit">Edit</a>
-  {% endfill %}
-{% endcomponent %}
+  </Fill>
+</Card>
 ```
 
 Unfilled named slots render their fallback content.
 
+### Scoped slots
+
+Slots can pass data back to the caller using `data={expr}`:
+
+```html
+{# list.html #}
+<Component name="List" items>
+  <ul>
+    <For each={items} as="item">
+      <li><Slot name="item" data={item} /></li>
+    </For>
+  </ul>
+</Component>
+```
+
+The caller accesses the slot data with `let:data`:
+
+```html
+<Import src="list" name="List" />
+<List items={users}>
+  <Fill slot="item" let:data="user">
+    <strong>{% user.name %}</strong>
+  </Fill>
+</List>
+```
+
 ## Scope Rules
 
-This is the key design decision in Grove's component system:
-
 - **Props** are available inside the component template. The component cannot see the caller's variables.
-- **Fills see the caller's scope**, not the component's. This means you can use your page data inside a `{% fill %}` block without threading it through props.
+- **Fills see the caller's scope**, not the component's. This means you can use your page data inside a `<Fill>` block without threading it through props.
 
-```jinja2
-{# page.grov — caller's scope has "posts" #}
-{% component "components/card.grov" title="Recent" summary="Latest posts" %}
-  {% fill "tags" %}
+```html
+{# page.html — caller's scope has "posts" #}
+<Import src="card" name="Card" />
+<Card title="Recent" summary="Latest posts">
+  <Fill slot="tags">
     {# This sees "posts" from the page, not from the card component #}
-    {% for post in posts %}
-      <span>{{ post.title }}</span>
-    {% endfor %}
-  {% endfill %}
-{% endcomponent %}
+    <For each={posts} as="post">
+      <span>{% post.title %}</span>
+    </For>
+  </Fill>
+</Card>
+```
+
+## Layouts via Components
+
+Template inheritance (`extends`/`block`) is replaced by component composition. Define a layout as a component with named slots:
+
+```html
+{# base.html #}
+<Component name="Base">
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <title><Slot name="title">My Site</Slot></title>
+  </head>
+  <body>
+    <nav>...</nav>
+    <main><Slot name="content" /></main>
+    <footer><Slot name="footer">&copy; 2026 My Site</Slot></footer>
+  </body>
+  </html>
+</Component>
+```
+
+Pages import and fill the layout slots:
+
+```html
+{# home.html #}
+<Import src="base" name="Base" />
+<Base>
+  <Fill slot="title">Home — My Site</Fill>
+  <Fill slot="content">
+    <h1>Welcome</h1>
+    <p>This fills the content slot.</p>
+  </Fill>
+</Base>
 ```
 
 ## Nesting Components
 
 Components can use other components:
 
-```jinja2
-{# components/post-list.grov #}
-{% props posts %}
-{% for post in posts %}
-  {% component "components/card.grov" title=post.title summary=post.summary %}
-    {% fill "tags" %}
-      {% for tag in post.tags %}
-        {% component "components/tag.grov" label=tag.name color=tag.color %}{% endcomponent %}
-      {% endfor %}
-    {% endfill %}
-  {% endcomponent %}
-{% endfor %}
+```html
+{# post-list.html #}
+<Component name="PostList" posts>
+  <Import src="card" name="Card" />
+  <Import src="primitives/tag-badge" name="TagBadge" />
+  <For each={posts} as="post">
+    <Card title={post.title} summary={post.summary}>
+      <Fill slot="tags">
+        <For each={post.tags} as="tag">
+          <TagBadge label={tag.name} color={tag.color} />
+        </For>
+      </Fill>
+    </Card>
+  </For>
+</Component>
 ```
 
-Components can also use template inheritance (`{% extends %}`).
+## Dynamic Components
+
+Render a component whose name is determined at runtime:
+
+```html
+<Import src="icons" name="*" />
+<Component is={icon_name} size="lg" />
+```
+
+The `is` attribute accepts an expression that resolves to a component name from the current import scope.
+
+## Component Architecture
+
+### Primitives
+
+Leaf components with no child components. They accept props and render self-contained HTML.
+
+Examples: buttons, badges, icons, inputs.
+
+### Composites
+
+Components that compose other components and/or use slots for flexible content injection.
+
+Examples: cards, navigation bars, post lists.
+
+### Folder Structure
+
+```
+templates/
+  primitives/
+    button/button.html
+    tag-badge/tag-badge.html
+  composites/
+    card/card.html
+    nav/nav.html
+  layouts/
+    base.html
+    docs.html
+```
+
+### Path Resolution
+
+`FileSystemStore` resolves component paths in this order:
+
+1. **Exact match** — `composites/card` (file exists as-is)
+2. **Append .html** — `composites/card.html` (flat file)
+3. **Directory fallback** — `composites/card/card.html` (folder-per-component)

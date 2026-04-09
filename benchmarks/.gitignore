@@ -1,4 +1,6 @@
 profiles/
 profile
 !profile/*
+results/
 results.txt
+grove-results.txt

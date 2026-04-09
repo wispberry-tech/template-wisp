@@ -30,7 +30,7 @@ func main() {
 
 	result, err := eng.RenderTemplate(
 		context.Background(),
-		`Hello, {{ name }}! You have {{ count }} messages.`,
+		`Hello, {% name %}! You have {% count %} messages.`,
 		grove.Data{
 			"name":  "Alice",
 			"count": 3,
@@ -58,14 +58,14 @@ eng := grove.New(grove.WithStore(store))
 
 result, err := eng.Render(
 	context.Background(),
-	"index.grov",    // loads ./templates/index.grov
+	"index.html",    // loads ./templates/index.html
 	grove.Data{"title": "Home"},
 )
 ```
 
 Template names are forward-slash paths relative to the store root. `FileSystemStore` rejects absolute paths and `..` traversal for security.
 
-`Render` loads the template from the store by name, compiles it (with LRU caching), and executes it. Use `Render` instead of `RenderTemplate` when working with stored templates — it's required for `extends`, `include`, `render`, `import`, and `component` tags.
+`Render` loads the template from the store by name, compiles it (with LRU caching), and executes it. Use `Render` instead of `RenderTemplate` when working with stored templates — it's required for `<Import>`, `<Component>`, and other composition features.
 
 ## In-Memory Templates
 
@@ -73,12 +73,12 @@ For testing or dynamic templates, use `MemoryStore`:
 
 ```go
 store := grove.NewMemoryStore()
-store.Set("greeting.grov", `Hello, {{ name }}!`)
-store.Set("base.grov", `<html>{% block content %}{% endblock %}</html>`)
+store.Set("greeting.html", `Hello, {% name %}!`)
+store.Set("base.html", `<Component name="Base"><html><Slot /></html></Component>`)
 
 eng := grove.New(grove.WithStore(store))
 
-result, _ := eng.Render(ctx, "greeting.grov", grove.Data{"name": "Bob"})
+result, _ := eng.Render(ctx, "greeting.html", grove.Data{"name": "Bob"})
 fmt.Println(result.Body) // Hello, Bob!
 ```
 
@@ -99,9 +99,9 @@ data := grove.Data{
 }
 ```
 
-```jinja2
-{{ user.name }}      {# Alice #}
-{{ user.tags[0] }}   {# admin #}
+```html
+{% user.name %}      {# Alice #}
+{% user.tags[0] %}   {# admin #}
 ```
 
 ### Custom Go types
@@ -124,9 +124,9 @@ func (u User) GroveResolve(key string) (any, bool) {
 }
 ```
 
-```jinja2
-{{ user.name }}   {# works — returns "Alice" #}
-{{ user.email }}  {# empty — not exposed by GroveResolve #}
+```html
+{% user.name %}   {# works — returns "Alice" #}
+{% user.email %}  {# empty — not exposed by GroveResolve #}
 ```
 
 Only keys returned by `GroveResolve` are accessible in templates. This lets you control exactly what data is visible to template authors.
@@ -141,11 +141,11 @@ eng.SetGlobal("site_name", "My Blog")
 eng.SetGlobal("current_year", "2026")
 ```
 
-```jinja2
-<footer>© {{ current_year }} {{ site_name }}</footer>
+```html
+<footer>&copy; {% current_year %} {% site_name %}</footer>
 ```
 
-Globals have the lowest priority. Render data overrides globals, and local variables (from `set`, `let`, `for`) override render data.
+Globals have the lowest priority. Render data overrides globals, and local variables (from `{% set %}`, `{% let %}`, `<For>`) override render data.
 
 ## Engine Options
 
@@ -162,7 +162,7 @@ eng := grove.New(
 	grove.WithStrictVariables(true),
 	grove.WithCacheSize(1024),
 	grove.WithSandbox(grove.SandboxConfig{
-		AllowedTags:    []string{"if", "for", "set", "component"},
+		AllowedTags:    []string{"If", "For", "Import", "Component"},
 		AllowedFilters: []string{"upper", "lower", "escape", "safe"},
 		MaxLoopIter:    10000,
 	}),
@@ -178,7 +178,7 @@ Grove returns two error types:
 **`ParseError`** — syntax errors detected during compilation. Includes `Template`, `Line`, and `Column` fields:
 
 ```go
-result, err := eng.RenderTemplate(ctx, `{% if %}oops{% endif %}`, nil)
+result, err := eng.RenderTemplate(ctx, `<If>oops</If>`, nil)
 if err != nil {
 	var pe grove.ParseError
 	if errors.As(err, &pe) {
@@ -190,7 +190,7 @@ if err != nil {
 **`RuntimeError`** — errors during template execution (division by zero, missing required props, strict mode undefined variables):
 
 ```go
-result, err := eng.Render(ctx, "page.grov", data)
+result, err := eng.Render(ctx, "page.html", data)
 if err != nil {
 	var re grove.RuntimeError
 	if errors.As(err, &re) {

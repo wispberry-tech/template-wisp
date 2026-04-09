@@ -1,16 +1,17 @@
-{% props title, summary, href="#", date="", author_name="", author_slug="" %}
+<Component name="Card" title summary href="#" date="" author_name="" author_slug="">
 <article class="card">
   <h2 class="card-title">
-    <a href="{{ href }}">{{ title }}</a>
+    <a href="{% href %}">{% title %}</a>
   </h2>
   <div class="card-meta">
-    {% if date %}<time>{{ date }}</time>{% endif %}
-    {% if author_name %}
-      <span class="card-author">by <a href="/author/{{ author_slug }}">{{ author_name }}</a></span>
-    {% endif %}
+    <If test={date}><time>{% date %}</time></If>
+    <If test={author_name}>
+      <span class="card-author">by <a href="/author/{% author_slug %}">{% author_name %}</a></span>
+    </If>
   </div>
-  <p class="card-summary">{{ summary | truncate(150) }}</p>
+  <p class="card-summary">{% summary | truncate(150) %}</p>
   <div class="card-tags">
-    {% slot "tags" %}{% endslot %}
+    <Slot name="tags" />
   </div>
 </article>
+</Component>

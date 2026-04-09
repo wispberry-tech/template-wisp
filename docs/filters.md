@@ -2,11 +2,11 @@
 
 Filters transform values using pipe syntax. They can be chained and accept arguments:
 
-```jinja2
-{{ name | upper }}                       {# ALICE #}
-{{ name | trim | lower | title }}        {# Alice #}
-{{ text | truncate(50, "…") }}           {# First 50 chars… #}
-{{ items | sort | join(", ") }}          {# a, b, c #}
+```html
+{% name | upper %}                       {# ALICE #}
+{% name | trim | lower | title %}        {# Alice #}
+{% text | truncate(50, "…") %}           {# First 50 chars… #}
+{% items | sort | join(", ") %}          {# a, b, c #}
 ```
 
 ## String Filters
@@ -17,8 +17,8 @@ Filters transform values using pipe syntax. They can be chained and accept argum
 
 Converts string to uppercase.
 
-```jinja2
-{{ "hello" | upper }}  →  HELLO
+```html
+{% "hello" | upper %}  →  HELLO
 ```
 
 #### `lower`
@@ -27,8 +27,8 @@ Converts string to uppercase.
 
 Converts string to lowercase.
 
-```jinja2
-{{ "HELLO" | lower }}  →  hello
+```html
+{% "HELLO" | lower %}  →  hello
 ```
 
 #### `title`
@@ -37,8 +37,8 @@ Converts string to lowercase.
 
 Capitalizes the first letter of each word.
 
-```jinja2
-{{ "hello world" | title }}  →  Hello World
+```html
+{% "hello world" | title %}  →  Hello World
 ```
 
 #### `capitalize`
@@ -47,8 +47,8 @@ Capitalizes the first letter of each word.
 
 Capitalizes the first letter, lowercases the rest.
 
-```jinja2
-{{ "hello WORLD" | capitalize }}  →  Hello world
+```html
+{% "hello WORLD" | capitalize %}  →  Hello world
 ```
 
 #### `trim`
@@ -57,8 +57,8 @@ Capitalizes the first letter, lowercases the rest.
 
 Strips leading and trailing whitespace.
 
-```jinja2
-{{ "  hello  " | trim }}  →  hello
+```html
+{% "  hello  " | trim %}  →  hello
 ```
 
 #### `lstrip`
@@ -67,8 +67,8 @@ Strips leading and trailing whitespace.
 
 Strips leading whitespace only.
 
-```jinja2
-{{ "  hello  " | lstrip }}  →  hello  
+```html
+{% "  hello  " | lstrip %}  →  hello  
 ```
 
 #### `rstrip`
@@ -77,8 +77,8 @@ Strips leading whitespace only.
 
 Strips trailing whitespace only.
 
-```jinja2
-{{ "  hello  " | rstrip }}  →    hello
+```html
+{% "  hello  " | rstrip %}  →    hello
 ```
 
 #### `replace`
@@ -87,9 +87,9 @@ Strips trailing whitespace only.
 
 Replaces occurrences of `old` with `new`. Optional `count` limits replacements.
 
-```jinja2
-{{ "hello world" | replace("world", "Grove") }}  →  hello Grove
-{{ "aaa" | replace("a", "b", 2) }}  →  bba
+```html
+{% "hello world" | replace("world", "Grove") %}  →  hello Grove
+{% "aaa" | replace("a", "b", 2) %}  →  bba
 ```
 
 #### `truncate`
@@ -98,9 +98,9 @@ Replaces occurrences of `old` with `new`. Optional `count` limits replacements.
 
 Truncates string to `length` characters and appends `suffix`. Defaults: length=255, suffix="...".
 
-```jinja2
-{{ "Hello, World!" | truncate(5) }}  →  He...
-{{ "Hello, World!" | truncate(8, "…") }}  →  Hello…
+```html
+{% "Hello, World!" | truncate(5) %}  →  He...
+{% "Hello, World!" | truncate(8, "…") %}  →  Hello…
 ```
 
 #### `center`
@@ -109,9 +109,9 @@ Truncates string to `length` characters and appends `suffix`. Defaults: length=2
 
 Centers string within `width` using `fill` character. Default fill: space.
 
-```jinja2
-{{ "hi" | center(10) }}  →      hi    
-{{ "hi" | center(10, "-") }}  →  ----hi----
+```html
+{% "hi" | center(10) %}  →      hi    
+{% "hi" | center(10, "-") %}  →  ----hi----
 ```
 
 #### `ljust`
@@ -120,8 +120,8 @@ Centers string within `width` using `fill` character. Default fill: space.
 
 Left-justifies string within `width`. Default fill: space.
 
-```jinja2
-{{ "hi" | ljust(10, ".") }}  →  hi........
+```html
+{% "hi" | ljust(10, ".") %}  →  hi........
 ```
 
 #### `rjust`
@@ -130,8 +130,8 @@ Left-justifies string within `width`. Default fill: space.
 
 Right-justifies string within `width`. Default fill: space.
 
-```jinja2
-{{ "hi" | rjust(10, ".") }}  →  ........hi
+```html
+{% "hi" | rjust(10, ".") %}  →  ........hi
 ```
 
 #### `split`
@@ -140,8 +140,8 @@ Right-justifies string within `width`. Default fill: space.
 
 Splits string into a list. Default separator: space.
 
-```jinja2
-{{ "a,b,c" | split(",") | join(" ") }}  →  a b c
+```html
+{% "a,b,c" | split(",") | join(" ") %}  →  a b c
 ```
 
 #### `wordcount`
@@ -150,8 +150,8 @@ Splits string into a list. Default separator: space.
 
 Returns the number of words in a string.
 
-```jinja2
-{{ "hello beautiful world" | wordcount }}  →  3
+```html
+{% "hello beautiful world" | wordcount %}  →  3
 ```
 
 ## Collection Filters
@@ -162,10 +162,10 @@ Returns the number of words in a string.
 
 Returns the length of a list, map, or string (by rune count for strings).
 
-```jinja2
-{{ [1, 2, 3] | length }}   →  3
-{{ "hello" | length }}      →  5
-{{ {a: 1, b: 2} | length }} →  2
+```html
+{% [1, 2, 3] | length %}   →  3
+{% "hello" | length %}      →  5
+{% {a: 1, b: 2} | length %} →  2
 ```
 
 #### `first`
@@ -174,8 +174,8 @@ Returns the length of a list, map, or string (by rune count for strings).
 
 Returns the first element of a list. Returns nil for empty lists.
 
-```jinja2
-{{ ["a", "b", "c"] | first }}  →  a
+```html
+{% ["a", "b", "c"] | first %}  →  a
 ```
 
 #### `last`
@@ -184,8 +184,8 @@ Returns the first element of a list. Returns nil for empty lists.
 
 Returns the last element of a list. Returns nil for empty lists.
 
-```jinja2
-{{ ["a", "b", "c"] | last }}  →  c
+```html
+{% ["a", "b", "c"] | last %}  →  c
 ```
 
 #### `join`
@@ -194,9 +194,9 @@ Returns the last element of a list. Returns nil for empty lists.
 
 Joins list elements into a string. Default separator: empty string.
 
-```jinja2
-{{ ["a", "b", "c"] | join(", ") }}  →  a, b, c
-{{ [1, 2, 3] | join("-") }}  →  1-2-3
+```html
+{% ["a", "b", "c"] | join(", ") %}  →  a, b, c
+{% [1, 2, 3] | join("-") %}  →  1-2-3
 ```
 
 #### `sort`
@@ -205,8 +205,8 @@ Joins list elements into a string. Default separator: empty string.
 
 Sorts list elements as strings (stable sort).
 
-```jinja2
-{{ ["banana", "apple", "cherry"] | sort | join(", ") }}  →  apple, banana, cherry
+```html
+{% ["banana", "apple", "cherry"] | sort | join(", ") %}  →  apple, banana, cherry
 ```
 
 #### `reverse`
@@ -215,9 +215,9 @@ Sorts list elements as strings (stable sort).
 
 Reverses a list or string.
 
-```jinja2
-{{ ["a", "b", "c"] | reverse | join("") }}  →  cba
-{{ "hello" | reverse }}  →  olleh
+```html
+{% ["a", "b", "c"] | reverse | join("") %}  →  cba
+{% "hello" | reverse %}  →  olleh
 ```
 
 #### `unique`
@@ -226,8 +226,8 @@ Reverses a list or string.
 
 Removes duplicate elements, preserving order.
 
-```jinja2
-{{ ["a", "b", "a", "c", "b"] | unique | join(", ") }}  →  a, b, c
+```html
+{% ["a", "b", "a", "c", "b"] | unique | join(", ") %}  →  a, b, c
 ```
 
 #### `min`
@@ -236,8 +236,8 @@ Removes duplicate elements, preserving order.
 
 Returns the minimum value in a list. Compares numerically if possible, otherwise as strings.
 
-```jinja2
-{{ [3, 1, 2] | min }}  →  1
+```html
+{% [3, 1, 2] | min %}  →  1
 ```
 
 #### `max`
@@ -246,8 +246,8 @@ Returns the minimum value in a list. Compares numerically if possible, otherwise
 
 Returns the maximum value in a list. Compares numerically if possible, otherwise as strings.
 
-```jinja2
-{{ [3, 1, 2] | max }}  →  3
+```html
+{% [3, 1, 2] | max %}  →  3
 ```
 
 #### `sum`
@@ -256,9 +256,9 @@ Returns the maximum value in a list. Compares numerically if possible, otherwise
 
 Returns the sum of numeric values in a list.
 
-```jinja2
-{{ [1, 2, 3] | sum }}  →  6
-{{ [1.5, 2.5] | sum }}  →  4
+```html
+{% [1, 2, 3] | sum %}  →  6
+{% [1.5, 2.5] | sum %}  →  4
 ```
 
 #### `map`
@@ -267,9 +267,9 @@ Returns the sum of numeric values in a list.
 
 Extracts an attribute from each item in a list.
 
-```jinja2
+```html
 {% set users = [{name: "Alice"}, {name: "Bob"}] %}
-{{ users | map("name") | join(", ") }}  →  Alice, Bob
+{% users | map("name") | join(", ") %}  →  Alice, Bob
 ```
 
 #### `batch`
@@ -278,10 +278,10 @@ Extracts an attribute from each item in a list.
 
 Groups a list into batches (sub-lists) of the given size. Default size: 1.
 
-```jinja2
-{% for row in [1,2,3,4,5] | batch(2) %}
-  {{ row | join(",") }}
-{% endfor %}
+```html
+<For each={[1,2,3,4,5] | batch(2)} as="row">
+  {% row | join(",") %}
+</For>
 {# 1,2 then 3,4 then 5 #}
 ```
 
@@ -291,8 +291,8 @@ Groups a list into batches (sub-lists) of the given size. Default size: 1.
 
 Flattens nested lists one level deep.
 
-```jinja2
-{{ [[1, 2], [3, 4], [5]] | flatten | join(",") }}  →  1,2,3,4,5
+```html
+{% [[1, 2], [3, 4], [5]] | flatten | join(",") %}  →  1,2,3,4,5
 ```
 
 #### `keys`
@@ -301,9 +301,9 @@ Flattens nested lists one level deep.
 
 Returns the keys of a map as a list. For map literals, returns keys in insertion order. For Go maps passed as data, returns keys sorted lexicographically.
 
-```jinja2
+```html
 {% set m = {b: 2, a: 1} %}
-{{ m | keys | join(",") }}  →  b,a
+{% m | keys | join(",") %}  →  b,a
 ```
 
 #### `values`
@@ -312,9 +312,9 @@ Returns the keys of a map as a list. For map literals, returns keys in insertion
 
 Returns the values of a map as a list. For map literals, returns values in insertion order. For Go maps passed as data, returns values in sorted key order.
 
-```jinja2
+```html
 {% set m = {b: 2, a: 1} %}
-{{ m | values | join(",") }}  →  2,1
+{% m | values | join(",") %}  →  2,1
 ```
 
 ## Numeric Filters
@@ -325,9 +325,9 @@ Returns the values of a map as a list. For map literals, returns values in inser
 
 Returns the absolute value.
 
-```jinja2
-{{ -5 | abs }}  →  5
-{{ -3.14 | abs }}  →  3.14
+```html
+{% -5 | abs %}  →  5
+{% -3.14 | abs %}  →  3.14
 ```
 
 #### `round`
@@ -336,9 +336,9 @@ Returns the absolute value.
 
 Rounds to the given precision. Default: 0. Returns an integer when precision is 0.
 
-```jinja2
-{{ 3.7 | round }}  →  4
-{{ 3.14159 | round(2) }}  →  3.14
+```html
+{% 3.7 | round %}  →  4
+{% 3.14159 | round(2) %}  →  3.14
 ```
 
 #### `ceil`
@@ -347,8 +347,8 @@ Rounds to the given precision. Default: 0. Returns an integer when precision is 
 
 Returns the ceiling (rounds up to nearest integer).
 
-```jinja2
-{{ 3.2 | ceil }}  →  4
+```html
+{% 3.2 | ceil %}  →  4
 ```
 
 #### `floor`
@@ -357,8 +357,8 @@ Returns the ceiling (rounds up to nearest integer).
 
 Returns the floor (rounds down to nearest integer).
 
-```jinja2
-{{ 3.8 | floor }}  →  3
+```html
+{% 3.8 | floor %}  →  3
 ```
 
 #### `int`
@@ -367,9 +367,9 @@ Returns the floor (rounds down to nearest integer).
 
 Converts to integer.
 
-```jinja2
-{{ "42" | int }}  →  42
-{{ 3.9 | int }}  →  3
+```html
+{% "42" | int %}  →  42
+{% 3.9 | int %}  →  3
 ```
 
 #### `float`
@@ -378,9 +378,9 @@ Converts to integer.
 
 Converts to float.
 
-```jinja2
-{{ "3.14" | float }}  →  3.14
-{{ 42 | float }}  →  42
+```html
+{% "3.14" | float %}  →  3.14
+{% 42 | float %}  →  42
 ```
 
 ## Logic & Type Filters
@@ -391,9 +391,9 @@ Converts to float.
 
 Returns `fallback` if the value is falsy (nil, false, 0, empty string, empty list, empty map).
 
-```jinja2
-{{ name | default("Anonymous") }}
-{{ items | default([]) }}
+```html
+{% name | default("Anonymous") %}
+{% items | default([]) %}
 ```
 
 #### `string`
@@ -402,9 +402,9 @@ Returns `fallback` if the value is falsy (nil, false, 0, empty string, empty lis
 
 Converts a value to its string representation.
 
-```jinja2
-{{ 42 | string }}  →  42
-{{ true | string }}  →  true
+```html
+{% 42 | string %}  →  42
+{% true | string %}  →  true
 ```
 
 #### `bool`
@@ -413,11 +413,11 @@ Converts a value to its string representation.
 
 Converts a value to boolean using truthy/falsy rules.
 
-```jinja2
-{{ "" | bool }}   →  false
-{{ "hi" | bool }} →  true
-{{ 0 | bool }}    →  false
-{{ 1 | bool }}    →  true
+```html
+{% "" | bool %}   →  false
+{% "hi" | bool %} →  true
+{% 0 | bool %}    →  false
+{% 1 | bool %}    →  true
 ```
 
 ## HTML Filters
@@ -428,11 +428,11 @@ Converts a value to boolean using truthy/falsy rules.
 
 HTML-escapes special characters. Returns SafeHTML (won't be double-escaped).
 
-```jinja2
-{{ "<b>bold</b>" | escape }}  →  &lt;b&gt;bold&lt;/b&gt;
+```html
+{% "<b>bold</b>" | escape %}  →  &lt;b&gt;bold&lt;/b&gt;
 ```
 
-Note: auto-escaping is on by default for all `{{ }}` output, so you rarely need this filter explicitly. It's useful when you want to escape a value *before* passing it to another filter.
+Note: auto-escaping is on by default for all `{% %}` output, so you rarely need this filter explicitly. It's useful when you want to escape a value *before* passing it to another filter.
 
 #### `safe`
 
@@ -440,8 +440,8 @@ Note: auto-escaping is on by default for all `{{ }}` output, so you rarely need 
 
 Marks a value as trusted HTML, bypassing auto-escaping.
 
-```jinja2
-{{ html_content | safe }}
+```html
+{% html_content | safe %}
 ```
 
 **Use with caution** — only apply `safe` to content you trust. Untrusted content marked as safe creates XSS vulnerabilities.
@@ -452,8 +452,8 @@ Marks a value as trusted HTML, bypassing auto-escaping.
 
 Removes all HTML tags.
 
-```jinja2
-{{ "<p>Hello <b>world</b></p>" | striptags }}  →  Hello world
+```html
+{% "<p>Hello <b>world</b></p>" | striptags %}  →  Hello world
 ```
 
 #### `nl2br`
@@ -462,8 +462,8 @@ Removes all HTML tags.
 
 Converts newlines to `<br>` tags. HTML-escapes the input first, then returns SafeHTML.
 
-```jinja2
-{{ "line one\nline two" | nl2br }}  →  line one<br>
+```html
+{% "line one\nline two" | nl2br %}  →  line one<br>
 line two
 ```
 
@@ -500,10 +500,10 @@ eng.RegisterFilter("bold", grove.FilterFunc(
 ))
 ```
 
-```jinja2
-{{ name | shout }}       →  Alice!!!
-{{ "ha" | repeat(3) }}   →  hahaha
-{{ name | bold }}        →  <b>Alice</b>  (not escaped)
+```html
+{% name | shout %}       →  Alice!!!
+{% "ha" | repeat(3) %}   →  hahaha
+{% name | bold %}        →  <b>Alice</b>  (not escaped)
 ```
 
 See [API Reference](api-reference.md) for details on `FilterFn`, `FilterDef`, and `FilterFunc`.

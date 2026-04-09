@@ -382,11 +382,11 @@ func main() {
 		grove.WithStore(fsStore),
 		grove.WithSandbox(grove.SandboxConfig{
 			AllowedTags: []string{
-				"if", "elif", "else", "for", "empty", "set", "let",
-				"block", "extends", "include", "render", "import",
-				"component", "slot", "fill", "props",
-				"macro", "call", "capture", "range",
-				"asset", "meta", "hoist",
+				"set", "let",
+				"If", "ElseIf", "Else", "For", "Empty",
+				"Import", "Component", "Slot", "Fill",
+				"Capture", "Verbatim", "Hoist",
+				"ImportAsset", "SetMeta",
 			},
 			AllowedFilters: []string{
 				"upper", "lower", "title", "capitalize", "default", "truncate", "length",

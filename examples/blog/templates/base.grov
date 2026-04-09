@@ -1,20 +1,24 @@
-{% asset "/static/style.css" type="stylesheet" priority=10 %}
+<Component name="Base">
+<ImportAsset src="/static/style.css" type="stylesheet" priority="10" />
+<Import src="composites/nav" name="Nav" />
+<Import src="primitives/footer" name="Footer" />
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Grove Blog{% endblock %}</title>
+  <title><Slot name="title">Grove Blog</Slot></title>
   <!-- HEAD_ASSETS -->
   <!-- HEAD_META -->
   <!-- HEAD_HOISTED -->
 </head>
 <body>
-  {% component "composites/nav" site_name=site_name %}{% endcomponent %}
+  <Nav site_name={site_name} />
   <main class="container">
-    {% block content %}{% endblock %}
+    <Slot name="content" />
   </main>
-  {% component "primitives/footer" year=current_year %}{% endcomponent %}
+  <Footer year={current_year} />
   <!-- FOOT_ASSETS -->
 </body>
 </html>
+</Component>

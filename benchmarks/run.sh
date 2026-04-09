@@ -44,6 +44,10 @@ if [[ -n "$FILTER" ]]; then
     BENCH_PATTERN="$FILTER"
 fi
 
+RESULTS_DIR="results"
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+mkdir -p "$RESULTS_DIR"
+
 TMPRAW=$(mktemp)
 trap 'rm -f "$TMPRAW"' EXIT
 
@@ -61,9 +65,16 @@ go test -bench="$BENCH_PATTERN" -run='^$' -benchmem -count="$COUNT" -timeout="$T
 
 echo ""
 
+# Always save to results directory
+RESULT_FILE="$RESULTS_DIR/bench-${TIMESTAMP}.txt"
+cp "$TMPRAW" "$RESULT_FILE"
+ln -sf "bench-${TIMESTAMP}.txt" "$RESULTS_DIR/latest.txt"
+echo "Results saved to $RESULT_FILE"
+echo ""
+
 if [[ -n "$OUTFILE" ]]; then
     cp "$TMPRAW" "$OUTFILE"
-    echo "Raw output saved to $OUTFILE"
+    echo "Also saved to $OUTFILE"
     echo ""
 fi
 

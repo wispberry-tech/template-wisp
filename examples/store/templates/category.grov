@@ -1,32 +1,37 @@
-{% extends "base.grov" %}
-{% import "macros/pricing.grov" as pricing %}
+<Import src="base" name="Base" />
+<Import src="macros/pricing" name="Price" />
+<Import src="macros/pricing" name="DiscountBadge" />
+<Import src="composites/breadcrumbs/breadcrumbs" name="Breadcrumbs" />
+<Import src="composites/product-card/product-card" name="ProductCard" />
 
-{% block title %}{{ category.name }} &mdash; {{ site_name }}{% endblock %}
+<Base>
+  <Fill slot="title">{% category.name %} &mdash; {% site_name %}</Fill>
 
-{% block content %}
-{% meta name="description" content="Browse products in this category" %}
+  <Fill slot="content">
+    <SetMeta name="description" content="Browse products in this category" />
 
-{% include "composites/breadcrumbs/breadcrumbs.grov" %}
+    <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-<div class="category-header">
-  <h1>{{ category.name }}</h1>
-  <p>{{ category.description }}</p>
-</div>
+    <div class="category-header">
+      <h1>{% category.name %}</h1>
+      <p>{% category.description %}</p>
+    </div>
 
-<div class="product-grid">
-  {% for product in products %}
-    {% capture price_html %}
-      {{ pricing.price(product.price, product.sale_price) }}
-    {% endcapture %}
-    {% component "composites/product-card" name=product.name slug=product.slug image_url=product.image_url price_display=price_html rating=product.rating review_count=product.review_count %}
-      {% fill "badge" %}
-        {% if product.on_sale %}
-          {{ pricing.discount_badge(product.price, product.sale_price) }}
-        {% endif %}
-      {% endfill %}
-    {% endcomponent %}
-  {% empty %}
-    <p class="empty-state">No products in this category yet.</p>
-  {% endfor %}
-</div>
-{% endblock %}
+    <div class="product-grid">
+      <For each={products} as="product">
+        <Capture name="price_html">
+          <Price amount={product.price} sale_amount={product.sale_price} />
+        </Capture>
+        <ProductCard name={product.name} slug={product.slug} image_url={product.image_url} price_display={price_html} rating={product.rating} review_count={product.review_count}>
+          <Fill slot="badge">
+            <If test={product.on_sale}>
+              <DiscountBadge price={product.price} sale_price={product.sale_price} />
+            </If>
+          </Fill>
+        </ProductCard>
+      <Empty />
+        <p class="empty-state">No products in this category yet.</p>
+      </For>
+    </div>
+  </Fill>
+</Base>

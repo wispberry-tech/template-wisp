@@ -66,12 +66,20 @@ func (l *lx) step() error {
 	if l.pos+1 < len(l.src) {
 		pair := l.src[l.pos : l.pos+2]
 		switch pair {
-		case "{{":
-			return l.lexOutput()
 		case "{%":
 			return l.lexTag()
 		case "{#":
 			return l.lexComment()
+		}
+		// PascalCase element: <Name or </Name>
+		if l.src[l.pos] == '<' {
+			next := l.src[l.pos+1]
+			if next >= 'A' && next <= 'Z' {
+				return l.lexElement()
+			}
+			if next == '/' && l.pos+2 < len(l.src) && l.src[l.pos+2] >= 'A' && l.src[l.pos+2] <= 'Z' {
+				return l.lexCloseElement()
+			}
 		}
 	}
 	l.lexText()
@@ -87,8 +95,18 @@ func (l *lx) lexText() {
 	for l.pos < len(l.src) {
 		if l.pos+1 < len(l.src) {
 			p := l.src[l.pos : l.pos+2]
-			if p == "{{" || p == "{%" || p == "{#" {
+			if p == "{%" || p == "{#" {
 				break
+			}
+			// Stop on PascalCase elements: <Name or </Name>
+			if l.src[l.pos] == '<' {
+				next := l.src[l.pos+1]
+				if next >= 'A' && next <= 'Z' {
+					break
+				}
+				if next == '/' && l.pos+2 < len(l.src) && l.src[l.pos+2] >= 'A' && l.src[l.pos+2] <= 'Z' {
+					break
+				}
 			}
 		}
 		l.advance()
@@ -201,6 +219,188 @@ func (l *lx) lexRawContent(startLine int, stripTagLeft, stripTagRight bool) erro
 		l.advance()
 	}
 	return &lexErr{line: startLine, msg: "unclosed raw block"}
+}
+
+// ─── PascalCase Elements ─────────────────────────────────────────────────────
+
+func (l *lx) lexElement() error {
+	line, col := l.line, l.col
+	l.pos++ // consume <
+	l.col++
+
+	// Read element name (may include dots for namespaced components like UI.Card)
+	nameStart := l.pos
+	for l.pos < len(l.src) && (l.isIdentChar(l.pos) || l.src[l.pos] == '.') {
+		l.pos++
+		l.col++
+	}
+	name := l.src[nameStart:l.pos]
+
+	// Special handling for <Verbatim>
+	if name == "Verbatim" {
+		return l.lexVerbatimContent(line)
+	}
+
+	l.tokens = append(l.tokens, Token{Kind: TK_ELEMENT_OPEN, Value: name, Line: line, Col: col})
+	return l.lexElementAttrs()
+}
+
+func (l *lx) lexCloseElement() error {
+	line, col := l.line, l.col
+	l.pos += 2 // consume </
+	l.col += 2
+
+	nameStart := l.pos
+	for l.pos < len(l.src) && (l.isIdentChar(l.pos) || l.src[l.pos] == '.') {
+		l.pos++
+		l.col++
+	}
+	name := l.src[nameStart:l.pos]
+
+	l.skipSpaces()
+	if l.pos < len(l.src) && l.src[l.pos] == '>' {
+		l.pos++
+		l.col++
+	}
+
+	l.tokens = append(l.tokens, Token{Kind: TK_ELEMENT_CLOSE, Value: name, Line: line, Col: col})
+	return nil
+}
+
+func (l *lx) lexElementAttrs() error {
+	for l.pos < len(l.src) {
+		l.skipSpaces()
+		if l.pos >= len(l.src) {
+			return &lexErr{line: l.line, msg: "unclosed element"}
+		}
+
+		ch := l.src[l.pos]
+
+		// Self-close />
+		if ch == '/' && l.pos+1 < len(l.src) && l.src[l.pos+1] == '>' {
+			l.tokens = append(l.tokens, Token{Kind: TK_SELF_CLOSE, Value: "/>", Line: l.line, Col: l.col})
+			l.pos += 2
+			l.col += 2
+			return nil
+		}
+
+		// Element end >
+		if ch == '>' {
+			l.tokens = append(l.tokens, Token{Kind: TK_ELEMENT_END, Value: ">", Line: l.line, Col: l.col})
+			l.pos++
+			l.col++
+			return nil
+		}
+
+		// Colon (for let:data pattern)
+		if ch == ':' {
+			l.tokens = append(l.tokens, Token{Kind: TK_COLON, Value: ":", Line: l.line, Col: l.col})
+			l.pos++
+			l.col++
+			continue
+		}
+
+		// Attribute name
+		if !l.isIdentChar(l.pos) {
+			return &lexErr{line: l.line, msg: fmt.Sprintf("unexpected character in element: %q", ch)}
+		}
+		if err := l.lexIdent(); err != nil {
+			return err
+		}
+
+		// Check for = (attribute value)
+		if l.pos < len(l.src) && l.src[l.pos] == '=' {
+			l.tokens = append(l.tokens, Token{Kind: TK_ASSIGN, Value: "=", Line: l.line, Col: l.col})
+			l.pos++
+			l.col++
+
+			if l.pos >= len(l.src) {
+				return &lexErr{line: l.line, msg: "expected attribute value"}
+			}
+
+			ch = l.src[l.pos]
+			if ch == '"' || ch == '\'' {
+				if err := l.lexString(ch); err != nil {
+					return err
+				}
+			} else if ch == '{' {
+				if err := l.lexAttrExpr(); err != nil {
+					return err
+				}
+			} else {
+				return &lexErr{line: l.line, msg: fmt.Sprintf("unexpected character in attribute value: %q", ch)}
+			}
+		}
+	}
+	return &lexErr{line: l.line, msg: "unclosed element"}
+}
+
+func (l *lx) lexAttrExpr() error {
+	line, col := l.line, l.col
+	l.tokens = append(l.tokens, Token{Kind: TK_LBRACE, Value: "{", Line: line, Col: col})
+	l.pos++
+	l.col++
+
+	depth := 1
+	for l.pos < len(l.src) {
+		l.skipSpaces()
+		if l.pos >= len(l.src) {
+			break
+		}
+
+		ch := l.src[l.pos]
+		if ch == '}' {
+			depth--
+			if depth == 0 {
+				l.tokens = append(l.tokens, Token{Kind: TK_RBRACE, Value: "}", Line: l.line, Col: l.col})
+				l.pos++
+				l.col++
+				return nil
+			}
+		} else if ch == '{' {
+			depth++
+		}
+
+		if err := l.lexOneToken(); err != nil {
+			return err
+		}
+	}
+	return &lexErr{line: line, msg: "unclosed attribute expression"}
+}
+
+func (l *lx) lexVerbatimContent(startLine int) error {
+	// Strip trailing whitespace from preceding text token
+	l.stripLastTextRight()
+
+	// We've consumed <Verbatim, now expect >
+	l.skipSpaces()
+	if l.pos >= len(l.src) || l.src[l.pos] != '>' {
+		return &lexErr{line: startLine, msg: "expected > after <Verbatim"}
+	}
+	l.pos++
+	l.col++
+
+	// Scan until </Verbatim>
+	contentStart := l.pos
+	for l.pos < len(l.src) {
+		if l.hasPrefix("</Verbatim>") {
+			content := l.src[contentStart:l.pos]
+			// Advance past </Verbatim>
+			for i := 0; i < len("</Verbatim>"); i++ {
+				l.advance()
+			}
+			// Strip leading/trailing whitespace from content
+			content = strings.TrimSpace(content)
+			if content != "" {
+				l.tokens = append(l.tokens, Token{Kind: TK_TEXT, Value: content, Line: startLine})
+			}
+			// Strip leading whitespace from following text
+			l.stripNext = true
+			return nil
+		}
+		l.advance()
+	}
+	return &lexErr{line: startLine, msg: "unclosed <Verbatim> block"}
 }
 
 // ─── Comment {# #} ────────────────────────────────────────────────────────────

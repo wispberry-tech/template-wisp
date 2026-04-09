@@ -41,15 +41,22 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+RESULTS_DIR="results"
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+mkdir -p "$RESULTS_DIR"
+
 ARGS=(-n "$ITERATIONS")
 if [[ -n "$FILTER" ]]; then
     ARGS+=(-filter "$FILTER")
 fi
 
+RESULT_FILE="$RESULTS_DIR/timing-${TIMESTAMP}.txt"
+go run ./cmd/timing/ "${ARGS[@]}" | tee "$RESULT_FILE"
+ln -sf "timing-${TIMESTAMP}.txt" "$RESULTS_DIR/timing-latest.txt"
+echo ""
+echo "Results saved to $RESULT_FILE"
+
 if [[ -n "$OUTFILE" ]]; then
-    go run ./cmd/timing/ "${ARGS[@]}" | tee "$OUTFILE"
-    echo ""
-    echo "Output saved to $OUTFILE"
-else
-    go run ./cmd/timing/ "${ARGS[@]}"
+    cp "$RESULT_FILE" "$OUTFILE"
+    echo "Also saved to $OUTFILE"
 fi

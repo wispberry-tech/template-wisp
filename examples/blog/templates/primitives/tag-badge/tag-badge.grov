@@ -1,6 +1,7 @@
-{% props label, color="gray", slug="" %}
-{% if slug %}
-  <a href="/tag/{{ slug }}" class="tag tag-{{ color }}">{{ label }}</a>
-{% else %}
-  <span class="tag tag-{{ color }}">{{ label }}</span>
-{% endif %}
+<Component name="TagBadge" label color="gray" slug="">
+<If test={slug}>
+  <a href="/tag/{% slug %}" class="tag tag-{% color %}">{% label %}</a>
+<Else />
+  <span class="tag tag-{% color %}">{% label %}</span>
+</If>
+</Component>

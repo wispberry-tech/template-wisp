@@ -5,7 +5,10 @@ package ast
 type Node interface{ wispyNode() }
 
 // Program is the root node.
-type Program struct{ Body []Node }
+type Program struct {
+	Body      []Node
+	ImportMap map[string]string // localName → "src#compName" (from <Import> declarations)
+}
 
 func (*Program) wispyNode() {}
 
@@ -320,9 +323,10 @@ func (*PropsNode) wispyNode() {}
 // FillNode is NOT directly part of the template AST — it is consumed by the parser
 // when parsing a ComponentNode and stored in ComponentNode.Fills.
 type FillNode struct {
-	Name string
-	Body []Node
-	Line int
+	Name        string
+	Body        []Node
+	LetBindings map[string]string // scoped slot: scope_key → local_variable
+	Line        int
 }
 
 // ComponentNode is {% component "name" k=v, ... %}...{% endcomponent %}.
@@ -336,11 +340,12 @@ type ComponentNode struct {
 
 func (*ComponentNode) wispyNode() {}
 
-// SlotNode is {% slot ["name"] %}...{% endslot %} inside a component template.
+// SlotNode is <Slot name="x" data={expr} /> inside a component template.
 type SlotNode struct {
-	Name    string // "" = default slot
-	Default []Node // fallback content rendered when no matching fill
-	Line    int
+	Name      string         // "" = default slot
+	Default   []Node         // fallback content rendered when no matching fill
+	ScopeData []NamedArgNode // scoped slot data: key=expr pairs passed to fill
+	Line      int
 }
 
 func (*SlotNode) wispyNode() {}
@@ -441,3 +446,14 @@ type HoistNode struct {
 }
 
 func (*HoistNode) wispyNode() {}
+
+// ComponentDefNode represents a <Component name="X" ...>body</Component> definition.
+// Used in the HTML-centric syntax to define components within a file.
+type ComponentDefNode struct {
+	Name  string       // component name (e.g., "Btn")
+	Props []MacroParam // declared props
+	Body  []Node       // component body
+	Line  int
+}
+
+func (*ComponentDefNode) wispyNode() {}

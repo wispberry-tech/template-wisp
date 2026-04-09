@@ -1,66 +1,69 @@
-{% extends "base.grov" %}
-{% import "macros/pricing.grov" as pricing %}
+<Import src="base" name="Base" />
+<Import src="macros/pricing" name="Price" />
+<Import src="composites/breadcrumbs/breadcrumbs" name="Breadcrumbs" />
 
-{% block title %}Cart &mdash; {{ site_name }}{% endblock %}
+<Base>
+  <Fill slot="title">Cart &mdash; {% site_name %}</Fill>
 
-{% block content %}
-{% meta name="description" content="Your shopping cart" %}
+  <Fill slot="content">
+    <SetMeta name="description" content="Your shopping cart" />
 
-{% include "composites/breadcrumbs/breadcrumbs.grov" %}
+    <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-<h1>Shopping Cart</h1>
+    <h1>Shopping Cart</h1>
 
-{% if items | length > 0 %}
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Product</th>
-          <th>Price</th>
-          <th>Qty</th>
-          <th style="text-align: right;">Total</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in items %}
-          <tr>
-            <td><a href="/product/{{ item.product.slug }}">{{ item.product.name }}</a></td>
-            <td>{{ pricing.price(item.product.price, item.product.sale_price) }}</td>
-            <td>{{ item.quantity }}</td>
-            <td style="text-align: right;">{{ item.line_total | currency }}</td>
-            <td><a href="/cart/remove?product={{ item.product.slug }}" class="remove-link">Remove</a></td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+    <If test={items | length > 0}>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Price</th>
+              <th>Qty</th>
+              <th style="text-align: right;">Total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <For each={items} as="item">
+              <tr>
+                <td><a href="/product/{% item.product.slug %}">{% item.product.name %}</a></td>
+                <td><Price amount={item.product.price} sale_amount={item.product.sale_price} /></td>
+                <td>{% item.quantity %}</td>
+                <td style="text-align: right;">{% item.line_total | currency %}</td>
+                <td><a href="/cart/remove?product={% item.product.slug %}" class="remove-link">Remove</a></td>
+              </tr>
+            </For>
+          </tbody>
+        </table>
+      </div>
 
-  {% let %}
-    subtotal = 0
-  {% endlet %}
-  {% for item in items %}
-    {% set subtotal = subtotal + item.line_total %}
-  {% endfor %}
+      {% let %}
+        subtotal = 0
+      {% endlet %}
+      <For each={items} as="item">
+        {% set subtotal = subtotal + item.line_total %}
+      </For>
 
-  <div class="cart-summary">
-    <div class="cart-row">
-      <span>Subtotal</span>
-      <span>{{ subtotal | currency }}</span>
-    </div>
-    <div class="cart-row text-muted">
-      <span>Shipping</span>
-      <span>{{ subtotal >= 5000 ? "Free" : "$4.99" }}</span>
-    </div>
-    <hr>
-    {% set total = subtotal >= 5000 ? subtotal : subtotal + 499 %}
-    <div class="cart-row cart-total">
-      <span>Total</span>
-      <span>{{ total | currency }}</span>
-    </div>
-  </div>
-{% else %}
-  <p class="empty-state">Your cart is empty.</p>
-  <a href="/products" class="btn btn-primary">Continue Shopping</a>
-{% endif %}
-{% endblock %}
+      <div class="cart-summary">
+        <div class="cart-row">
+          <span>Subtotal</span>
+          <span>{% subtotal | currency %}</span>
+        </div>
+        <div class="cart-row text-muted">
+          <span>Shipping</span>
+          <span>{% subtotal >= 5000 ? "Free" : "$4.99" %}</span>
+        </div>
+        <hr>
+        {% set total = subtotal >= 5000 ? subtotal : subtotal + 499 %}
+        <div class="cart-row cart-total">
+          <span>Total</span>
+          <span>{% total | currency %}</span>
+        </div>
+      </div>
+    <Else />
+      <p class="empty-state">Your cart is empty.</p>
+      <a href="/products" class="btn btn-primary">Continue Shopping</a>
+    </If>
+  </Fill>
+</Base>

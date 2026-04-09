@@ -1,47 +1,47 @@
-{% extends "docs-layout.grov" %}
+<Import src="docs-layout" name="DocsLayout" />
 
-{% block title %}Filter Reference &mdash; {{ site_name }}{% endblock %}
+<DocsLayout sections={sections} all_pages={all_pages} current_slug={current_slug} breadcrumbs={breadcrumbs}>
+  <Fill slot="content">
+    <SetMeta name="description" content="Complete reference of all built-in Grove template filters" />
 
-{% block content %}
-{% meta name="description" content="Complete reference of all built-in Grove template filters" %}
+    <h1>Filter Reference</h1>
+    <p>{% result_count %} filters<If test={query}> matching "{% query %}"</If><If test={active_category}> in {% active_category %}</If></p>
 
-<h1>Filter Reference</h1>
-<p>{{ result_count }} filters{% if query %} matching "{{ query }}"{% endif %}{% if active_category %} in {{ active_category }}{% endif %}</p>
+    <form action="/docs/filters" method="get" class="filter-search">
+      <input type="text" name="q" value="{% query | default("") %}" placeholder="Search filters..." class="search-input">
+      <select name="category" onchange="this.form.submit()">
+        <option value="">All Categories</option>
+        <For each={filter_categories} as="cat">
+          <option value="{% cat %}" {% active_category == cat ? "selected" : "" %}>{% cat %}</option>
+        </For>
+      </select>
+    </form>
 
-<form action="/docs/filters" method="get" class="filter-search">
-  <input type="text" name="q" value="{{ query | default("") }}" placeholder="Search filters..." class="search-input">
-  <select name="category" onchange="this.form.submit()">
-    <option value="">All Categories</option>
-    {% for cat in filter_categories %}
-      <option value="{{ cat }}" {{ active_category == cat ? "selected" : "" }}>{{ cat }}</option>
-    {% endfor %}
-  </select>
-</form>
-
-<div class="filter-table-wrap">
-  <table class="filter-table">
-    <thead>
-      <tr>
-        <th>Filter</th>
-        <th>Category</th>
-        <th>Description</th>
-        <th>Example</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for f in filters %}
-        <tr>
-          <td><code>{{ f.name }}</code></td>
-          <td><span class="filter-category">{{ f.category }}</span></td>
-          <td>{{ f.description }}</td>
-          <td><code>{{ f.example_input }}</code> &rarr; <code>{{ f.example_output }}</code></td>
-        </tr>
-      {% empty %}
-        <tr>
-          <td colspan="4">No filters match your search.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
-{% endblock %}
+    <div class="filter-table-wrap">
+      <table class="filter-table">
+        <thead>
+          <tr>
+            <th>Filter</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Example</th>
+          </tr>
+        </thead>
+        <tbody>
+          <For each={filters} as="f">
+            <tr>
+              <td><code>{% f.name %}</code></td>
+              <td><span class="filter-category">{% f.category %}</span></td>
+              <td>{% f.description %}</td>
+              <td><code>{% f.example_input %}</code> &rarr; <code>{% f.example_output %}</code></td>
+            </tr>
+          <Empty />
+            <tr>
+              <td colspan="4">No filters match your search.</td>
+            </tr>
+          </For>
+        </tbody>
+      </table>
+    </div>
+  </Fill>
+</DocsLayout>

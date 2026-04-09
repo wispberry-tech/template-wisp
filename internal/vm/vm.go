@@ -806,6 +806,67 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 				return "", err
 			}
 
+		case compiler.OP_DYNAMIC_COMPONENT:
+			compDef := bc.Components[instr.A]
+			propCount := int(instr.B)
+
+			// Pop prop key-value pairs
+			props := make(map[string]any, propCount)
+			for i := propCount - 1; i >= 0; i-- {
+				val := v.pop()
+				key := v.pop()
+				props[key.String()] = val
+			}
+
+			// Pop the component name (from is={expr})
+			compNameVal := v.pop()
+			compName := compNameVal.String()
+
+			// Resolve component name via import map
+			templateName := compName
+			if bc.ImportMap != nil {
+				if resolved, ok := bc.ImportMap[compName]; ok {
+					templateName = resolved
+				}
+			}
+
+			// Load component template
+			compBC, err := v.eng.LoadTemplate(templateName)
+			if err != nil {
+				return "", &runtimeErr{msg: fmt.Sprintf("dynamic component %q: %v", compName, err)}
+			}
+
+			// Save caller scope; push component frame
+			callerScope := v.sc
+			if v.csdepth >= len(v.compStack) {
+				return "", &runtimeErr{msg: "component nesting too deep (max 16)"}
+			}
+			v.compStack[v.csdepth] = componentFrame{
+				fills:       compDef.Fills,
+				callerScope: callerScope,
+				passedProps: props,
+			}
+			v.csdepth++
+
+			globalSc := scope.New(nil)
+			for k, val := range v.eng.GlobalData() {
+				globalSc.Set(k, FromAny(val))
+			}
+			v.sc = scope.New(globalSc)
+
+			if compBC.Props == nil {
+				for k, val := range props {
+					v.sc.Set(k, val.(Value))
+				}
+			}
+
+			_, err = v.run(ctx, compBC)
+			v.csdepth--
+			v.sc = callerScope
+			if err != nil {
+				return "", err
+			}
+
 		case compiler.OP_PROPS_INIT:
 			if v.csdepth == 0 {
 				return "", &runtimeErr{msg: "props declaration outside component context"}
@@ -839,9 +900,22 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 		case compiler.OP_SLOT:
 			slotName := bc.Names[instr.A]
 			defaultBlockIdx := int(instr.B)
+			scopeDataCount := int(instr.Flags)
+
+			// Pop scope data pairs (key, value) from stack
+			type scopePair struct {
+				key string
+				val Value
+			}
+			scopeData := make([]scopePair, scopeDataCount)
+			for i := scopeDataCount - 1; i >= 0; i-- {
+				val := v.pop()
+				keyVal := v.pop()
+				scopeData[i] = scopePair{key: keyVal.String(), val: val}
+			}
 
 			if v.csdepth == 0 {
-				// {% slot %} used outside a component — render default content only
+				// Slot used outside a component — render default content only
 				if defaultBlockIdx != 0xFFFF {
 					if _, err := v.run(ctx, bc.Blocks[defaultBlockIdx].Body); err != nil {
 						return "", err
@@ -853,20 +927,33 @@ func (v *VM) run(ctx context.Context, bc *compiler.Bytecode) (string, error) {
 			frame := &v.compStack[v.csdepth-1]
 
 			// Find matching fill by name
-			var fillBody *compiler.Bytecode
+			var matchedFill *compiler.FillDef
 			for i := range frame.fills {
 				if frame.fills[i].Name == slotName {
-					fillBody = frame.fills[i].Body
+					matchedFill = &frame.fills[i]
 					break
 				}
 			}
 
-			if fillBody != nil {
-				// Render fill in caller scope (lazy render)
+			if matchedFill != nil && matchedFill.Body != nil {
+				// Render fill in caller scope (lazy render).
 				savedSC := v.sc
+				savedDepth := v.csdepth
 				v.sc = scope.New(frame.callerScope)
-				_, err := v.run(ctx, fillBody)
+				v.csdepth--
+
+				// Inject scoped slot data via let-bindings
+				if len(scopeData) > 0 && matchedFill.LetBindings != nil {
+					for _, sd := range scopeData {
+						if localVar, ok := matchedFill.LetBindings[sd.key]; ok {
+							v.sc.Set(localVar, sd.val)
+						}
+					}
+				}
+
+				_, err := v.run(ctx, matchedFill.Body)
 				v.sc = savedSC
+				v.csdepth = savedDepth
 				if err != nil {
 					return "", err
 				}

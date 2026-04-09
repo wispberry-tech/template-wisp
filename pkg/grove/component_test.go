@@ -126,13 +126,13 @@ func TestComponent_Nested(t *testing.T) {
 	require.Equal(t, "<div>[content]</div>", renderComponent(t, store, "page.html", grove.Data{}))
 }
 
-// ─── Component + inheritance ──────────────────────────────────────────────────
+// ─── Component composition (no extends — pure component model) ──────────────
 
-func TestComponent_WithExtends(t *testing.T) {
+func TestComponent_WithComposition(t *testing.T) {
 	store := grove.NewMemoryStore()
 	store.Set("base-card.html", `<Component name="BaseCard" title><div><h2>{% title %}</h2><Slot /></div></Component>`)
-	// card.html extends base-card.html — inheriting its layout
-	store.Set("card.html", `<Component name="Card" title><Extends src="base-card" /></Component>`)
+	// card.html composes base-card via import + invocation (no extends)
+	store.Set("card.html", `<Import src="base-card" name="BaseCard" /><Component name="Card" title><BaseCard title={title}><Slot /></BaseCard></Component>`)
 	store.Set("page.html", `<Import src="card" name="Card" /><Card title="News"><p>Content</p></Card>`)
 	require.Equal(t, "<div><h2>News</h2><p>Content</p></div>", renderComponent(t, store, "page.html", grove.Data{}))
 }
@@ -234,7 +234,8 @@ func TestComponent_DynamicComponent(t *testing.T) {
 
 func TestComponent_SelfClosing(t *testing.T) {
 	store := grove.NewMemoryStore()
-	store.Set("icon.html", `<Component name="Icon" icon><svg><use href={icon} /></svg></Component>`)
+	// Per spec: use {% %} for interpolation in HTML attributes, not {expr}
+	store.Set("icon.html", `<Component name="Icon" icon><svg><use href="{% icon %}"></use></svg></Component>`)
 	store.Set("page.html", `<Import src="icon" name="Icon" /><Icon icon="star" />`)
 	require.Equal(t, `<svg><use href="star"></use></svg>`, renderComponent(t, store, "page.html", grove.Data{}))
 }

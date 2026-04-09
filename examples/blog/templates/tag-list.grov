@@ -1,19 +1,22 @@
-{% extends "base.grov" %}
+<Import src="base" name="Base" />
+<Import src="composites/breadcrumbs/breadcrumbs" name="Breadcrumbs" />
 
-{% block title %}Tags &mdash; Grove Blog{% endblock %}
+<Base>
+  <Fill slot="title">Tags &mdash; Grove Blog</Fill>
 
-{% block content %}
-{% include "composites/breadcrumbs/breadcrumbs.grov" %}
+  <Fill slot="content">
+    <Breadcrumbs />
 
-<h1>Tags</h1>
-<div class="tag-grid">
-  {% for item in tag_counts %}
-    <a href="/tag/{{ item.tag.slug }}" class="tag-card tag-card-{{ item.tag.color }}">
-      <span class="tag-card-name">{{ item.tag.name }}</span>
-      <span class="tag-card-count">{{ item.count }} {{ item.count == 1 ? "post" : "posts" }}</span>
-    </a>
-  {% empty %}
-    <p class="empty-state">No tags yet.</p>
-  {% endfor %}
-</div>
-{% endblock %}
+    <h1>Tags</h1>
+    <div class="tag-grid">
+      <For each={tag_counts} as="item">
+        <a href="/tag/{% item.tag.slug %}" class="tag-card tag-card-{% item.tag.color %}">
+          <span class="tag-card-name">{% item.tag.name %}</span>
+          <span class="tag-card-count">{% item.count %} {% item.count == 1 ? "post" : "posts" %}</span>
+        </a>
+        <Empty />
+        <p class="empty-state">No tags yet.</p>
+      </For>
+    </div>
+  </Fill>
+</Base>

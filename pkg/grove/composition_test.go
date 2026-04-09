@@ -80,7 +80,7 @@ func TestComponent_IsolatedScope(t *testing.T) {
 	// Components cannot read caller variables — scope is isolated
 	store := grove.NewMemoryStore()
 	store.Set("peek.html", `<Component name="Peek">[{% secret %}]</Component>`)
-	store.Set("page.html", `<Set secret="outer" /><Import src="peek" name="Peek" /><Peek />`)
+	store.Set("page.html", `{% set secret = "outer" %}<Import src="peek" name="Peek" /><Peek />`)
 	require.Equal(t, "[]", renderStore(t, store, "page.html", grove.Data{}))
 }
 
@@ -135,7 +135,7 @@ func TestImport_IsolatedScope(t *testing.T) {
 	// New: components are always isolated
 	store := grove.NewMemoryStore()
 	store.Set("part.html", `<Component name="Part">[{% secret %}]</Component>`)
-	store.Set("page.html", `<Set secret="hidden" /><Import src="part" name="Part" /><Part />`)
+	store.Set("page.html", `{% set secret = "hidden" %}<Import src="part" name="Part" /><Part />`)
 	require.Equal(t, "[]", renderStore(t, store, "page.html", grove.Data{}))
 }
 
@@ -143,7 +143,7 @@ func TestImport_ExplicitProp(t *testing.T) {
 	// Old: {% render "card.html" item="Widget" %} — isolated with explicit var
 	store := grove.NewMemoryStore()
 	store.Set("card.html", `<Component name="Card" item>[{% item %}][{% secret %}]</Component>`)
-	store.Set("page.html", `<Set secret="hidden" /><Import src="card" name="Card" /><Card item="Widget" />`)
+	store.Set("page.html", `{% set secret = "hidden" %}<Import src="card" name="Card" /><Card item="Widget" />`)
 	require.Equal(t, "[Widget][]", renderStore(t, store, "page.html", grove.Data{}))
 }
 

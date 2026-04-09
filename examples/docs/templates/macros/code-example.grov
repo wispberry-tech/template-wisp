@@ -1,8 +1,8 @@
-{% macro code(label, content) %}
+<Component name="Code" label="" content>
 <div class="code-example">
-  {% if label %}
-    <div class="code-label">{{ label }}</div>
-  {% endif %}
-  <pre><code>{{ content }}</code></pre>
+  <If test={label}>
+    <div class="code-label">{% label %}</div>
+  </If>
+  <pre><code>{% content %}</code></pre>
 </div>
-{% endmacro %}
+</Component>

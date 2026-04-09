@@ -1,60 +1,66 @@
-{% extends "base.grov" %}
+<Import src="base" name="Base" />
+<Import src="composites/breadcrumbs/breadcrumbs" name="Breadcrumbs" />
+<Import src="composites/card" name="Card" />
+<Import src="composites/author-card" name="AuthorCard" />
+<Import src="primitives/tag-badge" name="TagBadge" />
 
-{% block title %}{{ post.title }} &mdash; Grove Blog{% endblock %}
+<Base>
+  <Fill slot="title">{% post.title %} &mdash; Grove Blog</Fill>
 
-{% block content %}
-{% meta name="description" content="A blog post on Grove Blog" %}
-{% meta property="og:title" content="Grove Blog Post" %}
+  <Fill slot="content">
+    <SetMeta name="description" content="A blog post on Grove Blog" />
+    <SetMeta property="og:title" content="Grove Blog Post" />
 
-{% include "composites/breadcrumbs/breadcrumbs.grov" %}
+    <Breadcrumbs />
 
-{% if post.draft %}
-  <div class="notice notice-warning">
-    This post is a <strong>draft</strong> and is not yet published.
-  </div>
-{% endif %}
+    <If test={post.draft}>
+      <div class="notice notice-warning">
+        This post is a <strong>draft</strong> and is not yet published.
+      </div>
+    </If>
 
-<article class="article">
-  <header class="article-header">
-    <h1>{{ post.title }}</h1>
-    <div class="article-meta">
-      <time>{{ post.date }}</time>
-      <span class="article-author">
-        by <a href="/author/{{ post.author.slug }}">{{ post.author.name }}</a>
-      </span>
+    <article class="article">
+      <header class="article-header">
+        <h1>{% post.title %}</h1>
+        <div class="article-meta">
+          <time>{% post.date %}</time>
+          <span class="article-author">
+            by <a href="/author/{% post.author.slug %}">{% post.author.name %}</a>
+          </span>
+        </div>
+        <div class="tag-list">
+          <For each={post.tags} as="tag">
+            <TagBadge label={tag.name} color={tag.color} slug={tag.slug} />
+          </For>
+        </div>
+      </header>
+
+      <div class="article-body">
+        {% post.body | safe %}
+      </div>
+    </article>
+
+    <AuthorCard name={post.author.name} slug={post.author.slug} bio={post.author.bio} avatar_url={post.author.avatar_url} role={post.author.role} />
+
+    <If test={related_posts | length > 0}>
+      <section class="related-posts">
+        <h2>Related Posts</h2>
+        <div class="post-grid">
+          <For each={related_posts} as="rp">
+            <Card title={rp.title} summary={rp.summary} href={"/post/" ~ rp.slug} date={rp.date}>
+              <Fill slot="tags">
+                <For each={rp.tags} as="tag">
+                  <TagBadge label={tag.name} color={tag.color} slug={tag.slug} />
+                </For>
+              </Fill>
+            </Card>
+          </For>
+        </div>
+      </section>
+    </If>
+
+    <div class="back-link">
+      <a href="/">&larr; Back to all posts</a>
     </div>
-    <div class="tag-list">
-      {% for tag in post.tags %}
-        {% component "primitives/tag-badge" label=tag.name color=tag.color slug=tag.slug %}{% endcomponent %}
-      {% endfor %}
-    </div>
-  </header>
-
-  <div class="article-body">
-    {{ post.body | safe }}
-  </div>
-</article>
-
-{% component "composites/author-card" name=post.author.name slug=post.author.slug bio=post.author.bio avatar_url=post.author.avatar_url role=post.author.role %}{% endcomponent %}
-
-{% if related_posts | length > 0 %}
-  <section class="related-posts">
-    <h2>Related Posts</h2>
-    <div class="post-grid">
-      {% for rp in related_posts %}
-        {% component "composites/card" title=rp.title summary=rp.summary href="/post/" ~ rp.slug date=rp.date %}
-          {% fill "tags" %}
-            {% for tag in rp.tags %}
-              {% component "primitives/tag-badge" label=tag.name color=tag.color slug=tag.slug %}{% endcomponent %}
-            {% endfor %}
-          {% endfill %}
-        {% endcomponent %}
-      {% endfor %}
-    </div>
-  </section>
-{% endif %}
-
-<div class="back-link">
-  <a href="/">&larr; Back to all posts</a>
-</div>
-{% endblock %}
+  </Fill>
+</Base>

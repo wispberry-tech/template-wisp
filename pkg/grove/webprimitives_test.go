@@ -189,7 +189,7 @@ func TestAsset_FootHTML(t *testing.T) {
 
 func TestAsset_FromComponent(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"button.html": `<ImportAsset src="button.css" type="stylesheet" /><button>click</button>`,
+		"button.html": `<Component name="Button"><ImportAsset src="button.css" type="stylesheet" /><button>click</button></Component>`,
 		"page.html":   `<Import src="button" name="Button" /><Button />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -264,7 +264,7 @@ func TestHoist_IndependentTargets(t *testing.T) {
 
 func TestHoist_FromComponent(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"widget.html": `<Hoist target="head"><style>.widget{}</style></Hoist>widget`,
+		"widget.html": `<Component name="Widget"><Hoist target="head"><style>.widget{}</style></Hoist>widget</Component>`,
 		"page.html":   `<Import src="widget" name="Widget" /><Widget />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -322,7 +322,7 @@ func TestMeta_CollisionWarning(t *testing.T) {
 
 func TestMeta_FromComponent(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"hero.html": `<SetMeta name="og:image" content="/hero.jpg" />`,
+		"hero.html": `<Component name="Hero"><SetMeta name="og:image" content="/hero.jpg" /></Component>`,
 		"page.html": `<Import src="hero" name="Hero" /><Hero />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -546,11 +546,11 @@ func TestSandbox_DisallowedTagInInclude(t *testing.T) {
 	// part.html uses {% set %} which is not in AllowedTags
 	s := grove.NewMemoryStore()
 	s.Set("page.html", `<Import src="part" name="Part" /><Part />`)
-	s.Set("part.html", `{% set x = 1 %}{% x %}`)
+	s.Set("part.html", `<Component name="Part">{% set x = 1 %}{% x %}</Component>`)
 	eng := grove.New(
 		grove.WithStore(s),
 		grove.WithSandbox(grove.SandboxConfig{
-			AllowedTags: []string{"If", "For", "Import"}, // Import allowed; set is not
+			AllowedTags: []string{"If", "For", "Import", "Component"}, // Import/Component allowed; set is not
 		}),
 	)
 	_, err := eng.Render(context.Background(), "page.html", grove.Data{})

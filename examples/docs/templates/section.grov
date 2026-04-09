@@ -1,20 +1,20 @@
-{% extends "docs-layout.grov" %}
+<Import src="docs-layout" name="DocsLayout" />
 
-{% block title %}{{ section.name }} &mdash; {{ site_name }}{% endblock %}
+<DocsLayout sections={sections} all_pages={all_pages} current_slug={current_slug} breadcrumbs={breadcrumbs}>
+  <Fill slot="content">
+    <SetMeta name="description" content="Grove template engine documentation" />
 
-{% block content %}
-{% meta name="description" content="Grove template engine documentation" %}
+    <h1>{% section.name %}</h1>
+    <p class="section-description">{% section.description %}</p>
 
-<h1>{{ section.name }}</h1>
-<p class="section-description">{{ section.description }}</p>
-
-<div class="page-list">
-  {% for pg in section_pages %}
-    <a href="/docs/{{ pg.section_slug }}/{{ pg.slug }}" class="page-list-item">
-      <h3>{{ pg.title }}</h3>
-    </a>
-  {% empty %}
-    <p>No pages in this section yet.</p>
-  {% endfor %}
-</div>
-{% endblock %}
+    <div class="page-list">
+      <For each={section_pages} as="pg">
+        <a href="/docs/{% pg.section_slug %}/{% pg.slug %}" class="page-list-item">
+          <h3>{% pg.title %}</h3>
+        </a>
+      <Empty />
+        <p>No pages in this section yet.</p>
+      </For>
+    </div>
+  </Fill>
+</DocsLayout>

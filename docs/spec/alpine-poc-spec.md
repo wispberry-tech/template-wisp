@@ -56,7 +56,7 @@ This creates a **two-layer system**:
 - Interpolation and filters (`{% expr | filter %}`)
 - Asset collection (`<ImportAsset>`, `<SetMeta>`, `<Hoist>`)
 - Auto-escaping with `safe` filter escape hatch
-- `x-data` auto-injection (server data → Alpine state)
+- Explicit server→client data injection via `grove:data` attribute
 
 ### What Alpine Does
 
@@ -652,8 +652,18 @@ Component templates may have multiple root elements:
 ### Syntax
 
 ```html
+{# Single import #}
 <Import src="path/to/file" name="ComponentName" />
 <Import src="path/to/file" name="ComponentName" as="LocalAlias" />
+
+{# Multi-import — multiple names from the same file #}
+<Import src="path/to/file" name="Card, CardHeader, CardFooter" />
+
+{# Wildcard — import all exported components from a file #}
+<Import src="path/to/file" name="*" />
+
+{# Wildcard with prefix — all components available as UI.Card, UI.Badge, etc. #}
+<Import src="path/to/file" name="*" as="UI" />
 ```
 
 **Attributes:**
@@ -661,23 +671,33 @@ Component templates may have multiple root elements:
 | Attribute | Required | Description |
 |-----------|----------|-------------|
 | `src` | Yes | Path to the `.grov` file (without extension) |
-| `name` | Yes | Component name as declared in the file's `<Component name="...">` |
-| `as` | No | Local alias. If omitted, uses `name` |
+| `name` | Yes | Component name(s): single name, comma-separated list, or `*` for all |
+| `as` | No | Local alias (single import) or namespace prefix (wildcard import). If omitted, uses `name` |
 
 **Rules:**
 - `<Import>` must appear before any HTML output in the file
-- Multiple imports from the same file require separate `<Import>` lines
 - Importing a `name` that doesn't exist in the target file is a parse error
 - Duplicate local names across imports is a parse error
 - Self-closing element (`/>`)
+- In comma-separated lists, whitespace around names is trimmed
+- `as` cannot be used with comma-separated lists (use separate imports to rename individual components)
+- Wildcard `*` imports all `<Component>` definitions from the file
+- Wildcard with `as="Prefix"` makes components available as `<Prefix.ComponentName>`
 
 **Examples:**
 
 ```html
-{# Import individual components #}
-<Import src="components/cards" name="Card" />
-<Import src="components/cards" name="CardHeader" />
-<Import src="components/cards" name="CardFooter" />
+{# Import multiple components from one file — single line #}
+<Import src="components/cards" name="Card, CardHeader, CardFooter" />
+
+{# Import everything from a UI library #}
+<Import src="components/ui" name="*" />
+
+{# Namespaced wildcard — avoids conflicts between files #}
+<Import src="components/ui" name="*" as="UI" />
+<Import src="components/forms" name="*" as="Form" />
+
+{# Then use as: <UI.Card>, <UI.Badge>, <Form.Input>, <Form.Select> #}
 
 {# Import with rename to avoid conflicts #}
 <Import src="components/cards" name="Card" as="InfoCard" />
@@ -905,14 +925,24 @@ Nested layouts are just component composition:
 
 ## 11. Data Flow: Server → Client
 
-### Auto-Injection
+### Explicit Injection with `grove:data`
 
-When Grove encounters `x-data`, it scans the expression for identifiers and checks them against the render context. Matching variables are serialized as JSON into the output.
+Server data is passed to Alpine using the `grove:data` attribute. This attribute accepts a comma-separated list of Grove variable names to serialize as JSON into the element's `x-data` expression.
 
-**Resolution order:**
-1. Explicit values in `x-data` (literals, functions) — kept as-is
-2. Identifiers matching Grove render context variables — serialized as JSON
-3. Unresolved identifiers — left as-is (assumed to be client-side or parent scope)
+```html
+<div grove:data="user, stats" x-data="{ tab: 'overview' }">
+```
+
+Grove resolves the named variables from the render context, serializes them as JSON, and merges them into the `x-data` object. The `grove:data` attribute is consumed during rendering — it never appears in the output.
+
+**Rules:**
+- `grove:data` accepts a comma-separated list of variable names
+- Each name is resolved against the current Grove scope (render context, `{% set %}` variables, component props)
+- Resolved values are serialized as JSON and merged into `x-data` as properties
+- Client-only properties in `x-data` (literals, functions) are preserved as-is
+- A name in `grove:data` that doesn't resolve to a variable in scope is a compile-time error
+- `grove:data` without a corresponding `x-data` is a compile-time error
+- `grove:data` is stripped from the output HTML
 
 **Example:**
 
@@ -926,7 +956,7 @@ result, _ := engine.Render("pages/dashboard.grov", grove.Data{
 ```
 
 ```html
-<div x-data="{ user, stats, tab: 'overview' }">
+<div grove:data="user, stats" x-data="{ tab: 'overview' }">
   <h1>Dashboard v{% version %}</h1>
   <span x-text="user.name"></span>
 </div>
@@ -940,7 +970,17 @@ result, _ := engine.Render("pages/dashboard.grov", grove.Data{
 </div>
 ```
 
-Note: `version` is used in `{% %}` (Grove interpolation — consumed). `user` and `stats` are in `x-data` (serialized for Alpine). `x-text="user.name"` is a client-side Alpine directive — passed through.
+Note: `version` is used in `{% %}` (Grove interpolation — consumed). `user` and `stats` are named in `grove:data` (serialized into `x-data` for Alpine). `x-text="user.name"` is a client-side Alpine directive — passed through.
+
+### Why Explicit Over Auto-Injection
+
+An earlier design auto-scanned `x-data` expressions for identifiers matching the render context. This was replaced with explicit `grove:data` because:
+
+- **No ambiguity** — the developer declares exactly which variables cross the server→client boundary
+- **No shadowing bugs** — client-side variable names that happen to match server context variables won't be unexpectedly replaced
+- **No JS parsing in Go** — Grove doesn't need to parse JavaScript expressions to extract identifiers
+- **Visible in templates** — reviewers can immediately see which server data is being sent to the client
+- **Compile-time errors** — typos in variable names are caught early instead of silently producing `undefined` client-side
 
 ### What Gets Serialized
 
@@ -984,6 +1024,31 @@ Functions, channels, and other Go-only types that cannot be serialized are injec
 | SEO matters (content must be in clean HTML) | The list is updated by user interaction |
 | The dataset is large (avoids serializing to client) | Items are added/removed dynamically |
 | No JavaScript is needed for this list | The list depends on client-side state |
+
+### Compiler Warnings
+
+The compiler should emit warnings for common server/client control flow mistakes. These are warnings, not errors — sometimes the developer knows what they're doing.
+
+| Warning | Trigger | Message |
+|---------|---------|---------|
+| `grove:server-loop-in-client-scope` | `<For>` appears inside an element with `x-data` or `grove:data` | "Server-side `<For>` inside an Alpine `x-data` scope — if this data is already available client-side, consider using `x-for` instead" |
+| `grove:server-if-in-client-scope` | `<If>` appears inside an element with `x-data`, and the test expression references a variable named in `grove:data` | "Server-side `<If>` testing a variable that is also injected into `x-data` — the condition won't react to client-side changes" |
+| `grove:client-loop-without-data` | `x-for` iterates a variable that is not in any `grove:data` or `x-data` ancestor scope | "Alpine `x-for` references `items` but no `grove:data` or `x-data` scope provides it" |
+| `grove:duplicate-data-binding` | Same variable name appears in both `grove:data` and as an explicit key in `x-data` | "Variable `user` is in both `grove:data` and `x-data` — the `grove:data` value will overwrite the `x-data` value" |
+
+**Suppressing warnings:**
+
+Warnings can be suppressed per-element with `grove:nowarn`:
+
+```html
+{# I know what I'm doing — server-rendering items inside an x-data scope for SEO, 
+   while also making the data available for client-side filtering #}
+<div grove:data="items" x-data="{ query: '' }" grove:nowarn="server-loop-in-client-scope">
+  <For each={items} as="item">
+    <article>{% item.title %}</article>
+  </For>
+</div>
+```
 
 ---
 
@@ -1123,7 +1188,7 @@ Outputs content without processing Grove syntax:
   <p>No posts yet.</p>
 </For>
 
-<div x-data="{ items, query: '' }">
+<div grove:data="items" x-data="{ query: '' }">
   <input x-model="query">
   <template x-for="item in items" :key="item.id">
     <div x-text="item.name"></div>
@@ -1180,7 +1245,7 @@ The HTML `<template>` element is used by Alpine for `x-if`, `x-for`, and `x-tele
     </For>
 
     {# Client-side search #}
-    <div x-data="{ posts, query: '', get filtered() { return posts.filter(p => p.title.toLowerCase().includes(query.toLowerCase())) } }">
+    <div grove:data="posts" x-data="{ query: '', get filtered() { return this.posts.filter(p => p.title.toLowerCase().includes(this.query.toLowerCase())) } }">
       <input type="text" x-model="query" placeholder="Search posts...">
 
       <template x-for="post in filtered" :key="post.slug">
@@ -1216,8 +1281,7 @@ The HTML `<template>` element is used by Alpine for `x-if`, `x-for`, and `x-tele
       <a href="/admin/products/{% product.id %}">Edit Product</a>
     </If>
 
-    <div x-data="{
-      product,
+    <div grove:data="product" x-data="{
       selectedVariant: product.variants[0],
       quantity: 1,
       adding: false,
@@ -1263,7 +1327,7 @@ The HTML `<template>` element is used by Alpine for `x-if`, `x-for`, and `x-tele
 {# components/ui.grov #}
 
 <Component name="Dropdown" label items>
-  <div x-data="{ items, open: false }" class="dropdown">
+  <div grove:data="items" x-data="{ open: false }" class="dropdown">
     <button @click="open = !open">{% label %}</button>
 
     <div x-show="open" x-transition @click.outside="open = false" class="dropdown-menu">
@@ -1421,7 +1485,7 @@ The HTML `<template>` element is used by Alpine for `x-if`, `x-for`, and `x-tele
 {# components/tabs.grov #}
 
 <Component name="Tabs" tabs defaultTab>
-  <div x-data="{ tabs, active: defaultTab || tabs[0].id }" class="tabs">
+  <div grove:data="tabs" x-data="{ active: defaultTab || tabs[0].id }" class="tabs">
     <nav class="tab-nav">
       <template x-for="tab in tabs" :key="tab.id">
         <button
@@ -1504,7 +1568,7 @@ If `a.grov` imports from `b.grov` and `b.grov` imports from `a.grov`, this is a 
 | Element | Purpose |
 |---------|---------|
 | `<Component name="X" ...props>` | Component definition |
-| `<Import src="..." name="..." />` | Component import |
+| `<Import src="..." name="..." />` | Component import (single, multi, or wildcard) |
 | `<If test={expr}>` | Conditional |
 | `<ElseIf test={expr}>` | Chained conditional branch |
 | `<Else>` | Default branch |
@@ -1518,3 +1582,10 @@ If `a.grov` imports from `b.grov` and `b.grov` imports from `a.grov`, this is a 
 | `<Verbatim>` | Literal output |
 | `<ImportAsset>` | Asset collection |
 | `<SetMeta>` | Meta collection |
+
+### Grove Attributes (on HTML elements)
+
+| Attribute | Purpose |
+|-----------|---------|
+| `grove:data="var1, var2"` | Serialize server variables into `x-data` as JSON |
+| `grove:nowarn="warning-name"` | Suppress a specific compiler warning on this element |

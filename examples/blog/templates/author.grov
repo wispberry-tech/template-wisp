@@ -1,24 +1,30 @@
-{% extends "base.grov" %}
+<Import src="base" name="Base" />
+<Import src="composites/breadcrumbs/breadcrumbs" name="Breadcrumbs" />
+<Import src="composites/author-card" name="AuthorCard" />
+<Import src="composites/card" name="Card" />
+<Import src="primitives/tag-badge" name="TagBadge" />
 
-{% block title %}{{ author.name }} &mdash; Grove Blog{% endblock %}
+<Base>
+  <Fill slot="title">{% author.name %} &mdash; Grove Blog</Fill>
 
-{% block content %}
-{% include "composites/breadcrumbs/breadcrumbs.grov" %}
+  <Fill slot="content">
+    <Breadcrumbs />
 
-{% component "composites/author-card" name=author.name slug=author.slug bio=author.bio avatar_url=author.avatar_url role=author.role %}{% endcomponent %}
+    <AuthorCard name={author.name} slug={author.slug} bio={author.bio} avatar_url={author.avatar_url} role={author.role} />
 
-<h2>Posts by {{ author.name }}</h2>
-<div class="post-grid">
-  {% for post in posts %}
-    {% component "composites/card" title=post.title summary=post.summary href="/post/" ~ post.slug date=post.date %}
-      {% fill "tags" %}
-        {% for tag in post.tags %}
-          {% component "primitives/tag-badge" label=tag.name color=tag.color slug=tag.slug %}{% endcomponent %}
-        {% endfor %}
-      {% endfill %}
-    {% endcomponent %}
-  {% empty %}
-    <p class="empty-state">No posts by this author yet.</p>
-  {% endfor %}
-</div>
-{% endblock %}
+    <h2>Posts by {% author.name %}</h2>
+    <div class="post-grid">
+      <For each={posts} as="post">
+        <Card title={post.title} summary={post.summary} href={"/post/" ~ post.slug} date={post.date}>
+          <Fill slot="tags">
+            <For each={post.tags} as="tag">
+              <TagBadge label={tag.name} color={tag.color} slug={tag.slug} />
+            </For>
+          </Fill>
+        </Card>
+        <Empty />
+        <p class="empty-state">No posts by this author yet.</p>
+      </For>
+    </div>
+  </Fill>
+</Base>

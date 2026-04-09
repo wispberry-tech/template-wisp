@@ -20,7 +20,7 @@ Creates a new template engine. Safe for concurrent use — multiple goroutines c
 func (e *Engine) RenderTemplate(ctx context.Context, src string, data Data) (RenderResult, error)
 ```
 
-Compiles and renders an inline template string. Does not support `extends`, `include`, `render`, `import`, `component`, or `asset` tags (these require a store).
+Compiles and renders an inline template string. Does not support `<Import>`, `<Component>`, or other store-dependent elements (these require a store).
 
 ```go
 func (e *Engine) Render(ctx context.Context, name string, data Data) (RenderResult, error)
@@ -60,7 +60,7 @@ Registers a custom filter. `fn` can be a `FilterFn` or a `*FilterDef` (created w
 func WithStore(s store.Store) Option
 ```
 
-Sets the template store used by `Render`, `include`, `render`, `import`, and `component`.
+Sets the template store used by `Render`, `<Import>`, and `<Component>`.
 
 ```go
 func WithStrictVariables(strict bool) Option
@@ -90,13 +90,13 @@ type SandboxConfig struct {
 }
 ```
 
-- `AllowedTags`: when set, only listed tags are permitted. Others cause a `ParseError` at compile time.
+- `AllowedTags`: when set, only listed PascalCase element names and tag names are permitted. Others cause a `ParseError` at compile time.
 - `AllowedFilters`: when set, only listed filters are permitted. Others cause a `ParseError` at compile time.
 - `MaxLoopIter`: maximum total loop iterations across all loops in a single render. Exceeding this causes a `RuntimeError`.
 
 ```go
 eng := grove.New(grove.WithSandbox(grove.SandboxConfig{
-    AllowedTags:    []string{"if", "for", "set", "component"},
+    AllowedTags:    []string{"If", "For", "Import", "Component"},
     AllowedFilters: []string{"upper", "lower", "escape", "safe", "default"},
     MaxLoopIter:    10000,
 }))
@@ -138,10 +138,10 @@ func (u User) GroveResolve(key string) (any, bool) {
 }
 ```
 
-```jinja2
-{{ user.name }}      {# "Alice" #}
-{{ user.email }}     {# "alice@example.com" #}
-{{ user.password }}  {# empty — not exposed #}
+```html
+{% user.name %}      {# "Alice" #}
+{% user.email %}     {# "alice@example.com" #}
+{% user.password %}  {# empty — not exposed #}
 ```
 
 ## Stores
@@ -162,8 +162,8 @@ Adds or updates a template.
 
 ```go
 store := grove.NewMemoryStore()
-store.Set("base.grov", `<html>{% block content %}{% endblock %}</html>`)
-store.Set("page.grov", `{% extends "base.grov" %}{% block content %}Hello{% endblock %}`)
+store.Set("base.html", `<Component name="Base"><html><Slot /></html></Component>`)
+store.Set("page.html", `<Import src="base" name="Base" /><Base>Hello</Base>`)
 ```
 
 ### FileSystemStore
@@ -178,8 +178,8 @@ Creates a store that loads templates from disk. Template names are forward-slash
 store := grove.NewFileSystemStore("./templates")
 eng := grove.New(grove.WithStore(store))
 
-// Loads ./templates/pages/home.grov
-result, err := eng.Render(ctx, "pages/home.grov", data)
+// Loads ./templates/pages/home.html
+result, err := eng.Render(ctx, "pages/home.html", data)
 ```
 
 **Security:** Rejects absolute paths and `..` traversal. Paths are cleaned and verified to stay within the root directory.

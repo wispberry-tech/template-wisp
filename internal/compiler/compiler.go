@@ -24,6 +24,7 @@ func Compile(prog *ast.Program) (*Bytecode, error) {
 		Extends:    c.extends,
 		Props:      c.props,
 		Components: c.components,
+		ImportMap:  prog.ImportMap,
 	}
 	est := 0
 	for _, cn := range bc.Consts {
@@ -209,8 +210,16 @@ func (c *cmp) compileNode(node ast.Node) error {
 		c.emit(OP_PROPS_INIT, 0, 0, 0)
 
 	case *ast.SlotNode:
+		// Push scope data onto stack for scoped slots (key, value pairs)
+		for _, sd := range n.ScopeData {
+			c.emitPushConst(sd.Key)
+			if err := c.compileExpr(sd.Value); err != nil {
+				return err
+			}
+		}
+		scopeCount := uint8(len(n.ScopeData))
 		if len(n.Default) == 0 {
-			c.emit(OP_SLOT, uint16(c.addName(n.Name)), 0xFFFF, 0)
+			c.emit(OP_SLOT, uint16(c.addName(n.Name)), 0xFFFF, scopeCount)
 		} else {
 			sub := &cmp{nameIdx: make(map[string]int)}
 			if err := sub.compileBody(n.Default); err != nil {
@@ -220,7 +229,7 @@ func (c *cmp) compileNode(node ast.Node) error {
 			defaultBC := subBytecode(sub)
 			c.blocks = append(c.blocks, BlockDef{Name: "__slot__:" + n.Name, Body: defaultBC})
 			defaultIdx := len(c.blocks) - 1
-			c.emit(OP_SLOT, uint16(c.addName(n.Name)), uint16(defaultIdx), 0)
+			c.emit(OP_SLOT, uint16(c.addName(n.Name)), uint16(defaultIdx), scopeCount)
 		}
 
 	case *ast.ComponentNode:
@@ -237,6 +246,21 @@ func (c *cmp) compileNode(node ast.Node) error {
 
 	case *ast.HoistNode:
 		return c.compileHoist(n)
+
+	case *ast.ComponentDefNode:
+		// Component definition: extract props and compile body
+		if len(n.Props) > 0 {
+			for _, p := range n.Props {
+				mp := MacroParam{Name: p.Name}
+				if p.Default != nil {
+					mp.Default = constValueOf(p.Default)
+				}
+				c.props = append(c.props, mp)
+			}
+			c.emit(OP_PROPS_INIT, 0, 0, 0)
+		}
+		// else: no props declared → permissive mode (Props stays nil)
+		return c.compileBody(n.Body)
 
 	default:
 		return fmt.Errorf("compiler: unknown node type %T", node)
@@ -719,12 +743,41 @@ func (c *cmp) compileComponent(n *ast.ComponentNode) error {
 			return err
 		}
 		sub.emit(OP_HALT, 0, 0, 0)
-		fills = append(fills, FillDef{Name: fill.Name, Body: subBytecode(sub)})
+		fills = append(fills, FillDef{Name: fill.Name, Body: subBytecode(sub), LetBindings: fill.LetBindings})
 	}
 
 	def := ComponentDef{Name: n.Name, Fills: fills}
 	compIdx := len(c.components)
 	c.components = append(c.components, def)
+
+	if n.Name == "__dynamic__" {
+		// Dynamic component: <Component is={expr} ...>
+		// First prop is __is__ (the expression that resolves to a component name)
+		var isExpr ast.Node
+		var realProps []ast.NamedArgNode
+		for _, prop := range n.Props {
+			if prop.Key == "__is__" {
+				isExpr = prop.Value
+			} else {
+				realProps = append(realProps, prop)
+			}
+		}
+		// Push the is-expression (resolves to component name at runtime)
+		if isExpr != nil {
+			if err := c.compileExpr(isExpr); err != nil {
+				return err
+			}
+		}
+		// Push prop key-value pairs
+		for _, prop := range realProps {
+			c.emitPushConst(prop.Key)
+			if err := c.compileExpr(prop.Value); err != nil {
+				return err
+			}
+		}
+		c.emit(OP_DYNAMIC_COMPONENT, uint16(compIdx), uint16(len(realProps)), 0)
+		return nil
+	}
 
 	// Push prop key-value pairs onto stack (key first, then value)
 	for _, prop := range n.Props {

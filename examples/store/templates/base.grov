@@ -1,31 +1,33 @@
-{% asset "/static/style.css" type="stylesheet" priority=10 %}
+<Component name="Base" title="Grove Store" nav_categories="" cart_count="" content="">
+<ImportAsset src="/static/style.css" type="stylesheet" priority="10" />
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}Grove Store{% endblock %}</title>
+  <title><Slot name="title">Grove Store</Slot></title>
   <!-- HEAD_ASSETS -->
   <!-- HEAD_META -->
 </head>
 <body>
   <nav class="nav">
-    <a href="/" class="nav-brand">{{ site_name }}</a>
+    <a href="/" class="nav-brand">{% site_name %}</a>
     <div class="nav-links">
       <a href="/products" class="nav-link">All Products</a>
-      {% block nav_categories %}{% endblock %}
-      <a href="/cart" class="nav-link nav-cart">Cart{% if cart_count %} ({{ cart_count }}){% endif %}</a>
+      <Slot name="nav_categories" />
+      <a href="/cart" class="nav-link nav-cart">Cart<If test={cart_count}> ({% cart_count %})</If></a>
     </div>
     <form action="/search" method="get" class="nav-search">
       <input type="text" name="q" placeholder="Search products..." class="search-input">
     </form>
   </nav>
   <main class="container">
-    {% block content %}{% endblock %}
+    <Slot name="content" />
   </main>
   <footer class="footer">
-    <p>&copy; {{ current_year }} Grove Store. Powered by the Grove template engine.</p>
+    <p>&copy; {% current_year %} Grove Store. Powered by the Grove template engine.</p>
   </footer>
   <!-- FOOT_ASSETS -->
 </body>
 </html>
+</Component>

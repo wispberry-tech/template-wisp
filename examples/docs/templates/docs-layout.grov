@@ -1,17 +1,30 @@
-{% extends "base.grov" %}
+<Import src="base" name="Base" />
+<Import src="partials/breadcrumbs" name="Breadcrumbs" />
+<Import src="partials/sidebar" name="Sidebar" />
 
-{% block nav %}
-  {{ super() }}
-  {% render "partials/breadcrumbs.grov" breadcrumbs=breadcrumbs %}
-{% endblock %}
-
-{% block layout %}
-<div class="docs-layout">
-  <aside class="docs-sidebar">
-    {% render "partials/sidebar.grov" sections=sections all_pages=all_pages current_slug=current_slug %}
-  </aside>
-  <main class="docs-content">
-    {% block content %}{% endblock %}
-  </main>
-</div>
-{% endblock %}
+<Component name="DocsLayout" sections all_pages current_slug breadcrumbs>
+<Base sections={sections}>
+  <Fill slot="nav">
+    <nav class="nav">
+      <a href="/" class="nav-brand">{% site_name %}</a>
+      <div class="nav-links">
+        <For each={sections} as="section">
+          <a href="/docs/{% section.slug %}" class="nav-link">{% section.name %}</a>
+        </For>
+        <a href="/docs/filters" class="nav-link">Filter Reference</a>
+      </div>
+    </nav>
+    <Breadcrumbs breadcrumbs={breadcrumbs} />
+  </Fill>
+  <Fill slot="layout">
+    <div class="docs-layout">
+      <aside class="docs-sidebar">
+        <Sidebar sections={sections} all_pages={all_pages} current_slug={current_slug} />
+      </aside>
+      <main class="docs-content">
+        <Slot name="content" />
+      </main>
+    </div>
+  </Fill>
+</Base>
+</Component>

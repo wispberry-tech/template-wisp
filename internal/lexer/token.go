@@ -52,6 +52,11 @@ const (
 	TK_LBRACE   // { (map literal)
 	TK_RBRACE   // } (map literal)
 	TK_IN   // in   (for...in)
+	// PascalCase element tokens (HTML-centric syntax)
+	TK_ELEMENT_OPEN  // <Name (Value = element name)
+	TK_ELEMENT_CLOSE // </Name> (Value = element name)
+	TK_ELEMENT_END   // >
+	TK_SELF_CLOSE    // />
 )
 
 // Token is a single lexed unit.

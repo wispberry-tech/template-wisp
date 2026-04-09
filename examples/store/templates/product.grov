@@ -1,92 +1,98 @@
-{% extends "base.grov" %}
-{% import "macros/pricing.grov" as pricing %}
+<Import src="base" name="Base" />
+<Import src="macros/pricing" name="Price" />
+<Import src="macros/pricing" name="StarRating" />
+<Import src="macros/pricing" name="DiscountBadge" />
+<Import src="composites/breadcrumbs/breadcrumbs" name="Breadcrumbs" />
+<Import src="composites/product-card/product-card" name="ProductCard" />
 
-{% block title %}{{ product.name }} &mdash; {{ site_name }}{% endblock %}
+<Base>
+  <Fill slot="title">{% product.name %} &mdash; {% site_name %}</Fill>
 
-{% block content %}
-{% meta name="description" content="Grove Store product" %}
-{% meta property="og:title" content="Grove Store" %}
+  <Fill slot="content">
+    <SetMeta name="description" content="Grove Store product" />
+    <SetMeta property="og:title" content="Grove Store" />
 
-{% include "composites/breadcrumbs/breadcrumbs.grov" %}
+    <Breadcrumbs breadcrumbs={breadcrumbs} />
 
-<div class="product-detail">
-  <div class="product-image">
-    <img src="{{ product.image_url }}" alt="{{ product.name }}">
-  </div>
-  <div class="product-info">
-    <h1>{{ product.name }}</h1>
+    <div class="product-detail">
+      <div class="product-image">
+        <img src="{% product.image_url %}" alt="{% product.name %}">
+      </div>
+      <div class="product-info">
+        <h1>{% product.name %}</h1>
 
-    <div class="product-rating">
-      {{ pricing.star_rating(product.rating, product.review_count) }}
-    </div>
-
-    <div class="product-price">
-      {{ pricing.price(product.price, product.sale_price) }}
-      {{ pricing.discount_badge(product.price, product.sale_price) }}
-    </div>
-
-    {% if product.on_sale %}
-      {% let %}
-        savings = product.price - product.sale_price
-      {% endlet %}
-      <p class="savings">You save {{ savings | currency }}!</p>
-    {% endif %}
-
-    <p class="product-description">{{ product.description }}</p>
-
-    {% if product.colors | length > 0 %}
-      <div class="product-option">
-        <strong>Color:</strong>
-        <div class="option-list">
-          {% for color in product.colors %}
-            <span class="option-pill">{{ color }}</span>
-          {% endfor %}
+        <div class="product-rating">
+          <StarRating rating={product.rating} count={product.review_count} />
         </div>
-      </div>
-    {% endif %}
 
-    {% if product.sizes | length > 0 %}
-      <div class="product-option">
-        <strong>Size:</strong>
-        <div class="option-list">
-          {% for size in product.sizes %}
-            <span class="option-pill">{{ size }}</span>
-          {% endfor %}
+        <div class="product-price">
+          <Price amount={product.price} sale_amount={product.sale_price} />
+          <DiscountBadge price={product.price} sale_price={product.sale_price} />
         </div>
+
+        <If test={product.on_sale}>
+          {% let %}
+            savings = product.price - product.sale_price
+          {% endlet %}
+          <p class="savings">You save {% savings | currency %}!</p>
+        </If>
+
+        <p class="product-description">{% product.description %}</p>
+
+        <If test={product.colors | length > 0}>
+          <div class="product-option">
+            <strong>Color:</strong>
+            <div class="option-list">
+              <For each={product.colors} as="color">
+                <span class="option-pill">{% color %}</span>
+              </For>
+            </div>
+          </div>
+        </If>
+
+        <If test={product.sizes | length > 0}>
+          <div class="product-option">
+            <strong>Size:</strong>
+            <div class="option-list">
+              <For each={product.sizes} as="size">
+                <span class="option-pill">{% size %}</span>
+              </For>
+            </div>
+          </div>
+        </If>
+
+        <If test={product.in_stock}>
+          <div class="product-actions">
+            <label>Qty:</label>
+            <select id="qty-select">
+              <For each={range(1, 10)} as="n">
+                <option value="{% n %}">{% n %}</option>
+              </For>
+            </select>
+            <a href="/cart/add?product={% product.slug %}&qty=1" class="btn btn-primary">Add to Cart</a>
+          </div>
+        <Else />
+          <p class="out-of-stock">Out of Stock</p>
+        </If>
       </div>
-    {% endif %}
-
-    {% if product.in_stock %}
-      <div class="product-actions">
-        <label>Qty:</label>
-        <select id="qty-select">
-          {% for n in range(1, 10) %}
-            <option value="{{ n }}">{{ n }}</option>
-          {% endfor %}
-        </select>
-        <a href="/cart/add?product={{ product.slug }}&qty=1" class="btn btn-primary">Add to Cart</a>
-      </div>
-    {% else %}
-      <p class="out-of-stock">Out of Stock</p>
-    {% endif %}
-  </div>
-</div>
-
-<div class="product-body">
-  {{ product.body | safe }}
-</div>
-
-{% if related | length > 0 %}
-  <section class="related-products">
-    <h2>Related Products</h2>
-    <div class="product-grid">
-      {% for rp in related %}
-        {% capture rp_price %}
-          {{ pricing.price(rp.price, rp.sale_price) }}
-        {% endcapture %}
-        {% component "composites/product-card" name=rp.name slug=rp.slug image_url=rp.image_url price_display=rp_price rating=rp.rating review_count=rp.review_count %}{% endcomponent %}
-      {% endfor %}
     </div>
-  </section>
-{% endif %}
-{% endblock %}
+
+    <div class="product-body">
+      {% product.body | safe %}
+    </div>
+
+    <If test={related | length > 0}>
+      <section class="related-products">
+        <h2>Related Products</h2>
+        <div class="product-grid">
+          <For each={related} as="rp">
+            <Capture name="rp_price">
+              <Price amount={rp.price} sale_amount={rp.sale_price} />
+            </Capture>
+            <ProductCard name={rp.name} slug={rp.slug} image_url={rp.image_url} price_display={rp_price} rating={rp.rating} review_count={rp.review_count} />
+          </For>
+        </div>
+      </section>
+    </If>
+  </Fill>
+</Base>

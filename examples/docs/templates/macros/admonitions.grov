@@ -1,23 +1,23 @@
-{% macro note(message, title) %}
-  {% if not title %}{% set title = "Note" %}{% endif %}
+<Component name="Note" message title="">
+  {% set title = title | default("Note") %}
   <div class="admonition admonition-note">
-    <strong>{{ title }}</strong>
-    <div>{{ message | safe }}</div>
+    <strong>{% title %}</strong>
+    <div>{% message | safe %}</div>
   </div>
-{% endmacro %}
+</Component>
 
-{% macro warning(message, title) %}
-  {% if not title %}{% set title = "Warning" %}{% endif %}
+<Component name="Warning" message title="">
+  {% set title = title | default("Warning") %}
   <div class="admonition admonition-warning">
-    <strong>{{ title }}</strong>
-    <div>{{ message | safe }}</div>
+    <strong>{% title %}</strong>
+    <div>{% message | safe %}</div>
   </div>
-{% endmacro %}
+</Component>
 
-{% macro tip(message, title) %}
-  {% if not title %}{% set title = "Tip" %}{% endif %}
+<Component name="Tip" message title="">
+  {% set title = title | default("Tip") %}
   <div class="admonition admonition-tip">
-    <strong>{{ title }}</strong>
-    <div>{{ message | safe }}</div>
+    <strong>{% title %}</strong>
+    <div>{% message | safe %}</div>
   </div>
-{% endmacro %}
+</Component>

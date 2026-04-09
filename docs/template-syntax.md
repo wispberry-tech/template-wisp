@@ -2,21 +2,21 @@
 
 ## Delimiters
 
-Grove uses three delimiter pairs:
+Grove uses a single delimiter pair for expressions and two types of elements:
 
-| Delimiter | Purpose | Example |
-|-----------|---------|---------|
-| `{{ }}` | Output expression | `{{ name }}` |
-| `{% %}` | Tags (control flow, assignment) | `{% if active %}` |
+| Syntax | Purpose | Example |
+|--------|---------|---------|
+| `{% %}` | Expression output / tags | `{% name %}`, `{% set x = 1 %}` |
+| `<PascalCase>` | Control flow & composition elements | `<If>`, `<For>`, `<Component>` |
 | `{# #}` | Comments (not rendered) | `{# TODO: fix this #}` |
 
 ### Whitespace control
 
-Add `-` inside any delimiter to strip adjacent whitespace:
+Add `-` inside the `{% %}` delimiter to strip adjacent whitespace:
 
-```jinja2
-{%- if active -%}   {# strips whitespace on both sides #}
-{{- name -}}         {# strips whitespace on both sides #}
+```html
+{%- name -%}   {# strips whitespace on both sides #}
+{%- set x = 1 -%}
 ```
 
 `-` on the left strips all preceding whitespace (back to previous output). `-` on the right strips all following whitespace (up to next output).
@@ -25,12 +25,12 @@ Add `-` inside any delimiter to strip adjacent whitespace:
 
 Access data passed to the template:
 
-```jinja2
-{{ name }}              {# simple variable #}
-{{ user.name }}         {# dot access #}
-{{ user["name"] }}      {# bracket access (equivalent) #}
-{{ items[0] }}          {# index access #}
-{{ users[0].address.city }}  {# chained access #}
+```html
+{% name %}              {# simple variable #}
+{% user.name %}         {# dot access #}
+{% user["name"] %}      {# bracket access (equivalent) #}
+{% items[0] %}          {# index access #}
+{% users[0].address.city %}  {# chained access #}
 ```
 
 Undefined variables render as empty string by default. With `WithStrictVariables(true)`, they return a `RuntimeError`.
@@ -55,152 +55,152 @@ Ordered by precedence (highest to lowest):
 
 ### Arithmetic
 
-```jinja2
-{{ price * quantity }}       {# multiplication #}
-{{ total / count }}          {# division #}
-{{ index % 2 }}              {# modulo #}
-{{ base + tax }}             {# addition #}
-{{ "Hello" ~ " " ~ name }}  {# string concatenation #}
+```html
+{% price * quantity %}       {# multiplication #}
+{% total / count %}          {# division #}
+{% index % 2 %}              {# modulo #}
+{% base + tax %}             {# addition #}
+{% "Hello" ~ " " ~ name %}  {# string concatenation #}
 ```
 
 ### Comparison and logic
 
-```jinja2
-{{ age >= 18 }}          {# true/false #}
-{{ role == "admin" }}
-{{ active and verified }}
-{{ banned or suspended }}
-{{ not disabled }}
+```html
+{% age >= 18 %}          {# true/false #}
+{% role == "admin" %}
+{% active and verified %}
+{% banned or suspended %}
+{% not disabled %}
 ```
 
 ### Ternary expressions
 
-```jinja2
-{{ active ? "yes" : "no" }}
-{{ user ? user.name : "Anonymous" }}
+```html
+{% active ? "yes" : "no" %}
+{% user ? user.name : "Anonymous" %}
 ```
 
 Ternary nests right-to-left (like JavaScript):
 
-```jinja2
-{{ a ? "A" : b ? "B" : "C" }}
+```html
+{% a ? "A" : b ? "B" : "C" %}
 {# equivalent to: a ? "A" : (b ? "B" : "C") #}
 ```
 
 Filters bind tighter than `?`, so use parentheses if filtering the condition:
 
-```jinja2
-{{ (name | length) ? name : "unnamed" }}
+```html
+{% (name | length) ? name : "unnamed" %}
 ```
 
 ## List Literals
 
-```jinja2
+```html
 {% set colors = ["red", "green", "blue"] %}
 {% set matrix = [[1, 2], [3, 4]] %}
 {% set empty = [] %}
 
-{{ colors[0] }}          {# red #}
-{{ matrix[1][0] }}       {# 3 #}
-{{ colors | join(", ") }} {# red, green, blue #}
+{% colors[0] %}          {# red #}
+{% matrix[1][0] %}       {# 3 #}
+{% colors | join(", ") %} {# red, green, blue #}
 ```
 
 Trailing commas are allowed: `["a", "b",]`.
 
 ## Map Literals
 
-```jinja2
+```html
 {% set theme = {bg: "#fff", fg: "#000", border: "#ccc"} %}
 {% set nested = {card: {padding: "1rem", shadow: true}} %}
 {% set empty = {} %}
 
-{{ theme.bg }}           {# #fff #}
-{{ theme["fg"] }}        {# #000 #}
-{{ nested.card.padding }} {# 1rem #}
+{% theme.bg %}           {# #fff #}
+{% theme["fg"] %}        {# #000 #}
+{% nested.card.padding %} {# 1rem #}
 ```
 
-Keys are unquoted identifiers. Trailing commas are allowed. Maps preserve insertion order — iterating with `for` or using `keys`/`values` filters returns entries in declaration order.
+Keys are unquoted identifiers. Trailing commas are allowed. Maps preserve insertion order — iterating with `<For>` or using `keys`/`values` filters returns entries in declaration order.
 
 Maps and lists nest freely:
 
-```jinja2
+```html
 {% set data = {
   users: [
     {name: "Alice", role: "admin"},
     {name: "Bob", role: "editor"}
   ]
 } %}
-{{ data.users[0].name }}  {# Alice #}
+{% data.users[0].name %}  {# Alice #}
 ```
 
 ## Filters
 
 Filters transform values using pipe syntax:
 
-```jinja2
-{{ name | upper }}                    {# ALICE #}
-{{ name | lower | title }}            {# Alice (chained) #}
-{{ text | truncate(100) }}            {# with arguments #}
-{{ text | replace("old", "new") }}    {# multiple arguments #}
+```html
+{% name | upper %}                    {# ALICE #}
+{% name | lower | title %}            {# Alice (chained) #}
+{% text | truncate(100) %}            {# with arguments #}
+{% text | replace("old", "new") %}    {# multiple arguments #}
 ```
 
 See [Filters](filters.md) for the complete catalog of 42 built-in filters.
 
 ## Control Flow
 
-### if / elif / else
+### If / ElseIf / Else
 
-```jinja2
-{% if user.admin %}
+```html
+<If test={user.admin}>
   <span class="badge">Admin</span>
-{% elif user.role == "editor" %}
+<ElseIf test={user.role == "editor"} />
   <span class="badge">Editor</span>
-{% else %}
+<Else />
   <span class="badge">Member</span>
-{% endif %}
+</If>
 ```
 
 **Truthy/falsy rules:** `nil`, `false`, `0`, `""` (empty string), empty lists `[]`, and empty maps `{}` are falsy. Everything else is truthy.
 
-### for loops
+### For loops
 
 Iterate over lists:
 
-```jinja2
-{% for item in items %}
-  <li>{{ item }}</li>
-{% endfor %}
+```html
+<For each={items} as="item">
+  <li>{% item %}</li>
+</For>
 ```
 
-With an `{% empty %}` fallback for empty collections:
+With an `<Empty />` fallback for empty collections:
 
-```jinja2
-{% for post in posts %}
-  <article>{{ post.title }}</article>
-{% empty %}
+```html
+<For each={posts} as="post">
+  <article>{% post.title %}</article>
+<Empty />
   <p>No posts yet.</p>
-{% endfor %}
+</For>
 ```
 
-Iterate with index:
+Iterate with index (two-variable form):
 
-```jinja2
-{% for i, item in items %}
-  <li>{{ i }}: {{ item }}</li>
-{% endfor %}
+```html
+<For each={items} as="item" key="i">
+  <li>{% i %}: {% item %}</li>
+</For>
 ```
 
 Iterate over maps (keys are sorted lexicographically):
 
-```jinja2
-{% for key, value in config %}
-  {{ key }}: {{ value }}
-{% endfor %}
+```html
+<For each={config} as="value" key="key">
+  {% key %}: {% value %}
+</For>
 ```
 
 #### Loop variables
 
-Inside every `for` loop, a `loop` variable is automatically available:
+Inside every `<For>` loop, a `loop` variable is automatically available:
 
 | Variable | Description |
 |----------|-------------|
@@ -212,36 +212,36 @@ Inside every `for` loop, a `loop` variable is automatically available:
 | `loop.depth` | Nesting depth (1 for outermost loop) |
 | `loop.parent` | Reference to the enclosing loop's `loop` variable |
 
-```jinja2
-{% for item in items %}
-  {{ loop.index }}/{{ loop.length }}: {{ item }}
-  {% if loop.first %}(first){% endif %}
-  {% if loop.last %}(last){% endif %}
-{% endfor %}
+```html
+<For each={items} as="item">
+  {% loop.index %}/{% loop.length %}: {% item %}
+  <If test={loop.first}>(first)</If>
+  <If test={loop.last}>(last)</If>
+</For>
 ```
 
 Nested loop example:
 
-```jinja2
-{% for row in rows %}
-  {% for cell in row %}
-    [{{ loop.parent.index }},{{ loop.index }}] = {{ cell }}
-  {% endfor %}
-{% endfor %}
+```html
+<For each={rows} as="row">
+  <For each={row} as="cell">
+    [{% loop.parent.index %},{% loop.index %}] = {% cell %}
+  </For>
+</For>
 ```
 
 ### range
 
 Generate numeric sequences:
 
-```jinja2
-{% for i in range(5) %}{{ i }}{% endfor %}
+```html
+<For each={range(5)} as="i">{% i %}</For>
 {# 0 1 2 3 4 #}
 
-{% for i in range(1, 4) %}{{ i }}{% endfor %}
+<For each={range(1, 4)} as="i">{% i %}</For>
 {# 1 2 3 #}
 
-{% for i in range(10, 0, -2) %}{{ i }}{% endfor %}
+<For each={range(10, 0, -2)} as="i">{% i %}</For>
 {# 10 8 6 4 2 #}
 ```
 
@@ -251,20 +251,20 @@ Generate numeric sequences:
 
 Assign a single variable:
 
-```jinja2
+```html
 {% set greeting = "Hello, " ~ name %}
 {% set total = price * quantity %}
 {% set colors = ["red", "green", "blue"] %}
-{{ greeting }}
+{% greeting %}
 ```
 
-Variables set inside a `for` loop persist after the loop ends.
+Variables set inside a `<For>` loop persist after the loop ends.
 
 ### let
 
 Assign multiple variables with optional conditionals:
 
-```jinja2
+```html
 {% let %}
   bg = "#d1ecf1"
   fg = "#0c5460"
@@ -281,8 +281,8 @@ Assign multiple variables with optional conditionals:
   end
 {% endlet %}
 
-<div style="background: {{ bg }}; color: {{ fg }}">
-  {{ icon }} {{ message }}
+<div style="background: {% bg %}; color: {% fg %}">
+  {% icon %} {% message %}
 </div>
 ```
 
@@ -296,7 +296,7 @@ Assign multiple variables with optional conditionals:
 - All variables are written to the outer scope (available after `{% endlet %}`)
 - No output is produced inside the block
 
-```jinja2
+```html
 {% let %}
   themes = {
     warning: {bg: "#fff3cd", fg: "#856404"},
@@ -307,23 +307,23 @@ Assign multiple variables with optional conditionals:
 {% endlet %}
 ```
 
-### capture
+### Capture
 
 Render a block into a variable instead of outputting it:
 
-```jinja2
-{% capture greeting %}
-  Hello, {{ name | title }}!
-{% endcapture %}
+```html
+<Capture name="greeting">
+  Hello, {% name | title %}!
+</Capture>
 
-{{ greeting | trim }}
+{% greeting | trim %}
 ```
 
 The captured content is a string. You can filter or manipulate it after capture.
 
 ## Comments
 
-```jinja2
+```html
 {# This is a comment — not rendered in output #}
 
 {# 
@@ -332,13 +332,13 @@ The captured content is a string. You can filter or manipulate it after capture.
 #}
 ```
 
-## Raw Blocks
+## Verbatim Blocks
 
 Output template delimiters literally without parsing:
 
-```jinja2
-{% raw %}
-  {{ this is not parsed }}
-  {% neither is this %}
-{% endraw %}
+```html
+<Verbatim>
+  {% this is not parsed %}
+  <If> neither is this </If>
+</Verbatim>
 ```

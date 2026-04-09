@@ -31,14 +31,27 @@ Compares Grove against other Go template engines across multiple scenarios.
 ```bash
 cd benchmarks
 
-# Run all benchmarks
+# Run all benchmarks (results saved to results/)
 make bench
 
-# Format with benchstat
+# Format latest results with benchstat
 make compare
+
+# Compare two runs
+make compare-runs OLD=results/bench-old.txt NEW=results/bench-new.txt
 
 # Grove-only regression check
 make bench-grove
+```
+
+Or via shell scripts:
+
+```bash
+# Micro-benchmarks with formatted output
+./run.sh
+
+# With options
+./run.sh -c 6 -f Render_Complex
 ```
 
 Or directly:
@@ -52,25 +65,34 @@ go test -bench=. -run='^$' -benchmem -count=6
 Wall-clock timing on production-sized templates (100-item loops, nested structures, full pages):
 
 ```bash
-# Run all scenarios
+# Run all scenarios (results saved to results/)
 ./run-timing.sh
 
-# Custom iterations, filter, save output
-./run-timing.sh -n 500 -f "Complex" -o timing.txt
+# Custom iterations, filter
+./run-timing.sh -n 500 -f "Complex"
 ```
+
+## Results
+
+All benchmark runs are automatically saved to the `results/` directory with timestamps:
+- `results/bench-YYYYMMDD-HHMMSS.txt` — micro-benchmark results
+- `results/timing-YYYYMMDD-HHMMSS.txt` — timing benchmark results
+- `results/grove-YYYYMMDD-HHMMSS.txt` — Grove-only results
+- `results/latest.txt` — symlink to most recent micro-benchmark run
+
+The `results/` directory is gitignored.
 
 ## Comparing across versions
 
 ```bash
 # Save baseline
 make bench
-cp results.txt baseline.txt
 
 # Make changes to Grove, then re-run
 make bench
 
-# Compare
-benchstat baseline.txt results.txt
+# Compare latest against previous
+make compare-runs OLD=results/bench-first.txt NEW=results/bench-second.txt
 ```
 
 Install benchstat: `go install golang.org/x/perf/cmd/benchstat@latest`

@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  A bytecode-compiled template engine for Go with components, inheritance, and web primitives.
+  A bytecode-compiled template engine for Go with an HTML-centric syntax, components, and web primitives.
 </p>
 
 ## Install
@@ -27,7 +27,7 @@ func main() {
 	eng := grove.New()
 	result, err := eng.RenderTemplate(
 		context.Background(),
-		`Hello, {{ name | title }}!`,
+		`Hello, {% name | title %}!`,
 		grove.Data{"name": "world"},
 	)
 	if err != nil {
@@ -39,44 +39,45 @@ func main() {
 
 ## Template Language
 
-Grove templates mix HTML with expressions, control flow, and components:
+Grove templates use `{% %}` as the single delimiter and PascalCase elements for control flow and composition:
 
-```jinja2
-{% extends "base.grov" %}
+```html
+<Import src="base" name="Base" />
+<Import src="composites/card" name="Card" />
 
-{% block content %}
-{% asset "/static/page.css" type="stylesheet" %}
-{% meta name="description" content="Latest posts" %}
+<Base>
+  <Fill slot="content">
+    <ImportAsset src="/static/page.css" type="stylesheet" />
+    <SetMeta name="description" content="Latest posts" />
 
-<h1>{{ title | upper }}</h1>
+    <h1>{% title | upper %}</h1>
 
-{% for post in posts %}
-  {% component "composites/card" title=post.title date=post.date %}
-    {% fill "tags" %}
-      {% for tag in post.tags %}
-        <span class="{{ tag.draft ? "muted" : "active" }}">{{ tag.name }}</span>
-      {% endfor %}
-    {% endfill %}
-  {% endcomponent %}
-{% empty %}
-  <p>No posts yet.</p>
-{% endfor %}
-{% endblock %}
+    <For each={posts} as="post">
+      <Card title={post.title} date={post.date}>
+        <Fill slot="tags">
+          <For each={post.tags} as="tag">
+            <span class="{% tag.draft ? "muted" : "active" %}">{% tag.name %}</span>
+          </For>
+        </Fill>
+      </Card>
+    <Empty />
+      <p>No posts yet.</p>
+    </For>
+  </Fill>
+</Base>
 ```
 
 ### Syntax at a Glance
 
-| Category | Tags |
-|----------|------|
-| **Output** | `{{ expr }}`, `{{ value \| filter }}`, `{{ cond ? a : b }}` |
-| **Control flow** | `if` / `elif` / `else`, `for` / `empty`, `range` |
-| **Assignment** | `set`, `let` (multi-variable with conditionals), `capture` |
-| **Composition** | `include`, `render`, `macro` / `call` / `import` |
-| **Inheritance** | `extends`, `block`, `super()` |
-| **Components** | `component`, `props`, `slot`, `fill` |
-| **Web primitives** | `asset`, `meta`, `hoist` |
+| Category | Syntax |
+|----------|--------|
+| **Output** | `{% expr %}`, `{% value \| filter %}`, `{% cond ? a : b %}` |
+| **Control flow** | `<If>` / `<ElseIf>` / `<Else>`, `<For>` / `<Empty>`, `range()` |
+| **Assignment** | `{% set %}`, `{% let %}` (multi-variable with conditionals), `<Capture>` |
+| **Components** | `<Component>`, `<Import>`, `<Slot>`, `<Fill>` |
+| **Web primitives** | `<ImportAsset>`, `<SetMeta>`, `<Hoist>` |
 | **Data literals** | `[1, 2, 3]`, `{key: "value"}` |
-| **Other** | `{# comment #}`, `{% raw %}`, whitespace control (`{%- -%}`) |
+| **Other** | `{# comment #}`, `<Verbatim>`, whitespace control (`{%- -%}`) |
 
 ### Built-in Filters
 
@@ -95,11 +96,11 @@ Grove templates mix HTML with expressions, control flow, and components:
 | Feature | Description |
 |---------|-------------|
 | **Bytecode compilation** | Templates compile to bytecode and run on a stack-based VM. Compiled bytecode is immutable and shared across goroutines. |
-| **Template inheritance** | `extends`, `block`, and `super()` for layered layouts with unlimited depth. |
-| **Components** | Reusable templates with `props`, `slot`, and `fill`. Fills see the caller's scope, not the component's. |
-| **Macros** | `macro`, `call`, `caller()`, and `import` for reusable template functions. |
-| **Web primitives** | `asset`, `meta`, and `hoist` tags collect resources during rendering. `RenderResult` returns them for assembly into the final HTML response. |
-| **Auto-escaping** | HTML output is escaped by default. `safe` filter and `raw` blocks bypass it for trusted content. |
+| **Components** | `<Component>` definitions with props, `<Slot>`, and `<Fill>`. Fills see the caller's scope, not the component's. Scoped slots pass data back to callers. |
+| **Layouts** | Layouts are components with named slots — no special inheritance system. Compose layouts to any depth. |
+| **Imports** | `<Import>` brings components into scope. Supports multi-import, wildcard, aliases, and namespaces. |
+| **Web primitives** | `<ImportAsset>`, `<SetMeta>`, and `<Hoist>` collect resources during rendering. `RenderResult` returns them for assembly into the final HTML response. |
+| **Auto-escaping** | HTML output is escaped by default. `safe` filter and `<Verbatim>` blocks bypass it for trusted content. |
 | **Sandboxing** | Restrict allowed tags, filters, and loop iterations per engine. |
 
 ## Documentation
@@ -108,10 +109,8 @@ Full documentation is in the [`docs/`](docs/index.md) directory:
 
 - [Getting Started](docs/getting-started.md) — install, configure, render your first template
 - [Template Syntax](docs/template-syntax.md) — variables, expressions, control flow, assignment
-- [Template Inheritance](docs/template-inheritance.md) — extends, block, super()
-- [Components](docs/components.md) — props, slots, fills
-- [Macros & Includes](docs/macros-and-includes.md) — macro, include, render, import
+- [Components](docs/components.md) — definitions, imports, props, slots, fills, layouts
 - [Filters](docs/filters.md) — all 42 built-in filters
-- [Web Primitives](docs/web-primitives.md) — asset, meta, hoist, RenderResult
+- [Web Primitives](docs/web-primitives.md) — ImportAsset, SetMeta, Hoist, RenderResult
 - [API Reference](docs/api-reference.md) — Go types, methods, and configuration
 - [Examples](docs/examples.md) — blog app walkthrough

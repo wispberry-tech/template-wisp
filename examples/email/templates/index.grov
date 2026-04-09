@@ -20,18 +20,18 @@
   <p>Preview transactional email templates with different users and scenarios.</p>
 
   <ul class="template-list">
-    {% for tpl in templates %}
+    <For each={templates} as="tpl">
       <li class="template-item">
-        <h3>{{ tpl.label }}</h3>
-        <p>{{ tpl.description }}</p>
+        <h3>{% tpl.label %}</h3>
+        <p>{% tpl.description %}</p>
         <div class="template-links">
-          {% for user in users %}
-            <a href="/preview/{{ tpl.name }}?user={{ user.id }}">{{ user.name }} ({{ user.plan }})</a>
-          {% endfor %}
-          <a href="/source/{{ tpl.name }}">View Source</a>
+          <For each={users} as="user">
+            <a href="/preview/{% tpl.name %}?user={% user.id %}">{% user.name %} ({% user.plan %})</a>
+          </For>
+          <a href="/source/{% tpl.name %}">View Source</a>
         </div>
       </li>
-    {% endfor %}
+    </For>
   </ul>
 </body>
 </html>

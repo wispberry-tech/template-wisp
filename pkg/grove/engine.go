@@ -3,8 +3,10 @@ package grove
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/wispberry-tech/grove/internal/ast"
@@ -122,7 +124,11 @@ func (e *Engine) RenderTemplate(ctx context.Context, src string, data Data) (Ren
 	if err != nil {
 		return RenderResult{}, wrapRuntimeErr(err)
 	}
-	return resultFromExecute(er), nil
+	result := resultFromExecute(er)
+	if err := processGroveDirectives(&result, data); err != nil {
+		return RenderResult{}, err
+	}
+	return result, nil
 }
 
 // Render compiles and renders a named template from the engine's store.
@@ -135,7 +141,11 @@ func (e *Engine) Render(ctx context.Context, name string, data Data) (RenderResu
 	if err != nil {
 		return RenderResult{}, wrapRuntimeErr(err)
 	}
-	return resultFromExecute(er), nil
+	result := resultFromExecute(er)
+	if err := processGroveDirectives(&result, data); err != nil {
+		return RenderResult{}, err
+	}
+	return result, nil
 }
 
 // RenderTo renders a named template and writes the body to w.
@@ -151,6 +161,10 @@ func (e *Engine) RenderTo(ctx context.Context, name string, data Data, w io.Writ
 // LoadTemplate loads, lexes, parses, and compiles a named template from the store.
 // Results are cached by name in the LRU cache. Implements vm.EngineIface.
 func (e *Engine) LoadTemplate(name string) (*compiler.Bytecode, error) {
+	// Handle "src#CompName" format for named components
+	if idx := strings.Index(name, "#"); idx >= 0 {
+		return e.loadNamedComponent(name[:idx], name[idx+1:])
+	}
 	if bc, ok := e.cache.get(name); ok {
 		return bc, nil
 	}
@@ -159,7 +173,13 @@ func (e *Engine) LoadTemplate(name string) (*compiler.Bytecode, error) {
 	}
 	src, err := e.cfg.store.Load(name)
 	if err != nil {
-		return nil, err
+		// Try with .html extension for import resolution
+		src2, err2 := e.cfg.store.Load(name + ".html")
+		if err2 != nil {
+			return nil, err // return original error
+		}
+		src = src2
+		name = name + ".html"
 	}
 	tokens, err := lexer.Tokenize(string(src))
 	if err != nil {
@@ -174,6 +194,64 @@ func (e *Engine) LoadTemplate(name string) (*compiler.Bytecode, error) {
 		return nil, err
 	}
 	e.cache.set(name, bc)
+	return bc, nil
+}
+
+// loadNamedComponent loads a specific named component from a template file.
+// It parses the file, finds the ComponentDefNode with the matching name,
+// and compiles just that component.
+func (e *Engine) loadNamedComponent(src, compName string) (*compiler.Bytecode, error) {
+	cacheKey := src + "#" + compName
+	if bc, ok := e.cache.get(cacheKey); ok {
+		return bc, nil
+	}
+	if e.cfg.store == nil {
+		return nil, fmt.Errorf("no store configured")
+	}
+
+	// Load the source file
+	raw, err := e.cfg.store.Load(src)
+	if err != nil {
+		raw2, err2 := e.cfg.store.Load(src + ".html")
+		if err2 != nil {
+			return nil, fmt.Errorf("template %q not found", src)
+		}
+		raw = raw2
+	}
+
+	tokens, err := lexer.Tokenize(string(raw))
+	if err != nil {
+		return nil, &groverrors.ParseError{Message: err.Error()}
+	}
+	prog, err := parser.Parse(tokens, false, e.allowedTagsMap())
+	if err != nil {
+		return nil, err
+	}
+
+	// Find the named ComponentDefNode
+	for _, node := range prog.Body {
+		if def, ok := node.(*ast.ComponentDefNode); ok && def.Name == compName {
+			// Create a program with just this component's PropsNode + body
+			compProg := &ast.Program{}
+			if len(def.Props) > 0 {
+				compProg.Body = append(compProg.Body, &ast.PropsNode{Params: def.Props, Line: def.Line})
+			}
+			compProg.Body = append(compProg.Body, def.Body...)
+			bc, compErr := e.compileChecked(compProg)
+			if compErr != nil {
+				return nil, compErr
+			}
+			e.cache.set(cacheKey, bc)
+			return bc, nil
+		}
+	}
+
+	// No named component found — fall back to treating entire file as component
+	bc, err := e.compileChecked(prog)
+	if err != nil {
+		return nil, err
+	}
+	e.cache.set(cacheKey, bc)
 	return bc, nil
 }
 
@@ -253,6 +331,141 @@ func (e *Engine) MaxLoopIter() int {
 		return e.cfg.sandbox.MaxLoopIter
 	}
 	return 0
+}
+
+// ─── grove:data / grove:nowarn post-processing ──────────────────────────────
+
+// processGroveDirectives handles grove:data and grove:nowarn attributes in the rendered output.
+func processGroveDirectives(result *RenderResult, data Data) error {
+	body := result.Body
+
+	// Process grove:nowarn — strip attribute from output
+	for {
+		idx := strings.Index(body, " grove:nowarn=")
+		if idx < 0 {
+			break
+		}
+		end := findAttrEnd(body, idx+len(" grove:nowarn="))
+		body = body[:idx] + body[end:]
+	}
+
+	// Process grove:data — resolve variables and merge into x-data
+	for {
+		idx := strings.Index(body, " grove:data=")
+		if idx < 0 {
+			break
+		}
+		attrEnd := findAttrEnd(body, idx+len(" grove:data="))
+		attrVal := extractQuotedValue(body[idx+len(" grove:data="):attrEnd])
+
+		// Find the element this attribute belongs to (scan backwards for <)
+		elemStart := strings.LastIndex(body[:idx], "<")
+		if elemStart < 0 {
+			return fmt.Errorf("grove:data found outside an HTML element")
+		}
+
+		// Find x-data on the same element
+		elemEnd := strings.Index(body[elemStart:], ">")
+		if elemEnd < 0 {
+			return fmt.Errorf("unclosed HTML element with grove:data")
+		}
+		elemEnd += elemStart + 1
+		elemContent := body[elemStart:elemEnd]
+
+		xdataIdx := strings.Index(elemContent, " x-data=")
+		if xdataIdx < 0 {
+			return fmt.Errorf("grove:data requires x-data on the same element")
+		}
+
+		// Parse variable names
+		varNames := strings.Split(attrVal, ",")
+		var jsonParts []string
+		for _, name := range varNames {
+			name = strings.TrimSpace(name)
+			if name == "" {
+				continue
+			}
+			val, ok := data[name]
+			if !ok {
+				return fmt.Errorf("grove:data: variable %q not found", name)
+			}
+			jsonBytes, err := jsonMarshal(val)
+			if err != nil {
+				jsonBytes = []byte("null")
+			}
+			jsonParts = append(jsonParts, name+": "+string(jsonBytes))
+		}
+
+		// Merge into x-data: prepend variables to the existing object
+		xdataAbsIdx := elemStart + xdataIdx + len(" x-data=")
+		xdataEnd := findAttrEnd(body, xdataAbsIdx)
+		xdataVal := extractQuotedValue(body[xdataAbsIdx:xdataEnd])
+
+		// Merge: inject vars at the start of the x-data object
+		merged := xdataVal
+		if strings.HasPrefix(strings.TrimSpace(xdataVal), "{") {
+			inner := strings.TrimSpace(xdataVal)
+			inner = strings.TrimPrefix(inner, "{")
+			inner = strings.TrimSuffix(inner, "}")
+			inner = strings.TrimSpace(inner)
+			if inner != "" {
+				merged = "{ " + strings.Join(jsonParts, ", ") + ", " + inner + " }"
+			} else {
+				merged = "{ " + strings.Join(jsonParts, ", ") + " }"
+			}
+		}
+
+		// Rebuild: remove grove:data attr, replace x-data value
+		body = body[:idx] + body[attrEnd:] // remove grove:data
+		// Recalculate x-data position (shifted after removing grove:data)
+		shift := attrEnd - idx
+		newXdataAbsIdx := xdataAbsIdx - shift
+		newXdataEnd := xdataEnd - shift
+		if newXdataAbsIdx > idx {
+			// x-data was after grove:data in the element
+			newXdataAbsIdx -= 0 // already shifted
+		}
+		// Replace x-data value
+		xdataQuoteStart := newXdataAbsIdx
+		xdataQuoteEnd := newXdataEnd
+		body = body[:xdataQuoteStart] + `"` + merged + `"` + body[xdataQuoteEnd:]
+	}
+
+	result.Body = body
+	return nil
+}
+
+// findAttrEnd finds the end of an HTML attribute value starting at pos (after the =).
+// Handles both "quoted" and 'single-quoted' values.
+func findAttrEnd(s string, pos int) int {
+	if pos >= len(s) {
+		return pos
+	}
+	quote := s[pos]
+	if quote != '"' && quote != '\'' {
+		return pos
+	}
+	end := strings.IndexByte(s[pos+1:], quote)
+	if end < 0 {
+		return len(s)
+	}
+	return pos + end + 2 // include closing quote
+}
+
+// extractQuotedValue extracts the value from "value" or 'value'.
+func extractQuotedValue(s string) string {
+	if len(s) < 2 {
+		return s
+	}
+	if (s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'') {
+		return s[1 : len(s)-1]
+	}
+	return s
+}
+
+// jsonMarshal serializes a Go value to JSON.
+func jsonMarshal(v any) ([]byte, error) {
+	return json.Marshal(v)
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

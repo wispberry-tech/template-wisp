@@ -1,20 +1,21 @@
-{% extends "docs-layout.grov" %}
-{% import "macros/admonitions.grov" as adm %}
+<Import src="docs-layout" name="DocsLayout" />
+<Import src="macros/admonitions" name="*" as="Adm" />
+<Import src="partials/prev-next" name="PrevNext" />
 
-{% block title %}{{ page.title }} &mdash; {{ site_name }}{% endblock %}
+<DocsLayout sections={sections} all_pages={all_pages} current_slug={current_slug} breadcrumbs={breadcrumbs}>
+  <Fill slot="content">
+    <SetMeta name="description" content="How template inheritance works in Grove" />
 
-{% block content %}
-{% meta name="description" content="How template inheritance works in Grove" %}
+    <article class="doc-page">
+      <h1>{% page.title %}</h1>
 
-<article class="doc-page">
-  <h1>{{ page.title }}</h1>
+      <Adm.Tip message="This page is itself rendered using 3-level component composition. The base component defines the HTML shell, DocsLayout adds the sidebar, and this page fills in the content. View the template source to see it in action." />
 
-  {{ adm.tip("This page is itself rendered using 3-level template inheritance. The base template defines the HTML shell, docs-layout adds the sidebar, and this page fills in the content. View the template source to see it in action.") }}
+      <div class="doc-body">
+        {% page.body | safe %}
+      </div>
+    </article>
 
-  <div class="doc-body">
-    {{ page.body | safe }}
-  </div>
-</article>
-
-{% render "partials/prev-next.grov" prev=prev next=next %}
-{% endblock %}
+    <PrevNext prev={prev} next={next} />
+  </Fill>
+</DocsLayout>

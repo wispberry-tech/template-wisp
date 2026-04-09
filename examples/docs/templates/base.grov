@@ -1,34 +1,36 @@
-{% asset "/static/docs.css" type="stylesheet" priority=10 %}
+<Component name="Base" title site_name sections current_year>
+<ImportAsset src="/static/docs.css" type="stylesheet" priority="10" />
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  <title><Slot name="title">{% site_name %}</Slot></title>
   <!-- HEAD_ASSETS -->
   <!-- HEAD_META -->
   <!-- HEAD_HOISTED -->
 </head>
 <body>
-  {% block nav %}
+  <Slot name="nav">
   <nav class="nav">
-    <a href="/" class="nav-brand">{{ site_name }}</a>
+    <a href="/" class="nav-brand">{% site_name %}</a>
     <div class="nav-links">
-      {% for section in sections %}
-        <a href="/docs/{{ section.slug }}" class="nav-link">{{ section.name }}</a>
-      {% endfor %}
+      <For each={sections} as="section">
+        <a href="/docs/{% section.slug %}" class="nav-link">{% section.name %}</a>
+      </For>
       <a href="/docs/filters" class="nav-link">Filter Reference</a>
     </div>
   </nav>
-  {% endblock %}
-  {% block layout %}
+  </Slot>
+  <Slot name="layout">
   <main class="container">
-    {% block content %}{% endblock %}
+    <Slot name="content" />
   </main>
-  {% endblock %}
+  </Slot>
   <footer class="footer">
-    <p>&copy; {{ current_year }} {{ site_name }}. Built with the Grove template engine.</p>
+    <p>&copy; {% current_year %} {% site_name %}. Built with the Grove template engine.</p>
   </footer>
   <!-- FOOT_ASSETS -->
 </body>
 </html>
+</Component>

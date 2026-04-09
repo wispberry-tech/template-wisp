@@ -1,104 +1,100 @@
-# Macros & Includes
+# Components Replace Macros & Includes
 
-## include
+In Grove's HTML-centric syntax, macros, includes, and imports are all replaced by the unified `<Component>` and `<Import>` system. See [Components](components.md) for the full documentation.
 
-Include a template inline. The included template shares the current scope:
+## Migration from Legacy Syntax
 
-```jinja2
-{% include "partials/nav.grov" %}
+### Macros → Components
+
+**Before (legacy):**
 ```
-
-Pass additional variables:
-
-```jinja2
-{% include "partials/nav.grov" section="about" active=true %}
-```
-
-The included template sees all variables from the current scope plus the explicitly passed ones.
-
-## render
-
-Like `include`, but with an isolated scope — only explicitly passed variables are visible:
-
-```jinja2
-{% render "partials/card.grov" title="Widget" price=9.99 %}
-```
-
-The rendered template cannot access the caller's variables. Use `render` when you want self-contained fragments that don't depend on page context.
-
-## include vs render
-
-| | `include` | `render` |
-|--|-----------|----------|
-| **Scope** | Shared — sees caller's variables | Isolated — only passed variables |
-| **Use when** | Partial needs page context | Fragment should be self-contained |
-| **Example** | Navigation bar that needs `current_page` | Email template snippet |
-
-Both require a template store (`WithStore`).
-
-## macro
-
-Define reusable template functions:
-
-```jinja2
 {% macro user_card(name, role="member") %}
   <div class="card">
     <strong>{{ name }}</strong>
     <span class="role">{{ role }}</span>
   </div>
 {% endmacro %}
-```
 
-Call a macro like a function:
-
-```jinja2
 {{ user_card("Alice", "admin") }}
-{{ user_card("Bob") }}
 ```
 
-Macros support positional and keyword arguments:
+**After:**
+```html
+{# user-card.html #}
+<Component name="UserCard" name role="member">
+  <div class="card">
+    <strong>{% name %}</strong>
+    <span class="role">{% role %}</span>
+  </div>
+</Component>
 
-```jinja2
-{% macro link(href, text, target="_self") %}
-  <a href="{{ href }}" target="{{ target }}">{{ text }}</a>
-{% endmacro %}
-
-{{ link("https://example.com", "Example") }}
-{{ link("https://example.com", "Example", target="_blank") }}
+{# page.html #}
+<Import src="user-card" name="UserCard" />
+<UserCard name="Alice" role="admin" />
 ```
 
-**Macros have isolated scope** — they cannot access variables from the surrounding template. Only the arguments passed to the macro are available inside it.
+### Includes → Import + Component
 
-## call and caller()
+**Before (legacy):**
+```
+{% include "partials/nav.grov" %}
+{% render "partials/card.grov" title="Widget" %}
+```
 
-Use `{% call %}` to pass a block of content to a macro:
+**After:**
+```html
+<Import src="partials/nav" name="Nav" />
+<Import src="partials/card" name="Card" />
 
-```jinja2
+<Nav />
+<Card title="Widget" />
+```
+
+All components have isolated scope — there is no shared-scope include. Pass data explicitly via props.
+
+### Import namespace → Wildcard import
+
+**Before (legacy):**
+```
+{% import "macros/ui.grov" as ui %}
+{{ ui.user_card("Alice") }}
+```
+
+**After:**
+```html
+<Import src="macros/ui" name="*" as="UI" />
+<UI.UserCard name="Alice" />
+```
+
+### call/caller → Slots
+
+**Before (legacy):**
+```
 {% macro card(title) %}
   <div class="card">
     <h2>{{ title }}</h2>
-    <div class="body">
-      {{ caller() }}
-    </div>
+    {{ caller() }}
   </div>
 {% endmacro %}
 
 {% call card("Orders") %}
-  <p>You have 3 pending orders.</p>
+  <p>3 pending orders</p>
 {% endcall %}
 ```
 
-Inside the macro, `{{ caller() }}` renders the content from the `{% call %}` block. `caller()` can be called multiple times.
+**After:**
+```html
+{# card.html #}
+<Component name="Card" title>
+  <div class="card">
+    <h2>{% title %}</h2>
+    <Slot />
+  </div>
+</Component>
 
-## import
-
-Import macros from another template file into a namespace:
-
-```jinja2
-{% import "macros/ui.grov" as ui %}
-
-{{ ui.user_card("Alice") }}
-{{ ui.link("https://example.com", "Click here") }}
+{# page.html #}
+<Import src="card" name="Card" />
+<Card title="Orders">
+  <p>3 pending orders</p>
+</Card>
 ```
-
-`import` requires a template store. The imported template is executed, and any macros defined in it become available through the namespace.

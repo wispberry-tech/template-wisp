@@ -1,8 +1,9 @@
-{% props label, href="#", variant="primary", type="link" %}
-{% asset "/js/primitives/button/button.js" type="script" %}
+<Component name="Button" label href="#" variant="primary" type="link">
+<ImportAsset src="/js/primitives/button/button.js" type="script" />
 
-{% if type == "link" %}
-  <a href="{{ href }}" class="btn btn-{{ variant }}" data-button>{{ label }}</a>
-{% else %}
-  <button type="{{ type }}" class="btn btn-{{ variant }}" data-button>{{ label }}</button>
-{% endif %}
+<If test={type == "link"}>
+  <a href="{% href %}" class="btn btn-{% variant %}" data-button>{% label %}</a>
+<Else />
+  <button type="{% type %}" class="btn btn-{% variant %}" data-button>{% label %}</button>
+</If>
+</Component>

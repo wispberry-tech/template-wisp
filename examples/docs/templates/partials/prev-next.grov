@@ -1,16 +1,18 @@
+<Component name="PrevNext" prev next>
 <nav class="prev-next">
-  {% if prev %}
-    <a href="/docs/{{ prev.section_slug }}/{{ prev.slug }}" class="prev-next-link prev-link">
-      &larr; {{ prev.title }}
+  <If test={prev}>
+    <a href="/docs/{% prev.section_slug %}/{% prev.slug %}" class="prev-next-link prev-link">
+      &larr; {% prev.title %}
     </a>
-  {% else %}
+  <Else />
     <span></span>
-  {% endif %}
-  {% if next %}
-    <a href="/docs/{{ next.section_slug }}/{{ next.slug }}" class="prev-next-link next-link">
-      {{ next.title }} &rarr;
+  </If>
+  <If test={next}>
+    <a href="/docs/{% next.section_slug %}/{% next.slug %}" class="prev-next-link next-link">
+      {% next.title %} &rarr;
     </a>
-  {% else %}
+  <Else />
     <span></span>
-  {% endif %}
+  </If>
 </nav>
+</Component>

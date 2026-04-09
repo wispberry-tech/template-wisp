@@ -1,10 +1,12 @@
+<Component name="Breadcrumbs" breadcrumbs>
 <nav class="breadcrumb">
-  {% for crumb in breadcrumbs %}
-    {% if crumb.href %}
-      <a href="{{ crumb.href }}">{{ crumb.label }}</a>
+  <For each={breadcrumbs} as="crumb">
+    <If test={crumb.href}>
+      <a href="{% crumb.href %}">{% crumb.label %}</a>
       <span class="breadcrumb-sep">/</span>
-    {% else %}
-      <span class="breadcrumb-current">{{ crumb.label }}</span>
-    {% endif %}
-  {% endfor %}
+    <Else />
+      <span class="breadcrumb-current">{% crumb.label %}</span>
+    </If>
+  </For>
 </nav>
+</Component>

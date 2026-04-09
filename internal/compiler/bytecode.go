@@ -100,6 +100,11 @@ const (
 	// A = index into Consts for the target string; B = index into bc.Blocks for body.
 	OP_HOIST
 
+	// OP_DYNAMIC_COMPONENT — like OP_COMPONENT but name resolved at runtime.
+	// Stack: component name string on top, then B prop pairs (key, value).
+	// A = component def index; B = prop count.
+	OP_DYNAMIC_COMPONENT
+
 	// OP_BUILD_LIST — A = element count.
 	// Pops N values, builds []Value, pushes list Value.
 	OP_BUILD_LIST
@@ -131,8 +136,9 @@ type BlockDef struct {
 // FillDef is a compiled fill body associated with a named slot.
 // Name="" is the default (unnamed) slot fill.
 type FillDef struct {
-	Name string
-	Body *Bytecode
+	Name        string
+	Body        *Bytecode
+	LetBindings map[string]string // scoped slot: scope_key → local_variable
 }
 
 // ComponentDef holds the compiled fill bodies for a single {% component %} call site.
@@ -152,8 +158,9 @@ type Bytecode struct {
 	Blocks     []BlockDef      // compiled block bodies (parent defaults + child overrides)
 	Extends    string          // non-empty if this template uses {% extends %}
 	Props      []MacroParam    // from {% props %} declaration; nil = no declaration (permissive)
-	Components         []ComponentDef // one entry per {% component %} call in this template
-	EstimatedOutputSize int           // sum of static string constant lengths (hint for output buffer)
+	Components          []ComponentDef    // one entry per {% component %} call in this template
+	ImportMap           map[string]string // localName → "src#compName" for dynamic component resolution
+	EstimatedOutputSize int              // sum of static string constant lengths (hint for output buffer)
 }
 
 // BlockIndex returns a map from block name to index in Blocks.
