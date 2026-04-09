@@ -1,4 +1,5 @@
-// pkg/wispy/webprimitives_test.go
+// pkg/grove/webprimitives_test.go
+// Rewritten for Alpine-POC HTML-centric syntax (TDD — these tests will FAIL).
 package grove_test
 
 import (
@@ -12,47 +13,60 @@ import (
 	"github.com/wispberry-tech/grove/pkg/grove"
 )
 
-// ─── {% raw %} tests ──────────────────────────────────────────────────────────
+// ─── <Verbatim> tests (was {% raw %}) ────────────────────────────────────────
 
-func TestRaw_OutputExpr(t *testing.T) {
+func TestVerbatim_OutputExpr(t *testing.T) {
 	eng := grove.New()
 	result, err := eng.RenderTemplate(context.Background(),
-		`{% raw %}{{ variable }}{% endraw %}`,
+		`<Verbatim>{% variable %}</Verbatim>`,
 		grove.Data{"variable": "should not render"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Body != "{{ variable }}" {
-		t.Errorf("want {{ variable }}, got %q", result.Body)
+	if result.Body != "{% variable %}" {
+		t.Errorf("want {%% variable %%}, got %q", result.Body)
 	}
 }
 
-func TestRaw_OutputTag(t *testing.T) {
+func TestVerbatim_OutputTag(t *testing.T) {
 	eng := grove.New()
 	result, err := eng.RenderTemplate(context.Background(),
-		`{% raw %}{% if foo %}bar{% endif %}{% endraw %}`,
+		`<Verbatim><If test={foo}>bar</If></Verbatim>`,
 		grove.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if result.Body != "{% if foo %}bar{% endif %}" {
+	if result.Body != `<If test={foo}>bar</If>` {
 		t.Errorf("got %q", result.Body)
 	}
 }
 
-func TestRaw_MultiLine(t *testing.T) {
+func TestVerbatim_MultiLine(t *testing.T) {
 	eng := grove.New()
-	src := "{% raw %}\nline one\n{{ expr }}\n{% endraw %}"
+	src := "<Verbatim>\nline one\n{% expr %}\n</Verbatim>"
 	result, err := eng.RenderTemplate(context.Background(), src, grove.Data{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(result.Body, "{{ expr }}") {
-		t.Errorf("expected {{ expr }} in output, got %q", result.Body)
+	if !strings.Contains(result.Body, "{% expr %}") {
+		t.Errorf("expected {%% expr %%} in output, got %q", result.Body)
 	}
 }
 
-// ─── {% asset %} tests ────────────────────────────────────────────────────────
+func TestVerbatim_PreservesGroveDelimiters(t *testing.T) {
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		`<Verbatim>{% not processed %}</Verbatim>`,
+		grove.Data{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Body != "{% not processed %}" {
+		t.Errorf("expected literal {%% not processed %%}, got %q", result.Body)
+	}
+}
+
+// ─── <ImportAsset> tests (was {% asset %}) ───────────────────────────────────
 
 func newStoreEng(templates map[string]string, opts ...grove.Option) *grove.Engine {
 	s := grove.NewMemoryStore()
@@ -65,7 +79,7 @@ func newStoreEng(templates map[string]string, opts ...grove.Option) *grove.Engin
 
 func TestAsset_StylesheetCollected(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% asset "app.css" type="stylesheet" %}hello`,
+		"page.html": `<ImportAsset src="app.css" type="stylesheet" />hello`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -85,7 +99,7 @@ func TestAsset_StylesheetCollected(t *testing.T) {
 
 func TestAsset_ScriptCollected(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% asset "app.js" type="script" %}`,
+		"page.html": `<ImportAsset src="app.js" type="script" />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -98,7 +112,7 @@ func TestAsset_ScriptCollected(t *testing.T) {
 
 func TestAsset_Deduplication(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% asset "app.js" type="script" %}{% asset "app.js" type="script" %}`,
+		"page.html": `<ImportAsset src="app.js" type="script" /><ImportAsset src="app.js" type="script" />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -111,7 +125,7 @@ func TestAsset_Deduplication(t *testing.T) {
 
 func TestAsset_BooleanAttrInFootHTML(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% asset "app.js" type="script" defer %}`,
+		"page.html": `<ImportAsset src="app.js" type="script" defer />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -128,7 +142,7 @@ func TestAsset_BooleanAttrInFootHTML(t *testing.T) {
 
 func TestAsset_Priority(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% asset "b.css" type="stylesheet" %}{% asset "a.css" type="stylesheet" priority=10 %}`,
+		"page.html": `<ImportAsset src="b.css" type="stylesheet" /><ImportAsset src="a.css" type="stylesheet" priority={10} />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -147,7 +161,7 @@ func TestAsset_Priority(t *testing.T) {
 
 func TestAsset_HeadHTML(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% asset "style.css" type="stylesheet" %}`,
+		"page.html": `<ImportAsset src="style.css" type="stylesheet" />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -161,7 +175,7 @@ func TestAsset_HeadHTML(t *testing.T) {
 
 func TestAsset_FootHTML(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% asset "main.js" type="script" %}`,
+		"page.html": `<ImportAsset src="main.js" type="script" />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -175,8 +189,8 @@ func TestAsset_FootHTML(t *testing.T) {
 
 func TestAsset_FromComponent(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"button.html": `{% asset "button.css" type="stylesheet" %}<button>click</button>`,
-		"page.html":   `{% component "button.html" %}{% endcomponent %}`,
+		"button.html": `<ImportAsset src="button.css" type="stylesheet" /><button>click</button>`,
+		"page.html":   `<Import src="button" name="Button" /><Button />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -190,17 +204,17 @@ func TestAsset_FromComponent(t *testing.T) {
 func TestAsset_InlineTemplateError(t *testing.T) {
 	eng := grove.New()
 	_, err := eng.RenderTemplate(context.Background(),
-		`{% asset "app.css" type="stylesheet" %}`, grove.Data{})
+		`<ImportAsset src="app.css" type="stylesheet" />`, grove.Data{})
 	if err == nil {
 		t.Fatal("expected ParseError for asset in inline template")
 	}
 }
 
-// ─── {% hoist %} tests ────────────────────────────────────────────────────────
+// ─── <Hoist> tests (was {% hoist %}) ─────────────────────────────────────────
 
 func TestHoist_BasicTarget(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% hoist target="head" %}<style>.hero{}</style>{% endhoist %}body`,
+		"page.html": `<Hoist target="head"><style>.hero{}</style></Hoist>body`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -217,7 +231,7 @@ func TestHoist_BasicTarget(t *testing.T) {
 
 func TestHoist_MultipleBlocks(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% hoist target="head" %}first{% endhoist %}{% hoist target="head" %}second{% endhoist %}`,
+		"page.html": `<Hoist target="head">first</Hoist><Hoist target="head">second</Hoist>`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -234,7 +248,7 @@ func TestHoist_MultipleBlocks(t *testing.T) {
 
 func TestHoist_IndependentTargets(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% hoist target="head" %}HEAD{% endhoist %}{% hoist target="foot" %}FOOT{% endhoist %}`,
+		"page.html": `<Hoist target="head">HEAD</Hoist><Hoist target="foot">FOOT</Hoist>`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -250,8 +264,8 @@ func TestHoist_IndependentTargets(t *testing.T) {
 
 func TestHoist_FromComponent(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"widget.html": `{% hoist target="head" %}<style>.widget{}</style>{% endhoist %}widget`,
-		"page.html":   `{% component "widget.html" %}{% endcomponent %}`,
+		"widget.html": `<Hoist target="head"><style>.widget{}</style></Hoist>widget`,
+		"page.html":   `<Import src="widget" name="Widget" /><Widget />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -262,11 +276,11 @@ func TestHoist_FromComponent(t *testing.T) {
 	}
 }
 
-// ─── {% meta %} tests ─────────────────────────────────────────────────────────
+// ─── <SetMeta> tests (was {% meta %}) ────────────────────────────────────────
 
 func TestMeta_NameAttr(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% meta name="description" content="A great page" %}`,
+		"page.html": `<SetMeta name="description" content="A great page" />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -279,7 +293,7 @@ func TestMeta_NameAttr(t *testing.T) {
 
 func TestMeta_PropertyAttr(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% meta property="og:title" content="My Page" %}`,
+		"page.html": `<SetMeta property="og:title" content="My Page" />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -292,7 +306,7 @@ func TestMeta_PropertyAttr(t *testing.T) {
 
 func TestMeta_CollisionWarning(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% meta name="title" content="First" %}{% meta name="title" content="Second" %}`,
+		"page.html": `<SetMeta name="title" content="First" /><SetMeta name="title" content="Second" />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -308,8 +322,8 @@ func TestMeta_CollisionWarning(t *testing.T) {
 
 func TestMeta_FromComponent(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"hero.html": `{% meta name="og:image" content="/hero.jpg" %}`,
-		"page.html": `{% component "hero.html" %}{% endcomponent %}`,
+		"hero.html": `<SetMeta name="og:image" content="/hero.jpg" />`,
+		"page.html": `<Import src="hero" name="Hero" /><Hero />`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -320,7 +334,7 @@ func TestMeta_FromComponent(t *testing.T) {
 	}
 }
 
-// ─── FileSystemStore tests ────────────────────────────────────────────────────
+// ─── FileSystemStore tests ───────────────────────────────────────────────────
 
 func TestFileSystemStore_Load(t *testing.T) {
 	dir := t.TempDir()
@@ -377,7 +391,7 @@ func TestFileSystemStore_CleanedPath(t *testing.T) {
 
 func TestFileSystemStore_RenderFromFS(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "hi.html"), []byte("Hello {{ name }}!"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "hi.html"), []byte("Hello {% name %}!"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	eng := grove.New(grove.WithStore(grove.NewFileSystemStore(dir)))
@@ -390,7 +404,7 @@ func TestFileSystemStore_RenderFromFS(t *testing.T) {
 	}
 }
 
-// ─── LRU cache tests ──────────────────────────────────────────────────────────
+// ─── LRU cache tests ────────────────────────────────────────────────────────
 
 type countingStore struct {
 	inner *grove.MemoryStore
@@ -446,7 +460,7 @@ func TestLRUCache_Eviction(t *testing.T) {
 	}
 }
 
-// ─── RenderTo tests ───────────────────────────────────────────────────────────
+// ─── RenderTo tests ──────────────────────────────────────────────────────────
 
 func TestRenderTo_WritesBody(t *testing.T) {
 	s := grove.NewMemoryStore()
@@ -471,15 +485,15 @@ func TestRenderTo_PropagatesError(t *testing.T) {
 	}
 }
 
-// ─── Sandbox tests ────────────────────────────────────────────────────────────
+// ─── Sandbox tests ───────────────────────────────────────────────────────────
 
 func TestSandbox_AllowedTagsBlocked(t *testing.T) {
 	s := grove.NewMemoryStore()
-	s.Set("t.html", `{% set x = 1 %}{{ x }}`)
+	s.Set("t.html", `{% set x = 1 %}{% x %}`)
 	eng := grove.New(
 		grove.WithStore(s),
 		grove.WithSandbox(grove.SandboxConfig{
-			AllowedTags: []string{"if", "for"},
+			AllowedTags: []string{"If", "For"},
 		}),
 	)
 	_, err := eng.Render(context.Background(), "t.html", grove.Data{})
@@ -493,7 +507,7 @@ func TestSandbox_AllowedTagsBlocked(t *testing.T) {
 
 func TestSandbox_AllowedFiltersBlocked(t *testing.T) {
 	s := grove.NewMemoryStore()
-	s.Set("t.html", `{{ "hello" | downcase }}`)
+	s.Set("t.html", `{% "hello" | downcase %}`)
 	eng := grove.New(
 		grove.WithStore(s),
 		grove.WithSandbox(grove.SandboxConfig{
@@ -511,7 +525,7 @@ func TestSandbox_AllowedFiltersBlocked(t *testing.T) {
 
 func TestSandbox_MaxLoopIter(t *testing.T) {
 	s := grove.NewMemoryStore()
-	s.Set("t.html", `{% for i in items %}{{ i }}{% endfor %}`)
+	s.Set("t.html", `<For each={items} as="i">{% i %}</For>`)
 	eng := grove.New(
 		grove.WithStore(s),
 		grove.WithSandbox(grove.SandboxConfig{MaxLoopIter: 3}),
@@ -531,12 +545,12 @@ func TestSandbox_DisallowedTagInInclude(t *testing.T) {
 	// sandbox restrictions apply to included sub-templates:
 	// part.html uses {% set %} which is not in AllowedTags
 	s := grove.NewMemoryStore()
-	s.Set("page.html", `{% include "part.html" %}`)
-	s.Set("part.html", `{% set x = 1 %}{{ x }}`)
+	s.Set("page.html", `<Import src="part" name="Part" /><Part />`)
+	s.Set("part.html", `{% set x = 1 %}{% x %}`)
 	eng := grove.New(
 		grove.WithStore(s),
 		grove.WithSandbox(grove.SandboxConfig{
-			AllowedTags: []string{"if", "for", "include"}, // include allowed; set is not
+			AllowedTags: []string{"If", "For", "Import"}, // Import allowed; set is not
 		}),
 	)
 	_, err := eng.Render(context.Background(), "page.html", grove.Data{})
@@ -548,11 +562,11 @@ func TestSandbox_DisallowedTagInInclude(t *testing.T) {
 	}
 }
 
-// ─── Hoist inside conditional ─────────────────────────────────────────────────
+// ─── <Hoist> inside conditional ──────────────────────────────────────────────
 
 func TestHoist_InsideConditional_True(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% if show %}{% hoist target="x" %}hoisted{% endhoist %}{% endif %}body`,
+		"page.html": `<If test={show}><Hoist target="x">hoisted</Hoist></If>body`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{"show": true})
 	if err != nil {
@@ -568,7 +582,7 @@ func TestHoist_InsideConditional_True(t *testing.T) {
 
 func TestHoist_InsideConditional_False(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"page.html": `{% if show %}{% hoist target="x" %}hoisted{% endhoist %}{% endif %}body`,
+		"page.html": `<If test={show}><Hoist target="x">hoisted</Hoist></If>body`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{"show": false})
 	if err != nil {
@@ -579,12 +593,12 @@ func TestHoist_InsideConditional_False(t *testing.T) {
 	}
 }
 
-// ─── Meta from include ────────────────────────────────────────────────────────
+// ─── <SetMeta> from include ──────────────────────────────────────────────────
 
 func TestMeta_FromInclude(t *testing.T) {
 	eng := newStoreEng(map[string]string{
-		"part.html": `{% meta name="description" content="from include" %}`,
-		"page.html": `{% include "part.html" %}body`,
+		"part.html": `<SetMeta name="description" content="from include" />`,
+		"page.html": `<Import src="part" name="Part" /><Part />body`,
 	})
 	result, err := eng.Render(context.Background(), "page.html", grove.Data{})
 	if err != nil {
@@ -592,5 +606,96 @@ func TestMeta_FromInclude(t *testing.T) {
 	}
 	if result.Meta["description"] != "from include" {
 		t.Errorf("meta from include not bubbled up: %v", result.Meta)
+	}
+}
+
+// ─── grove:data tests (Alpine integration) ──────────────────────────────────
+
+func TestGroveData_BasicInjection(t *testing.T) {
+	// grove:data="user" on an element with x-data serializes the server
+	// variable as JSON into x-data, merging with existing Alpine state.
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		`<div grove:data="user" x-data="{ tab: 'info' }">{% user.name %}</div>`,
+		grove.Data{"user": map[string]any{"name": "Alice", "role": "admin"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// grove:data attr is stripped; user is serialized into x-data
+	if strings.Contains(result.Body, "grove:data") {
+		t.Errorf("grove:data should be stripped from output, got %q", result.Body)
+	}
+	if !strings.Contains(result.Body, "Alice") {
+		t.Errorf("expected user.name to be rendered, got %q", result.Body)
+	}
+	// The x-data should contain the merged object with serialized user data
+	if !strings.Contains(result.Body, `x-data=`) {
+		t.Errorf("expected x-data attribute in output, got %q", result.Body)
+	}
+}
+
+func TestGroveData_MultipleVars(t *testing.T) {
+	// grove:data="user, stats" injects multiple server variables into x-data
+	eng := grove.New()
+	result, err := eng.RenderTemplate(context.Background(),
+		`<div grove:data="user, stats" x-data="{ open: false }">content</div>`,
+		grove.Data{
+			"user":  map[string]any{"name": "Alice"},
+			"stats": map[string]any{"views": 42},
+		})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(result.Body, "grove:data") {
+		t.Errorf("grove:data should be stripped from output, got %q", result.Body)
+	}
+	if !strings.Contains(result.Body, `x-data=`) {
+		t.Errorf("expected x-data attribute in output, got %q", result.Body)
+	}
+}
+
+func TestGroveData_MissingVar_Error(t *testing.T) {
+	// Variable in grove:data that doesn't exist in scope should produce an error
+	eng := grove.New()
+	_, err := eng.RenderTemplate(context.Background(),
+		`<div grove:data="nonexistent" x-data="{}">content</div>`,
+		grove.Data{})
+	if err == nil {
+		t.Fatal("expected error for grove:data referencing missing variable")
+	}
+}
+
+func TestGroveData_WithoutXData_Error(t *testing.T) {
+	// grove:data without x-data on the same element should produce an error
+	eng := grove.New()
+	_, err := eng.RenderTemplate(context.Background(),
+		`<div grove:data="user">content</div>`,
+		grove.Data{"user": map[string]any{"name": "Alice"}})
+	if err == nil {
+		t.Fatal("expected error for grove:data without x-data on same element")
+	}
+}
+
+// ─── grove:nowarn test ───────────────────────────────────────────────────────
+
+func TestGroveNowarn(t *testing.T) {
+	// grove:nowarn="server-loop-in-client-scope" suppresses specific warnings
+	eng := newStoreEng(map[string]string{
+		"page.html": `<div x-data="{ items: [] }" grove:nowarn="server-loop-in-client-scope"><For each={items} as="item">{% item %}</For></div>`,
+	})
+	result, err := eng.Render(context.Background(), "page.html",
+		grove.Data{"items": []any{"a", "b"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// The warning "server-loop-in-client-scope" should be suppressed
+	for _, w := range result.Warnings {
+		if strings.Contains(w.Message, "server-loop-in-client-scope") {
+			t.Errorf("expected warning to be suppressed by grove:nowarn, got warning: %q", w)
+		}
+	}
+	// grove:nowarn should be stripped from output
+	if strings.Contains(result.Body, "grove:nowarn") {
+		t.Errorf("grove:nowarn should be stripped from output, got %q", result.Body)
 	}
 }
