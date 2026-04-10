@@ -349,7 +349,7 @@ func main() {
 	r.Get("/preview/{name}", previewHandler(eng))
 	r.Get("/source/{name}", sourceHandler(eng))
 
-	fmt.Println("Grove Email listening on http://localhost:3003")
+	fmt.Println("Grove Cloud listening on http://localhost:3003")
 	log.Fatal(http.ListenAndServe(":3003", r))
 }
 

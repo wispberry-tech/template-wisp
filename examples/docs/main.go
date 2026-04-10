@@ -382,11 +382,10 @@ func main() {
 		grove.WithStore(fsStore),
 		grove.WithSandbox(grove.SandboxConfig{
 			AllowedTags: []string{
-				"set", "let",
-				"If", "ElseIf", "Else", "For", "Empty",
-				"Import", "Component", "Slot", "Fill",
-				"Capture", "Verbatim", "Hoist",
-				"ImportAsset", "SetMeta",
+				"set", "import", "slot", "asset", "meta",
+				"#if", "#each", "#fill", "#slot", "#capture",
+				"#hoist", "#let", "#verbatim",
+				"Component",
 			},
 			AllowedFilters: []string{
 				"upper", "lower", "title", "capitalize", "default", "truncate", "length",
@@ -415,7 +414,7 @@ func main() {
 	staticDir := filepath.Join(baseDir, "static")
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 
-	fmt.Println("Grove Docs listening on http://localhost:3002")
+	fmt.Println("Grove Documentation listening on http://localhost:3002")
 	log.Fatal(http.ListenAndServe(":3002", r))
 }
 

@@ -4,7 +4,7 @@
 {% import TagBadge from "primitives/tag-badge" %}
 
 <Base>
-  {% #fill "title" %}{% title %} &mdash; Grove Blog{% /fill %}
+  {% #fill "title" %}{% title %} &mdash; Meridian{% /fill %}
 
   {% #fill "content" %}
     <Breadcrumbs />

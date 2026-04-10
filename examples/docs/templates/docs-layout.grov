@@ -22,7 +22,7 @@
         <Sidebar sections={sections} all_pages={all_pages} current_slug={current_slug} />
       </aside>
       <main class="docs-content">
-        {% slot "content" %}
+        {% #slot "content" %}{% /slot %}
       </main>
     </div>
   {% /fill %}

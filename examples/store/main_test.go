@@ -25,7 +25,7 @@ func testEngine(t *testing.T) *grove.Engine {
 	templateDir := filepath.Join(baseDir, "templates")
 	store := grove.NewFileSystemStore(templateDir)
 	eng := grove.New(grove.WithStore(store))
-	eng.SetGlobal("site_name", "Grove Store")
+	eng.SetGlobal("site_name", "Coldfront Supply Co.")
 	eng.SetGlobal("current_year", "2026")
 	eng.RegisterFilter("currency", grove.FilterFn(func(v grove.Value, args []grove.Value) (grove.Value, error) {
 		cents, _ := v.ToInt64()

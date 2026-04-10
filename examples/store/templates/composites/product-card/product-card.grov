@@ -13,7 +13,7 @@
         <span class="text-muted">({% review_count %})</span>
       </div>
     {% /if %}
-    {% slot "badge" %}
+    {% #slot "badge" %}{% /slot %}
   </div>
 </div>
 </Component>

@@ -5,11 +5,11 @@
 {% import TagBadge from "primitives/tag-badge" %}
 
 <Base>
-  {% #fill "title" %}{% post.title %} &mdash; Grove Blog{% /fill %}
+  {% #fill "title" %}{% post.title %} &mdash; Meridian{% /fill %}
 
   {% #fill "content" %}
-    {% meta name="description" content="A blog post on Grove Blog" %}
-    {% meta property="og:title" content="Grove Blog Post" %}
+    {% meta name="description" content="A blog post on Meridian" %}
+    {% meta property="og:title" content="Meridian Post" %}
 
     <Breadcrumbs />
 

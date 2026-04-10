@@ -4,30 +4,43 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <title>{% #slot "title" %}Grove Cloud{% /slot %}</title>
   <style>
-    body { margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    body { margin: 0; padding: 0; background-color: #f4f4f7; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; min-width: 100% !important; }
+    body, table, td, div, p, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: nearest-neighbor; }
     .wrapper { width: 100%; background-color: #f4f4f7; padding: 24px 0; }
     .container { max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; }
-    .header { background-color: #2E6740; padding: 24px; text-align: center; }
-    .header h1 { color: #ffffff; margin: 0; font-size: 24px; }
-    .body { padding: 32px 24px; color: #333333; line-height: 1.6; }
-    .body h2 { color: #2E6740; margin: 0 0 16px; }
-    .body p { margin: 0 0 16px; }
-    .footer { padding: 24px; text-align: center; color: #888888; font-size: 12px; background-color: #f9f9f9; }
-    .footer a { color: #2E6740; }
-    .preheader { display: none !important; max-height: 0; overflow: hidden; mso-hide: all; }
+    .header { background-color: #2E6740; padding: 32px 24px; text-align: center; color: #ffffff; }
+    .header h1 { color: #ffffff; margin: 0; font-size: 24px; font-weight: 700; }
+    .body { padding: 32px 24px; color: #3D2E2A; line-height: 1.6; }
+    .body h2 { color: #2E6740; margin: 0 0 16px; font-size: 20px; font-weight: 600; }
+    .body h3 { color: #251917; margin: 0 0 12px; font-size: 16px; font-weight: 600; }
+    .body p { margin: 0 0 16px; text-align: left; }
+    .body a { color: #2E6740; text-decoration: none; }
+    .body a:hover { text-decoration: underline; }
+    .footer { padding: 24px; text-align: center; color: #7A6B66; font-size: 12px; background-color: #f9f9f9; line-height: 1.5; }
+    .footer a { color: #2E6740; text-decoration: none; }
+    .footer p { margin: 0 0 8px; }
+    .footer p:last-child { margin-bottom: 0; }
+    .preheader { display: none !important; max-height: 0px; overflow: hidden; mso-hide: all; }
+    .btn-primary { background-color: #2E6740; color: #ffffff; padding: 12px 24px; text-align: center; text-decoration: none; display: inline-block; border-radius: 6px; font-weight: 600; }
+    .btn-primary:hover { background-color: #245533; }
+    .divider { border: none; border-top: 1px solid #E8E3DC; margin: 24px 0; }
+    .spacer { height: 16px; }
   </style>
 </head>
 <body>
-  <div class="preheader"><!-- PREHEADER --></div>
+  <div class="preheader">{% #slot "preheader" %}{% /slot %}</div>
   <div class="wrapper">
     <div class="container">
       <div class="header">
         <h1>Grove Cloud</h1>
       </div>
       <div class="body">
-        {% slot "body" %}
+        {% #slot "body" %}{% /slot %}
       </div>
       <div class="footer">
         {% #slot "footer" %}

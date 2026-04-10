@@ -459,7 +459,7 @@ func main() {
 	templateDir := filepath.Join(baseDir, "templates")
 	store := grove.NewFileSystemStore(templateDir)
 	eng := grove.New(grove.WithStore(store))
-	eng.SetGlobal("site_name", "Grove Blog")
+	eng.SetGlobal("site_name", "Meridian")
 	eng.SetGlobal("current_year", "2026")
 
 	r := chi.NewRouter()
@@ -479,7 +479,7 @@ func main() {
 	// Serve colocated JS from component directories
 	r.Handle("/js/*", http.StripPrefix("/js/", http.FileServer(http.Dir(templateDir))))
 
-	fmt.Println("Grove Blog listening on http://localhost:3000")
+	fmt.Println("Meridian listening on http://localhost:3000")
 	log.Fatal(http.ListenAndServe(":3000", r))
 }
 

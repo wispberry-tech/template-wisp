@@ -7,15 +7,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% #slot "title" %}Grove Blog{% /slot %}</title>
+  <title>{% #slot "title" %}Meridian{% /slot %}</title>
   <!-- HEAD_ASSETS -->
   <!-- HEAD_META -->
   <!-- HEAD_HOISTED -->
 </head>
 <body>
+  <a href="#main" class="skip-link">Skip to main content</a>
   <Nav site_name={site_name} />
-  <main class="container">
-    {% slot "content" %}
+  <main id="main" class="container">
+    {% #slot "content" %}{% /slot %}
   </main>
   <Footer year={current_year} />
   <!-- FOOT_ASSETS -->

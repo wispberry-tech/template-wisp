@@ -9,8 +9,8 @@
   {% #fill "title" %}{% product.name %} &mdash; {% site_name %}{% /fill %}
 
   {% #fill "content" %}
-    {% meta name="description" content="Grove Store product" %}
-    {% meta property="og:title" content="Grove Store" %}
+    {% meta name="description" content="Premium outdoor gear from Coldfront Supply Co." %}
+    {% meta property="og:title" content="Coldfront Supply Co." %}
 
     <Breadcrumbs breadcrumbs={breadcrumbs} />
 

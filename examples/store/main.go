@@ -594,7 +594,7 @@ func main() {
 	templateDir := filepath.Join(baseDir, "templates")
 	store := grove.NewFileSystemStore(templateDir)
 	eng := grove.New(grove.WithStore(store))
-	eng.SetGlobal("site_name", "Grove Store")
+	eng.SetGlobal("site_name", "Coldfront Supply Co.")
 	eng.SetGlobal("current_year", "2026")
 
 	eng.RegisterFilter("currency", grove.FilterFn(func(v grove.Value, args []grove.Value) (grove.Value, error) {
@@ -623,7 +623,7 @@ func main() {
 	// Serve colocated JS from component directories
 	r.Handle("/js/*", http.StripPrefix("/js/", http.FileServer(http.Dir(templateDir))))
 
-	fmt.Println("Grove Store listening on http://localhost:3001")
+	fmt.Println("Coldfront Supply Co. listening on http://localhost:3001")
 	log.Fatal(http.ListenAndServe(":3001", r))
 }
 

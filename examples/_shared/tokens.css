@@ -1,0 +1,115 @@
+/* Grove Examples — Shared Design Tokens */
+/* Import this in every example stylesheet: @import "../_shared/tokens.css"; */
+
+:root {
+  /* ── Colors: Brand ──────────────────────────────────── */
+  --color-primary: #059669;
+  --color-primary-hover: #047857;
+  --color-primary-light: #ECFDF5;
+  --color-dark: #0F172A;
+  --color-cream: #F3F4F6;
+  --color-surface: #FFFFFF;
+  --color-page-bg: #FFFFFF;
+  --color-text: #1F2937;
+  --color-text-muted: #6B7280;
+  --color-border: #E5E7EB;
+  --color-border-light: #F3F4F6;
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-error: #EF4444;
+
+  /* ── Colors: Tags ──────────────────────────────────── */
+  --color-tag-blue-bg: #DBEAFE;
+  --color-tag-blue-text: #0369A1;
+  --color-tag-purple-bg: #F3E8FF;
+  --color-tag-purple-text: #7E22CE;
+  --color-tag-green-bg: #ECFDF5;
+  --color-tag-green-text: #059669;
+  --color-tag-orange-bg: #FEF3C7;
+  --color-tag-orange-text: #D97706;
+  --color-tag-red-bg: #FEE2E2;
+  --color-tag-red-text: #DC2626;
+  --color-tag-teal-bg: #CCFBF1;
+  --color-tag-teal-text: #0D9488;
+  --color-tag-gray-bg: #F3F4F6;
+  --color-tag-gray-text: #374151;
+
+  /* ── Colors: Alerts ────────────────────────────────── */
+  --color-info-bg: #ECFDF5;
+  --color-info-border: #059669;
+  --color-info-text: #047857;
+  --color-warning-bg: #FFFBEB;
+  --color-warning-border: #F59E0B;
+  --color-warning-text: #92400E;
+  --color-tip-bg: #F0FDF4;
+  --color-tip-border: #22C55E;
+  --color-tip-text: #16A34A;
+
+  /* ── Spacing Scale (base-4) ────────────────────────── */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-7: 1.75rem;   /* 28px */
+  --space-8: 2rem;      /* 32px */
+  --space-9: 2.25rem;   /* 36px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-14: 3.5rem;   /* 56px */
+  --space-16: 4rem;     /* 64px */
+
+  /* ── Typography Scale ──────────────────────────────── */
+  --text-xs: 0.75rem;   /* 12px */
+  --text-sm: 0.875rem;  /* 14px */
+  --text-base: 1rem;    /* 16px */
+  --text-lg: 1.125rem;  /* 18px */
+  --text-xl: 1.25rem;   /* 20px */
+  --text-2xl: 1.5rem;   /* 24px */
+  --text-3xl: 1.875rem; /* 30px */
+  --text-4xl: 2.25rem;  /* 36px */
+
+  /* ── Font Weight Scale ────────────────────────────── */
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ── Line Height Scale ────────────────────────────── */
+  --leading-tight: 1.3;
+  --leading-normal: 1.6;
+  --leading-relaxed: 1.75;
+
+  /* ── Border Radius ────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
+
+  /* ── Shadows ──────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(37, 25, 23, 0.05);
+  --shadow-md: 0 2px 4px rgba(37, 25, 23, 0.1);
+  --shadow-lg: 0 4px 8px rgba(37, 25, 23, 0.12);
+  --shadow-xl: 0 8px 16px rgba(37, 25, 23, 0.15);
+
+  /* ── Container Max-widths ────────────────────────── */
+  --container-sm: 640px;
+  --container-md: 768px;
+  --container-lg: 1024px;
+  --container-xl: 1200px;
+  --container-prose: 680px;
+
+  /* ── Transitions ──────────────────────────────────── */
+  --transition-fast: 0.15s ease-out;
+  --transition-base: 0.2s ease-out;
+  --transition-slow: 0.3s ease-out;
+}
+
+/* ── Font Families ─────────────────────────────────── */
+
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --font-mono: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}

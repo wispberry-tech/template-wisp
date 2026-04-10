@@ -9,7 +9,7 @@
     <h3><a href="/author/{% slug %}">{% name %}</a></h3>
     {% #if role %}<span class="author-role">{% role %}</span>{% /if %}
     {% #if bio %}<p class="author-bio">{% bio %}</p>{% /if %}
-    {% slot %}
+    {% #slot %}{% /slot %}
   </div>
 </div>
 </Component>

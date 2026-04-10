@@ -1,17 +1,18 @@
 {% import Base from "base" %}
 {% import Price from "macros/pricing" %}
 {% import DiscountBadge from "macros/pricing" %}
+{% import Button from "primitives/button" %}
 {% import ProductCard from "composites/product-card/product-card" %}
 
 <Base>
-  {% #fill "title" %}{% site_name %} &mdash; Outdoor Gear for Every Adventure{% /fill %}
+  {% #fill "title" %}Coldfront Supply Co. &mdash; Premium Technical Gear{% /fill %}
 
   {% #fill "content" %}
-    {% meta name="description" content="Shop outdoor gear for camping, hiking, cycling, running, and climbing." %}
+    {% meta name="description" content="Premium technical outdoor gear for mountaineering, climbing, hiking, and alpine sports." %}
 
     <section class="hero">
-      <h1>Gear Up for Your Next Adventure</h1>
-      <p>Quality outdoor equipment for every pursuit.</p>
+      <h1>Coldfront Supply Co.</h1>
+      <p>Professional-grade technical gear for serious outdoor athletes.</p>
     </section>
 
     <section class="section">

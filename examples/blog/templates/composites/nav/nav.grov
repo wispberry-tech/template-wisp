@@ -1,13 +1,13 @@
 <Component name="Nav" site_name>
 {% asset "/js/composites/nav/nav.js" type="script" %}
 
-<nav class="nav" data-nav>
+<nav class="nav" data-nav aria-label="Main navigation">
   <a href="/" class="nav-brand">{% site_name %}</a>
-  <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-label="Menu">&#9776;</button>
+  <button class="nav-toggle" data-nav-toggle aria-expanded="false" aria-label="Toggle navigation menu">&#9776;</button>
   <div class="nav-links" data-nav-links>
     <a href="/" class="nav-link">Home</a>
     <a href="/tags" class="nav-link">Tags</a>
-    {% slot %}
+    {% #slot %}{% /slot %}
   </div>
 </nav>
 </Component>

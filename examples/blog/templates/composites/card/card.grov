@@ -11,7 +11,7 @@
   </div>
   <p class="card-summary">{% summary | truncate(150) %}</p>
   <div class="card-tags">
-    {% slot "tags" %}
+    {% #slot "tags" %}{% /slot %}
   </div>
 </article>
 </Component>

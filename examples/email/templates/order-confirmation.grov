@@ -2,17 +2,17 @@
 {% import * as H from "helpers" %}
 
 <BaseEmail>
-  {% #fill "title" %}Order Confirmation — {% order.id %}{% /fill %}
+  {% #fill "title" %}Order Confirmation from Coldfront Supply Co.{% /fill %}
 
-  {% #hoist "preheader" %}Your order {% order.id | upper %} has been confirmed. Total: {% order.total | currency %}.{% /hoist %}
+  {% #hoist "preheader" %}Your order from Coldfront Supply Co. has been confirmed. Order #{% order.id | upper %}. Total: {% order.total | currency %}.{% /hoist %}
 
   {% #fill "body" %}
     <p>Hi {% user.name | default("Customer") %},</p>
-    <p>Thank you for your order! Here's your receipt:</p>
+    <p>Thank you for your order from <strong>Coldfront Supply Co.</strong> Here's your receipt:</p>
 
     <H.Divider />
 
-    <H.Heading text={"Order " ~ order.id | upper} />
+    <H.Heading text={"Order #" ~ order.id | upper} />
 
     <table cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse: collapse;">
       <thead>

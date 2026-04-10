@@ -1,32 +1,23 @@
-<Component name="Base" title="Grove Store" nav_categories="" cart_count="" content="">
+<Component name="Base" title="Coldfront Supply Co." cart_count="">
 {% asset "/static/style.css" type="stylesheet" priority=10 %}
+{% import Nav from "composites/nav" %}
+{% import Footer from "primitives/footer" %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% #slot "title" %}Grove Store{% /slot %}</title>
+  <title>{% #slot "title" %}Coldfront Supply Co.{% /slot %}</title>
   <!-- HEAD_ASSETS -->
   <!-- HEAD_META -->
 </head>
 <body>
-  <nav class="nav">
-    <a href="/" class="nav-brand">{% site_name %}</a>
-    <div class="nav-links">
-      <a href="/products" class="nav-link">All Products</a>
-      {% slot "nav_categories" %}
-      <a href="/cart" class="nav-link nav-cart">Cart{% #if cart_count %} ({% cart_count %}){% /if %}</a>
-    </div>
-    <form action="/search" method="get" class="nav-search">
-      <input type="text" name="q" placeholder="Search products..." class="search-input">
-    </form>
-  </nav>
-  <main class="container">
-    {% slot "content" %}
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <Nav site_name={site_name} cart_count={cart_count} />
+  <main id="main" class="container">
+    {% #slot "content" %}{% /slot %}
   </main>
-  <footer class="footer">
-    <p>&copy; {% current_year %} Grove Store. Powered by the Grove template engine.</p>
-  </footer>
+  <Footer year={current_year} />
   <!-- FOOT_ASSETS -->
 </body>
 </html>

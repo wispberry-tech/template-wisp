@@ -1,5 +1,5 @@
 <Component name="Breadcrumbs" breadcrumbs>
-<div class="breadcrumb-bar">
+<nav class="breadcrumb-bar" aria-label="Page breadcrumb">
   {% #each breadcrumbs as crumb %}
     {% #if crumb.href %}
       <a href="{% crumb.href %}">{% crumb.label %}</a>
@@ -8,5 +8,5 @@
       <span class="breadcrumb-current">{% crumb.label %}</span>
     {% /if %}
   {% /each %}
-</div>
+</nav>
 </Component>

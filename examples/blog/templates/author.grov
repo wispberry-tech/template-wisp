@@ -5,7 +5,7 @@
 {% import TagBadge from "primitives/tag-badge" %}
 
 <Base>
-  {% #fill "title" %}{% author.name %} &mdash; Grove Blog{% /fill %}
+  {% #fill "title" %}{% author.name %} &mdash; Meridian{% /fill %}
 
   {% #fill "content" %}
     <Breadcrumbs />

@@ -23,7 +23,7 @@ func testEngine(t *testing.T) *grove.Engine {
 	templateDir := filepath.Join(baseDir, "templates")
 	store := grove.NewFileSystemStore(templateDir)
 	eng := grove.New(grove.WithStore(store))
-	eng.SetGlobal("site_name", "Grove Blog")
+	eng.SetGlobal("site_name", "Meridian")
 	eng.SetGlobal("current_year", "2026")
 	return eng
 }

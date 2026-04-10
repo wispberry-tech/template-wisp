@@ -2,7 +2,7 @@
 {% import Breadcrumbs from "composites/breadcrumbs/breadcrumbs" %}
 
 <Base>
-  {% #fill "title" %}Tags &mdash; Grove Blog{% /fill %}
+  {% #fill "title" %}Tags &mdash; Meridian{% /fill %}
 
   {% #fill "content" %}
     <Breadcrumbs />
