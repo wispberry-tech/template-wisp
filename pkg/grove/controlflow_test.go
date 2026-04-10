@@ -400,3 +400,75 @@ func TestLet_TernaryInExpression(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "on", result.Body)
 }
+
+// ─── EDGE CASES ──────────────────────────────────────────────────────────────
+
+func TestEach_EmptyLiteral(t *testing.T) {
+	eng := newEngine(t)
+	// Empty array should render :empty block
+	result := render(t, eng, `{% #each [] as x %}x{% :empty %}empty{% /each %}`, grove.Data{})
+	require.Equal(t, "empty", result)
+}
+
+func TestEach_TwoVarOnList(t *testing.T) {
+	eng := newEngine(t)
+	// Two-variable form: value, index (note: index is second)
+	result := render(t, eng,
+		`{% #each items as item, i %}{% item %}:{% i %};{% /each %}`,
+		grove.Data{"items": []string{"a", "b", "c"}})
+	require.Equal(t, "a:0;b:1;c:2;", result)
+}
+
+func TestEach_TwoVarOnMap(t *testing.T) {
+	eng := newEngine(t)
+	// Two-variable form for maps: value, key
+	result := render(t, eng,
+		`{% #each m as v, k %}{% k %}={% v %};{% /each %}`,
+		grove.Data{"m": map[string]string{"a": "x", "b": "y"}})
+	require.Contains(t, result, "a=x")
+	require.Contains(t, result, "b=y")
+}
+
+func TestEach_NestedLoopParent(t *testing.T) {
+	eng := newEngine(t)
+	// loop.parent in nested loop
+	result := render(t, eng,
+		`{% #each outer as i %}{% #each inner as j %}{% loop.parent.index %}-{% loop.index %};{% /each %}{% /each %}`,
+		grove.Data{"outer": []int{1, 2}, "inner": []int{1, 2}})
+	require.Equal(t, "1-1;1-2;2-1;2-2;", result)
+}
+
+func TestEach_RangeNegativeStep(t *testing.T) {
+	eng := newEngine(t)
+	// Range with negative step: descending sequence
+	result := render(t, eng,
+		`{% #each range(3, 0, -1) as i %}{% i %},{% /each %}`,
+		grove.Data{})
+	require.Equal(t, "3,2,1,", result)
+}
+
+func TestIf_NilIsFalsy(t *testing.T) {
+	eng := newEngine(t)
+	result := render(t, eng, `{% #if value %}yes{% :else %}no{% /if %}`, grove.Data{"value": nil})
+	require.Equal(t, "no", result)
+}
+
+func TestIf_ZeroIsFalsy(t *testing.T) {
+	eng := newEngine(t)
+	result := render(t, eng, `{% #if value %}yes{% :else %}no{% /if %}`, grove.Data{"value": 0})
+	require.Equal(t, "no", result)
+}
+
+func TestIf_EmptyStringIsFalsy(t *testing.T) {
+	eng := newEngine(t)
+	result := render(t, eng, `{% #if value %}yes{% :else %}no{% /if %}`, grove.Data{"value": ""})
+	require.Equal(t, "no", result)
+}
+
+func TestIf_EmptyListIsFalsy(t *testing.T) {
+	eng := newEngine(t)
+	result := render(t, eng, `{% #if value %}yes{% :else %}no{% /if %}`, grove.Data{"value": []string{}})
+	require.Equal(t, "no", result)
+}
+
+// These edge cases are already covered by existing tests above.

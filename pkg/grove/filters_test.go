@@ -314,3 +314,154 @@ func TestFilter_Wordcount_MultiSpace(t *testing.T) {
 	// multiple spaces between words still counts correctly
 	require.Equal(t, "2", renderFilter(t, `{% s | wordcount %}`, grove.Data{"s": "hello  world"}))
 }
+
+// ─── EDGE CASES: NIL / EMPTY ──────────────────────────────────────────────────
+
+func TestFilter_EdgeCases_NilInput(t *testing.T) {
+	// Nil input through string filters should return empty or handle gracefully
+	cases := []struct {
+		tmpl string
+		want string
+		desc string
+	}{
+		{`{% s | upper %}`, "", "nil | upper"},
+		{`{% s | lower %}`, "", "nil | lower"},
+		{`{% s | trim %}`, "", "nil | trim"},
+		{`{% s | length %}`, "0", "nil | length"},
+	}
+	data := grove.Data{"s": nil}
+	for _, tc := range cases {
+		got := renderFilter(t, tc.tmpl, data)
+		require.Equal(t, tc.want, got, tc.desc)
+	}
+}
+
+func TestFilter_EdgeCases_EmptyString(t *testing.T) {
+	// Empty string edge cases
+	cases := []struct {
+		tmpl string
+		want string
+		desc string
+	}{
+		{`{% s | upper %}`, "", "empty | upper"},
+		{`{% s | trim %}`, "", "empty | trim"},
+		{`{% s | length %}`, "0", "empty | length"},
+		{`{% s | truncate(5) %}`, "", "empty | truncate"},
+		{`{% s | split(",") | length %}`, "1", "empty | split | length"},
+	}
+	data := grove.Data{"s": ""}
+	for _, tc := range cases {
+		got := renderFilter(t, tc.tmpl, data)
+		require.Equal(t, tc.want, got, tc.desc)
+	}
+}
+
+func TestFilter_EdgeCases_EmptyList(t *testing.T) {
+	// Empty list edge cases
+	cases := []struct {
+		tmpl string
+		want string
+		desc string
+	}{
+		{`{% items | length %}`, "0", "[] | length"},
+		{`{% items | first %}`, "", "[] | first"},
+		{`{% items | last %}`, "", "[] | last"},
+		{`{% items | join(",") %}`, "", "[] | join"},
+		{`{% items | sort | length %}`, "0", "[] | sort"},
+	}
+	data := grove.Data{"items": []interface{}{}}
+	for _, tc := range cases {
+		got := renderFilter(t, tc.tmpl, data)
+		require.Equal(t, tc.want, got, tc.desc)
+	}
+}
+
+// ─── FILTER EDGE CASES ─────────────────────────────────────────────────────────
+
+func TestFilter_Truncate_LongerThanInput(t *testing.T) {
+	// Truncate length >= string length should return original
+	require.Equal(t, "hello", renderFilter(t, `{% s | truncate(10) %}`, grove.Data{"s": "hello"}))
+}
+
+func TestFilter_Truncate_ZeroLen(t *testing.T) {
+	// Truncate to 0 should return suffix or empty
+	result := renderFilter(t, `{% s | truncate(0) %}`, grove.Data{"s": "hello"})
+	require.NotEqual(t, "hello", result) // Should truncate
+}
+
+func TestFilter_Batch_SizeOne(t *testing.T) {
+	// Batch size 1: each item in its own batch
+	require.Equal(t, "abc", renderFilter(t,
+		`{% #each items | batch(1) as batch %}{% #each batch as x %}{% x %}{% /each %}{% /each %}`,
+		grove.Data{"items": []string{"a", "b", "c"}}))
+}
+
+func TestFilter_Batch_LargerThanList(t *testing.T) {
+	// Batch size > list length: one batch with all items
+	require.Equal(t, "1", renderFilter(t,
+		`{% items | batch(100) | length %}`,
+		grove.Data{"items": []int{1, 2, 3}}))
+}
+
+func TestFilter_Sort_AllSame(t *testing.T) {
+	// Sort list of identical values
+	require.Equal(t, "a,a,a", renderFilter(t,
+		`{% #each items | sort as x %}{% x %}{% #if not loop.last %},{% /if %}{% /each %}`,
+		grove.Data{"items": []string{"a", "a", "a"}}))
+}
+
+func TestFilter_Min_SingleItem(t *testing.T) {
+	// Min/max of single-element list
+	require.Equal(t, "5", renderFilter(t, `{% items | min %}`, grove.Data{"items": []int{5}}))
+}
+
+func TestFilter_Max_SingleItem(t *testing.T) {
+	require.Equal(t, "5", renderFilter(t, `{% items | max %}`, grove.Data{"items": []int{5}}))
+}
+
+func TestFilter_Sum_MixedIntFloat(t *testing.T) {
+	// Sum of mixed int and float
+	require.Equal(t, "6.5", renderFilter(t, `{% items | sum %}`, grove.Data{"items": []interface{}{1, 2.5, 3}}))
+}
+
+func TestFilter_Map_MissingField(t *testing.T) {
+	// Map on missing field returns list with same length (with nil/empty values)
+	require.Equal(t, "2", renderFilter(t,
+		`{% items | map("missing") | length %}`,
+		grove.Data{"items": []map[string]string{{"name": "a"}, {"name": "b"}}}))
+}
+
+func TestFilter_Flatten_AlreadyFlat(t *testing.T) {
+	// Flatten on non-nested list should be identity
+	require.Equal(t, "1,2,3", renderFilter(t,
+		`{% #each items | flatten as x %}{% x %}{% #if not loop.last %},{% /if %}{% /each %}`,
+		grove.Data{"items": []int{1, 2, 3}}))
+}
+
+func TestFilter_Keys_EmptyMap(t *testing.T) {
+	// Keys of empty map
+	require.Equal(t, "0", renderFilter(t, `{% m | keys | length %}`, grove.Data{"m": map[string]string{}}))
+}
+
+func TestFilter_Values_EmptyMap(t *testing.T) {
+	// Values of empty map
+	require.Equal(t, "0", renderFilter(t, `{% m | values | length %}`, grove.Data{"m": map[string]string{}}))
+}
+
+func TestFilter_Split_EmptySep(t *testing.T) {
+	// Split with empty separator: should split into characters
+	result := renderFilter(t, `{% s | split("") | length %}`, grove.Data{"s": "abc"})
+	require.Equal(t, "3", result) // Should split into 3 chars
+}
+
+func TestFilter_Join_EmptyList(t *testing.T) {
+	// Join empty list returns empty string
+	require.Equal(t, "", renderFilter(t, `{% items | join(",") %}`, grove.Data{"items": []string{}}))
+}
+
+func TestFilter_Replace_EmptyNewStr(t *testing.T) {
+	// Replace with empty string (deletion)
+	require.Equal(t, "hllow", renderFilter(t,
+		`{% s | replace("e", "") %}`,
+		grove.Data{"s": "hellow"}))
+}

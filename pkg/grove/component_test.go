@@ -262,3 +262,65 @@ func TestComponent_FragmentSupport(t *testing.T) {
 	store.Set("page.html", `{% import Pair from "pair" %}<Pair a="hello" b="world" />`)
 	require.Equal(t, `<span>hello</span><span>world</span>`, renderComponent(t, store, "page.html", grove.Data{}))
 }
+
+// ─── EDGE CASES ────────────────────────────────────────────────────────────────
+
+func TestComponent_NoProps(t *testing.T) {
+	store := grove.NewMemoryStore()
+	// Component with zero declared props — should accept any/no props
+	store.Set("simple.html", `<Component name="Simple">hello</Component>`)
+	store.Set("page.html", `{% import Simple from "simple" %}<Simple />`)
+	require.Equal(t, "hello", renderComponent(t, store, "page.html", grove.Data{}))
+}
+
+func TestComponent_DefaultPropUsed(t *testing.T) {
+	store := grove.NewMemoryStore()
+	// Default value used when prop not passed
+	store.Set("btn.html", `<Component name="Btn" label="Click">{% label %}</Component>`)
+	store.Set("page.html", `{% import Btn from "btn" %}<Btn />`)
+	require.Equal(t, "Click", renderComponent(t, store, "page.html", grove.Data{}))
+}
+
+func TestComponent_DefaultPropOverridden(t *testing.T) {
+	store := grove.NewMemoryStore()
+	// Default value overridden by caller
+	store.Set("btn.html", `<Component name="Btn" label="Click">{% label %}</Component>`)
+	store.Set("page.html", `{% import Btn from "btn" %}<Btn label="Submit" />`)
+	require.Equal(t, "Submit", renderComponent(t, store, "page.html", grove.Data{}))
+}
+
+func TestComponent_FillNoMatchingSlot(t *testing.T) {
+	store := grove.NewMemoryStore()
+	// Fill for non-existent slot — content should not render (silently ignored or error, implementation dependent)
+	store.Set("card.html", `<Component name="Card">{% slot %}</Component>`)
+	store.Set("page.html", `{% import Card from "card" %}<Card>{% #fill "nonexistent" %}hidden{% /fill %}visible</Card>`)
+	result := renderComponent(t, store, "page.html", grove.Data{})
+	require.Contains(t, result, "visible")
+	require.NotContains(t, result, "hidden")
+}
+
+func TestComponent_SlotWithDefaultContent(t *testing.T) {
+	store := grove.NewMemoryStore()
+	// Named slot with default content — fallback renders when no fill
+	store.Set("card.html", `<Component name="Card"><div>{% #slot "content" %}default{% /slot %}</div></Component>`)
+	store.Set("page.html", `{% import Card from "card" %}<Card />`)
+	require.Equal(t, "<div>default</div>", renderComponent(t, store, "page.html", grove.Data{}))
+}
+
+func TestComponent_NestedSlotInFill(t *testing.T) {
+	store := grove.NewMemoryStore()
+	// Slot inside a fill inside another component
+	store.Set("outer.html", `<Component name="Outer">{% slot %}</Component>`)
+	store.Set("inner.html", `<Component name="Inner">{% #slot "x" %}inner-default{% /slot %}</Component>`)
+	store.Set("page.html", `{% import Outer from "outer" %}{% import Inner from "inner" %}<Outer>content<Inner>{% #fill "x" %}inner-content{% /fill %}</Inner></Outer>`)
+	result := renderComponent(t, store, "page.html", grove.Data{})
+	require.Contains(t, result, "inner-content")
+}
+
+func TestComponent_EmptyBody(t *testing.T) {
+	store := grove.NewMemoryStore()
+	// Component invoked with no children
+	store.Set("card.html", `<Component name="Card"><div>{% slot %}</div></Component>`)
+	store.Set("page.html", `{% import Card from "card" %}<Card />`)
+	require.Equal(t, "<div></div>", renderComponent(t, store, "page.html", grove.Data{}))
+}
