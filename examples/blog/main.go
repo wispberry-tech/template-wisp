@@ -450,6 +450,20 @@ func writeResult(w http.ResponseWriter, result grove.RenderResult) {
 
 // --- Main ---
 
+func getPort() string {
+	port := "3000"
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		port = envPort
+	}
+	if len(os.Args) > 1 {
+		port = os.Args[1]
+	}
+	if !strings.HasPrefix(port, ":") {
+		port = ":" + port
+	}
+	return port
+}
+
 func main() {
 	_, thisFile, _, _ := runtime.Caller(0)
 	baseDir := filepath.Dir(thisFile)
@@ -480,8 +494,9 @@ func main() {
 	r.Handle("/css/*", http.StripPrefix("/css/", filteredFileServer(templateDir, ".css")))
 	r.Handle("/js/*", http.StripPrefix("/js/", filteredFileServer(templateDir, ".js")))
 
-	fmt.Println("Meridian listening on http://localhost:3000")
-	log.Fatal(http.ListenAndServe(":3000", r))
+	port := getPort()
+	fmt.Printf("Meridian listening on http://localhost%s\n", port)
+	log.Fatal(http.ListenAndServe(port, r))
 }
 
 // filteredFileServer serves only files matching the given extension from dir.
