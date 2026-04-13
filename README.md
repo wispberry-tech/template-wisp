@@ -67,6 +67,87 @@ Grove templates use a single `{% %}` delimiter for server operations (control fl
 </Base>
 ```
 
+### Components
+
+Components are defined with `<Component>`, imported with `{% import %}`, and composed using slots and fills. Each component co-locates its own CSS and JS assets alongside the `.grov` file — assets declared inside a component automatically bubble up through `RenderResult` so the host page can collect them.
+
+**File structure** — components live in named directories with their assets alongside them:
+
+```
+templates/
+├── base.grov                          # layout component
+├── index.grov                         # page (imports components)
+├── composites/
+│   └── card/
+│       ├── card.grov                  # component definition
+│       └── card.css                   # co-located styles
+└── primitives/
+    └── button/
+        ├── button.grov                # component definition
+        ├── button.css                 # co-located styles
+        └── button.js                  # co-located script
+```
+
+**Defining a component** (`primitives/button/button.grov`):
+
+```html
+<Component name="Button" label href="#" variant="primary" type="link">
+{% asset "/css/primitives/button/button.css" type="stylesheet" %}
+{% asset "/js/primitives/button/button.js" type="script" %}
+
+{% #if type == "link" %}
+  <a href="{% href %}" class="btn btn-{% variant %}" data-button>{% label %}</a>
+{% :else %}
+  <button type="{% type %}" class="btn btn-{% variant %}" data-button>{% label %}</button>
+{% /if %}
+</Component>
+```
+
+Props are declared as attributes on `<Component>`. Trailing values are defaults (`variant="primary"`); bare names are required (`label`). The `{% asset %}` tags declare that this component needs its own CSS and JS — no matter how deeply nested the component is, those assets bubble up to the final `RenderResult`.
+
+**A component with named slots** (`composites/card/card.grov`):
+
+```html
+<Component name="Card" title summary href="#" date="" author_name="">
+{% asset "/css/composites/card/card.css" type="stylesheet" %}
+<article class="card">
+  <h2 class="card-title"><a href="{% href %}">{% title %}</a></h2>
+  <p class="card-summary">{% summary | truncate(150) %}</p>
+  <div class="card-tags">
+    {% #slot "tags" %}{% /slot %}
+  </div>
+</article>
+</Component>
+```
+
+**Importing and using components** from a page template:
+
+```html
+{% import Base from "base" %}
+{% import Card from "composites/card" %}
+{% import TagBadge from "primitives/tag-badge" %}
+
+<Base>
+  {% #fill "content" %}
+    <h1>{% title %}</h1>
+
+    {% #each posts as post %}
+      <Card title={post.title} summary={post.summary} href={"/post/" ~ post.slug}>
+        {% #fill "tags" %}
+          {% #each post.tags as tag %}
+            <TagBadge label={tag.name} color={tag.color} />
+          {% /each %}
+        {% /fill %}
+      </Card>
+    {% :empty %}
+      <p>No posts yet.</p>
+    {% /each %}
+  {% /fill %}
+</Base>
+```
+
+Props are passed with `{expr}` syntax. Fills inject content into named slots — and fills always see the **caller's** scope, not the component's. Every `{% asset %}` declared by `Card`, `TagBadge`, `Base`, or any other component in the tree is deduplicated and available on the `RenderResult` via `result.HeadHTML()` (stylesheets) and `result.FootHTML()` (scripts).
+
 ### Syntax at a Glance
 
 | Category | Syntax |
