@@ -12,6 +12,7 @@ const (
 	EngPongo2       = "Pongo2"
 	EngJet          = "Jet"
 	EngLiquid       = "Liquid"
+	EngHandlebars   = "Handlebars"
 )
 
 // --- Simple: variable interpolation ---
@@ -23,6 +24,7 @@ var SimpleTemplates = map[string]string{
 	EngPongo2:       `Hello, {{ name }}! You have {{ count }} messages.`,
 	EngJet:          `Hello, {{ .Name }}! You have {{ .Count }} messages.`,
 	EngLiquid:       `Hello, {{ name }}! You have {{ count }} messages.`,
+	EngHandlebars:   `Hello, {{name}}! You have {{count}} messages.`,
 }
 
 // --- Loop: iterate over a slice ---
@@ -34,6 +36,7 @@ var LoopTemplates = map[string]string{
 	EngPongo2: `<ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>`,
 	EngJet:    `<ul>{{range _, item := .Items}}<li>{{item}}</li>{{end}}</ul>`,
 	EngLiquid: `<ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>`,
+	EngHandlebars: `<ul>{{#each items}}<li>{{this}}</li>{{/each}}</ul>`,
 }
 
 // --- Conditional: if/elif/else ---
@@ -45,6 +48,7 @@ var ConditionalTemplates = map[string]string{
 	EngPongo2:       `{% if role == "admin" %}Admin Panel{% elif role == "mod" %}Mod Tools{% else %}User Dashboard{% endif %}`,
 	EngJet:          `{{if .Role == "admin"}}Admin Panel{{else if .Role == "mod"}}Mod Tools{{else}}User Dashboard{{end}}`,
 	EngLiquid:       `{% if role == "admin" %}Admin Panel{% elsif role == "mod" %}Mod Tools{% else %}User Dashboard{% endif %}`,
+	EngHandlebars:   `{{#if (eq role "admin")}}Admin Panel{{else if (eq role "mod")}}Mod Tools{{else}}User Dashboard{{/if}}`,
 }
 
 // --- Complex: blog post listing ---
@@ -114,6 +118,17 @@ var ComplexTemplates = map[string]string{
   {% if post.tags %}<div class="tags">{% for tag in post.tags %}<span class="tag">{{ tag }}</span>{% endfor %}</div>{% endif %}
 </article>
 {% endfor %}
+</div>`,
+
+	EngHandlebars: `<div class="posts">
+{{#each posts}}
+<article class="post{{#if this.featured}} featured{{/if}}">
+  <h2>{{this.title}}</h2>
+  <span class="meta">By {{this.author}} on {{this.date}}</span>
+  <p>{{this.excerpt}}</p>
+  {{#if this.tags}}<div class="tags">{{#each this.tags}}<span class="tag">{{this}}</span>{{/each}}</div>{{/if}}
+</article>
+{{/each}}
 </div>`,
 
 }

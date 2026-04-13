@@ -11,6 +11,7 @@ require (
 
 require (
 	github.com/CloudyKit/fastprinter v0.0.0-20200109182630-33d98a066a53 // indirect
+	github.com/aymerick/raymond v2.0.2+incompatible // indirect
 	github.com/osteele/tuesday v1.0.4 // indirect
 	golang.org/x/mod v0.34.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect

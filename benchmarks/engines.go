@@ -11,6 +11,7 @@ import (
 	"github.com/wispberry-tech/grove/pkg/grove"
 
 	"github.com/CloudyKit/jet/v6"
+	"github.com/aymerick/raymond"
 	"github.com/flosch/pongo2/v6"
 	"github.com/osteele/liquid"
 )
@@ -35,6 +36,7 @@ func AllEngines() []TemplateEngine {
 		newPongo2Engine(),
 		newJetEngine(),
 		newLiquidEngine(),
+		newHandlebarsEngine(),
 	}
 }
 
@@ -307,6 +309,65 @@ func (e *liquidEngine) ParseAndRender(name, source string, data map[string]any) 
 	return out, nil
 }
 
+// ---------- Handlebars ----------
+
+type handlebarsEngine struct {
+	templates map[string]*raymond.Template
+}
+
+func newHandlebarsEngine() *handlebarsEngine {
+	return &handlebarsEngine{templates: make(map[string]*raymond.Template)}
+}
+
+func (e *handlebarsEngine) Name() string { return EngHandlebars }
+
+func (e *handlebarsEngine) Parse(name, source string) error {
+	t, err := raymond.Parse(source)
+	if err != nil {
+		return err
+	}
+	e.templates[name] = t
+	return nil
+}
+
+func (e *handlebarsEngine) Render(name string, data map[string]any) (string, error) {
+	t, ok := e.templates[name]
+	if !ok {
+		return "", fmt.Errorf("template %q not found", name)
+	}
+	// Remove _struct key for Handlebars (map-based like Pongo2/Liquid)
+	clean := make(map[string]any, len(data))
+	for k, v := range data {
+		if k != "_struct" {
+			clean[k] = v
+		}
+	}
+	out, err := t.Exec(clean)
+	if err != nil {
+		return "", err
+	}
+	return out, nil
+}
+
+func (e *handlebarsEngine) ParseAndRender(name, source string, data map[string]any) (string, error) {
+	t, err := raymond.Parse(source)
+	if err != nil {
+		return "", err
+	}
+	// Remove _struct key for Handlebars (map-based like Pongo2/Liquid)
+	clean := make(map[string]any, len(data))
+	for k, v := range data {
+		if k != "_struct" {
+			clean[k] = v
+		}
+	}
+	out, err := t.Exec(clean)
+	if err != nil {
+		return "", err
+	}
+	return out, nil
+}
+
 // ---------- Data helpers ----------
 
 // WrapData creates data maps suitable for each engine type.
@@ -340,7 +401,7 @@ func WrapComplex() map[string]any {
 // Map-based engines get the raw map; struct-based engines get the _struct value.
 func EngineData(eng TemplateEngine, data map[string]any) map[string]any {
 	switch eng.Name() {
-	case EngGrove, EngPongo2, EngLiquid:
+	case EngGrove, EngPongo2, EngLiquid, EngHandlebars:
 		// These engines use map[string]any natively.
 		// Return without the _struct key to avoid polluting the namespace.
 		clean := make(map[string]any, len(data))
@@ -351,7 +412,7 @@ func EngineData(eng TemplateEngine, data map[string]any) map[string]any {
 		}
 		return clean
 	default:
-		// Struct-based engines — the data map just carries _struct.
+		// Struct-based engines (HTMLTemplate, TextTemplate, Jet, Hero) — the data map just carries _struct.
 		return data
 	}
 }
@@ -364,5 +425,6 @@ var (
 	_ TemplateEngine = (*pongo2Engine)(nil)
 	_ TemplateEngine = (*jetEngine)(nil)
 	_ TemplateEngine = (*liquidEngine)(nil)
+	_ TemplateEngine = (*handlebarsEngine)(nil)
 	_ io.Writer      = (*bytes.Buffer)(nil) // suppress unused import
 )
