@@ -241,6 +241,42 @@ var LargePageTemplates = map[string]string{
   </footer>
 </body>
 </html>`,
+
+	EngHandlebars: `<!DOCTYPE html>
+<html lang="{{lang}}">
+<head>
+  <meta charset="utf-8">
+  <title>{{site_name}} — {{page_title}}</title>
+  <meta name="description" content="{{meta_description}}">
+  <meta name="author" content="{{meta_author}}">
+  <link rel="canonical" href="{{canonical_url}}">
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/" class="logo">{{site_name}}</a>
+      <span class="tagline">{{tagline}}</span>
+    </nav>
+    <div class="user">Welcome, {{user_name}} ({{user_role}})</div>
+  </header>
+  <main>
+    <article>
+      <h1>{{page_title}}</h1>
+      <p class="lead">{{lead_text}}</p>
+      <div class="content">{{body_text}}</div>
+      <footer>
+        <span class="category">{{category}}</span>
+        <time>{{published_date}}</time>
+        <span class="reading-time">{{reading_time}} min read</span>
+      </footer>
+    </article>
+  </main>
+  <footer>
+    <p>&copy; {{copyright_year}} {{site_name}}. All rights reserved.</p>
+    <p>{{footer_text}}</p>
+  </footer>
+</body>
+</html>`,
 }
 
 // --- Large Loop: 100 product items ---
@@ -316,6 +352,18 @@ var LargeLoopTemplates = map[string]string{
   {% if product.in_stock %}<span class="badge">In Stock</span>{% else %}<span class="badge out">Out of Stock</span>{% endif %}
 </div>
 {% endfor %}
+</div>`,
+
+	EngHandlebars: `<div class="products">
+{{#each products}}
+<div class="product{{#if this.on_sale}} on-sale{{/if}}">
+  <h3>{{this.name}}</h3>
+  <p class="price">${{this.price}}</p>
+  <p class="desc">{{this.description}}</p>
+  <span class="category">{{this.category}}</span>
+  {{#if this.in_stock}}<span class="badge">In Stock</span>{{else}}<span class="badge out">Out of Stock</span>{{/if}}
+</div>
+{{/each}}
 </div>`,
 }
 
@@ -422,6 +470,23 @@ var NestedLoopTemplates = map[string]string{
   </div>
 </section>
 {% endfor %}
+</div>`,
+
+	EngHandlebars: `<div class="catalog">
+{{#each categories}}
+<section class="category">
+  <h2>{{this.name}} ({{this.count}} items)</h2>
+  <div class="items">
+  {{#each this.products}}
+    <div class="product{{#if this.featured}} featured{{/if}}">
+      <span class="name">{{this.name}}</span>
+      <span class="price">${{this.price}}</span>
+      {{#if this.on_sale}}<span class="sale">SALE</span>{{/if}}
+    </div>
+  {{/each}}
+  </div>
+</section>
+{{/each}}
 </div>`,
 }
 
@@ -807,6 +872,68 @@ var ComplexPageTemplates = map[string]string{
     {% for link in footer_links %}
       <li><a href="{{ link.url }}">{{ link.label }}</a></li>
     {% endfor %}
+    </ul>
+  </footer>
+</body>
+</html>`,
+
+	EngHandlebars: `<!DOCTYPE html>
+<html lang="{{lang}}">
+<head>
+  <meta charset="utf-8">
+  <title>{{site_name}} — {{page_title}}</title>
+  <meta name="description" content="{{meta_description}}">
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="/">{{site_name}}</a>
+      {{#if user_logged_in}}
+        <span>Welcome, {{user_name}}</span>
+        <a href="/cart">Cart ({{cart_count}})</a>
+      {{else}}
+        <a href="/login">Sign In</a>
+      {{/if}}
+    </nav>
+  </header>
+  <main>
+    <h1>{{page_title}}</h1>
+    <p class="lead">{{lead_text}}</p>
+    {{#each categories}}
+    <section class="category">
+      <h2>{{this.name}}</h2>
+      <p>{{this.description}}</p>
+      <div class="products">
+      {{#each this.products}}
+        <div class="product{{#if this.featured}} featured{{/if}}{{#if this.on_sale}} on-sale{{/if}}">
+          <h3>{{this.name}}</h3>
+          <p>{{this.description}}</p>
+          <div class="pricing">
+            <span class="price">${{this.price}}</span>
+            {{#if this.on_sale}}<span class="original">${{this.original_price}}</span>{{/if}}
+          </div>
+          {{#if this.in_stock}}
+            <button>Add to Cart</button>
+          {{else}}
+            <button disabled>Out of Stock</button>
+          {{/if}}
+          {{#if this.tags}}
+          <div class="tags">
+            {{#each this.tags}}<span class="tag">{{this}}</span>{{/each}}
+          </div>
+          {{/if}}
+        </div>
+      {{/each}}
+      </div>
+    </section>
+    {{/each}}
+  </main>
+  <footer>
+    <p>&copy; {{copyright_year}} {{site_name}}</p>
+    <ul class="links">
+    {{#each footer_links}}
+      <li><a href="{{this.url}}">{{this.label}}</a></li>
+    {{/each}}
     </ul>
   </footer>
 </body>

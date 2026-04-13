@@ -48,6 +48,10 @@ func main() {
 
 		for _, eng := range engines {
 			src := sc.Templates[eng.Name()]
+			if src == "" {
+				fmt.Fprintf(os.Stderr, "  %-18s SKIP: no template for this scenario\n", eng.Name())
+				continue
+			}
 			d := benchmarks.EngineData(eng, data)
 
 			// Parse + warmup renders
