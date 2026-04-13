@@ -1,6 +1,7 @@
 profiles/
 profile
 !profile/*
-results/
-results.txt
-grove-results.txt
+cpu.prof
+mem.prof
+timing
+cmd/timing/timing

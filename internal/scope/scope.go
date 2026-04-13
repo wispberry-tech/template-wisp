@@ -13,6 +13,11 @@ func New(parent *Scope) *Scope {
 	return &Scope{vars: make(map[string]any), parent: parent}
 }
 
+// NewWithCapacity creates a new Scope with a pre-sized map.
+func NewWithCapacity(parent *Scope, capacity int) *Scope {
+	return &Scope{vars: make(map[string]any, capacity), parent: parent}
+}
+
 // Set stores key=value in this scope frame.
 func (s *Scope) Set(key string, value any) {
 	s.vars[key] = value

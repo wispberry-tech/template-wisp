@@ -4,7 +4,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 # Defaults
-ITERATIONS=1000
+ITERATIONS=100
 FILTER=""
 WARMUP=10
 OUTFILE=""
@@ -17,19 +17,29 @@ Runs large-template wall-clock timing benchmarks across all engines.
 Unlike run.sh (which uses Go's testing.B micro-benchmarks), this measures
 real execution time on production-sized templates.
 
+Results include:
+  • Execution time and ops/sec for each engine
+  • Memory allocation per render and peak memory usage
+  • Min/Max times and standard deviation for variance analysis
+
+Results are saved with date-based filenames (includes timestamp within file):
+  • timing-YYYY-MM-DD.txt (with date & time in the file header)
+  • timing-latest.txt     (symlink to latest results)
+
 Options:
-  -n, --iterations N   Number of render iterations per engine (default: 1000)
+  -n, --iterations N   Number of render iterations per engine (default: 100)
   -f, --filter STR     Only run scenarios containing STR (e.g. "Nested", "Complex")
   -w, --warmup N       Number of warmup renders before measuring (default: 10)
-  -o, --output FILE    Save output to FILE
+  -o, --output FILE    Also save output to FILE
   -h, --help           Show this help
 
 Examples:
-  ./run-timing.sh                          # Run all scenarios, 1000 iterations
-  ./run-timing.sh -n 500                   # 500 iterations
-  ./run-timing.sh -f "Large Loop"          # Only the Large Loop scenario
-  ./run-timing.sh -n 2000 -w 20            # 2000 iterations with 20 warmup renders
-  ./run-timing.sh -n 2000 -o timing.txt    # 2000 iterations, save output
+  ./run-timing.sh                           # Run all scenarios, 100 iterations (20 chunks)
+  ./run-timing.sh -n 500                    # 500 iterations
+  ./run-timing.sh -f "Complex"              # Only the Complex Page scenario
+  ./run-timing.sh -n 1000 -w 20             # 1000 iterations with 20 warmup renders
+  ./run-timing.sh -n 500 -o timing.txt      # 500 iterations, save to timing.txt too
+  ./run-timing.sh -n 200 -f "Large Page"    # Compare Large Page template memory usage
 EOF
     exit 0
 }
@@ -46,7 +56,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 RESULTS_DIR="results"
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+DATE=$(date +%Y-%m-%d)
 mkdir -p "$RESULTS_DIR"
 
 ARGS=(-n "$ITERATIONS" -warmup "$WARMUP")
@@ -54,9 +64,9 @@ if [[ -n "$FILTER" ]]; then
     ARGS+=(-filter "$FILTER")
 fi
 
-RESULT_FILE="$RESULTS_DIR/timing-${TIMESTAMP}.txt"
+RESULT_FILE="$RESULTS_DIR/timing-${DATE}.txt"
 go run ./cmd/timing/ "${ARGS[@]}" | tee "$RESULT_FILE"
-ln -sf "timing-${TIMESTAMP}.txt" "$RESULTS_DIR/timing-latest.txt"
+ln -sf "timing-${DATE}.txt" "$RESULTS_DIR/timing-latest.txt"
 echo ""
 echo "Results saved to $RESULT_FILE"
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
@@ -12,21 +13,26 @@ import (
 )
 
 func main() {
-	iterations := flag.Int("n", 1000, "number of iterations per engine per scenario")
+	iterations := flag.Int("n", 100, "number of iterations per engine per scenario")
 	filter := flag.String("filter", "", "only run scenarios containing this substring")
 	warmup := flag.Int("warmup", 10, "number of warmup renders before measuring")
-	chunks := flag.Int("chunks", 10, "number of chunks to divide iterations into (for stddev)")
+	chunks := flag.Int("chunks", 20, "number of chunks to divide iterations into (for stddev)")
 	flag.Parse()
 
 	scenarios := benchmarks.AllTimingScenarios()
+	now := time.Now()
 
 	fmt.Println("══════════════════════════════════════════════════════════")
-	fmt.Printf("  Grove Timing Benchmark — %d iterations (warmup: %d, chunks: %d)\n", *iterations, *warmup, *chunks)
+	fmt.Printf("  Grove Timing Benchmark\n")
+	fmt.Printf("  Date:       %s\n", now.Format("2006-01-02 15:04:05"))
+	fmt.Printf("  Iterations: %d (chunks: %d, warmup: %d)\n", *iterations, *chunks, *warmup)
 	fmt.Println("══════════════════════════════════════════════════════════")
 	fmt.Println()
 	fmt.Println("  Results Key:")
 	fmt.Println("  • Avg/render    — average time per render (lower is better)")
 	fmt.Println("  • ops/sec       — renders per second (higher is better)")
+	fmt.Println("  • Alloc/render  — heap memory allocated per render (lower is better)")
+	fmt.Println("  • Peak Alloc    — peak heap memory during benchmark")
 	fmt.Println("  • Min / Max     — fastest and slowest chunk times (indicates variance)")
 	fmt.Println("  • ±StdDev       — standard deviation across chunks (lower is steadier)")
 	fmt.Println()
@@ -38,8 +44,8 @@ func main() {
 
 		fmt.Println()
 		fmt.Printf("  %s\n", sc.Name)
-		fmt.Printf("  %-18s %12s %12s %12s %12s %12s\n", "Engine", "Avg/render", "ops/sec", "Min", "Max", "±StdDev")
-		fmt.Printf("  %-18s %12s %12s %12s %12s %12s\n", "──────────────────", "────────────", "────────────", "────────────", "────────────", "────────────")
+		fmt.Printf("  %-18s %12s %12s %12s %12s %12s %12s %12s\n", "Engine", "Avg/render", "ops/sec", "Alloc/render", "Peak Alloc", "Min", "Max", "±StdDev")
+		fmt.Printf("  %-18s %12s %12s %12s %12s %12s %12s %12s\n", "──────────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────", "────────────")
 
 		data := sc.Data()
 		// Fresh engines per scenario to avoid template name/cache collisions (Jet caches by name).
@@ -73,6 +79,12 @@ func main() {
 			}
 			chunkTimes := make([]time.Duration, 0, *chunks)
 
+			// Memory tracking
+			runtime.GC()
+			var memBefore runtime.MemStats
+			runtime.ReadMemStats(&memBefore)
+			var peakAlloc uint64
+
 			for chunk := 0; chunk < *chunks; chunk++ {
 				start := time.Now()
 				for i := 0; i < chunkSize; i++ {
@@ -82,6 +94,14 @@ func main() {
 					}
 				}
 				chunkTimes = append(chunkTimes, time.Since(start))
+			}
+
+			// Collect memory stats after rendering
+			var memAfter runtime.MemStats
+			runtime.ReadMemStats(&memAfter)
+			peakAlloc = memAfter.Alloc
+			if memAfter.Alloc > memBefore.Alloc {
+				peakAlloc = memAfter.Alloc
 			}
 
 			// Calculate statistics from chunk timings
@@ -112,11 +132,14 @@ func main() {
 			stddev := time.Duration(math.Sqrt(variance))
 
 			opsPerSec := float64(*iterations) / totalTime.Seconds()
+			allocPerRender := (memAfter.Alloc - memBefore.Alloc) / uint64(*iterations)
 
-			fmt.Printf("  %-18s %12s %12s %12s %12s %12s\n",
+			fmt.Printf("  %-18s %12s %12s %12s %12s %12s %12s %12s\n",
 				eng.Name(),
 				formatDuration(avgTime),
 				formatOps(opsPerSec),
+				formatBytes(allocPerRender),
+				formatBytes(peakAlloc),
 				formatDuration(minTime/time.Duration(chunkSize)),
 				formatDuration(maxTime/time.Duration(chunkSize)),
 				formatDuration(stddev/time.Duration(chunkSize)))
@@ -148,3 +171,15 @@ func formatDuration(d time.Duration) string {
 		return fmt.Sprintf("%dns", d.Nanoseconds())
 	}
 }
+
+func formatBytes(b uint64) string {
+	switch {
+	case b >= 1024*1024:
+		return fmt.Sprintf("%.1fMB", float64(b)/(1024*1024))
+	case b >= 1024:
+		return fmt.Sprintf("%.1fKB", float64(b)/1024)
+	default:
+		return fmt.Sprintf("%dB", b)
+	}
+}
+

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/wispberry-tech/grove/internal/vm"
 )
@@ -17,7 +18,7 @@ func filterLength(v vm.Value, _ []vm.Value) (vm.Value, error) {
 	case vm.TypeMap:
 		return vm.IntVal(int64(v.MapLen())), nil
 	default:
-		return vm.IntVal(int64(len([]rune(v.String())))), nil
+		return vm.IntVal(int64(utf8.RuneCountInString(v.String()))), nil
 	}
 }
 
@@ -61,6 +62,11 @@ func filterSort(v vm.Value, _ []vm.Value) (vm.Value, error) {
 	out := make([]vm.Value, len(lst))
 	copy(out, lst)
 	sort.SliceStable(out, func(i, j int) bool {
+		af, aok := out[i].ToFloat64()
+		bf, bok := out[j].ToFloat64()
+		if aok && bok {
+			return af < bf
+		}
 		return out[i].String() < out[j].String()
 	})
 	return vm.ListVal(out), nil
@@ -104,15 +110,17 @@ func filterMin(v vm.Value, _ []vm.Value) (vm.Value, error) {
 		return vm.Nil, nil
 	}
 	minVal := lst[0]
+	minF, minOk := minVal.ToFloat64()
 	for _, item := range lst[1:] {
-		af, aok := minVal.ToFloat64()
 		bf, bok := item.ToFloat64()
-		if aok && bok {
-			if bf < af {
+		if minOk && bok {
+			if bf < minF {
 				minVal = item
+				minF = bf
 			}
 		} else if item.String() < minVal.String() {
 			minVal = item
+			minF, minOk = minVal.ToFloat64()
 		}
 	}
 	return minVal, nil
@@ -124,15 +132,17 @@ func filterMax(v vm.Value, _ []vm.Value) (vm.Value, error) {
 		return vm.Nil, nil
 	}
 	maxVal := lst[0]
+	maxF, maxOk := maxVal.ToFloat64()
 	for _, item := range lst[1:] {
-		af, aok := maxVal.ToFloat64()
 		bf, bok := item.ToFloat64()
-		if aok && bok {
-			if bf > af {
+		if maxOk && bok {
+			if bf > maxF {
 				maxVal = item
+				maxF = bf
 			}
 		} else if item.String() > maxVal.String() {
 			maxVal = item
+			maxF, maxOk = maxVal.ToFloat64()
 		}
 	}
 	return maxVal, nil

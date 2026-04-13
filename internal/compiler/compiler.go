@@ -10,7 +10,7 @@ import (
 
 // Compile walks prog and emits Bytecode.
 func Compile(prog *ast.Program) (*Bytecode, error) {
-	c := &cmp{nameIdx: make(map[string]int)}
+	c := &cmp{nameIdx: make(map[string]int), constIdx: make(map[any]int)}
 	if err := c.compileProgram(prog); err != nil {
 		return nil, err
 	}
@@ -39,6 +39,7 @@ func Compile(prog *ast.Program) (*Bytecode, error) {
 type cmp struct {
 	instrs     []Instruction
 	consts     []any
+	constIdx   map[any]int // deduplication index for constant pool
 	names      []string
 	nameIdx    map[string]int
 	macros     []MacroDef
@@ -115,7 +116,7 @@ func (c *cmp) compileExtendsTemplate(prog *ast.Program, extendsIdx int) error {
 }
 
 func (c *cmp) compileBlockDef(n *ast.BlockNode) error {
-	sub := &cmp{nameIdx: make(map[string]int)}
+	sub := &cmp{nameIdx: make(map[string]int), constIdx: make(map[any]int)}
 	if err := sub.compileBody(n.Body); err != nil {
 		return err
 	}
@@ -221,7 +222,7 @@ func (c *cmp) compileNode(node ast.Node) error {
 		if len(n.Default) == 0 {
 			c.emit(OP_SLOT, uint16(c.addName(n.Name)), 0xFFFF, scopeCount)
 		} else {
-			sub := &cmp{nameIdx: make(map[string]int)}
+			sub := &cmp{nameIdx: make(map[string]int), constIdx: make(map[any]int)}
 			if err := sub.compileBody(n.Default); err != nil {
 				return err
 			}
@@ -519,8 +520,13 @@ func (c *cmp) emitPlaceholder(op Opcode) int {
 }
 
 func (c *cmp) emitPushConst(v any) {
+	if idx, ok := c.constIdx[v]; ok {
+		c.emit(OP_PUSH_CONST, uint16(idx), 0, 0)
+		return
+	}
 	idx := len(c.consts)
 	c.consts = append(c.consts, v)
+	c.constIdx[v] = idx
 	c.emit(OP_PUSH_CONST, uint16(idx), 0, 0)
 }
 
@@ -538,7 +544,7 @@ func (c *cmp) addName(name string) int {
 
 // compileMacro compiles {% macro name(params) %}body{% endmacro %}.
 func (c *cmp) compileMacro(n *ast.MacroNode) error {
-	sub := &cmp{nameIdx: make(map[string]int)}
+	sub := &cmp{nameIdx: make(map[string]int), constIdx: make(map[any]int)}
 	if err := sub.compileBody(n.Body); err != nil {
 		return err
 	}
@@ -604,7 +610,7 @@ func (c *cmp) compileMacroCall(callee ast.Node, posArgs []ast.Node, namedArgs []
 
 // compileCallNode compiles {% call macro(args) %}body{% endcall %}.
 func (c *cmp) compileCallNode(n *ast.CallNode) error {
-	sub := &cmp{nameIdx: make(map[string]int)}
+	sub := &cmp{nameIdx: make(map[string]int), constIdx: make(map[any]int)}
 	if err := sub.compileBody(n.Body); err != nil {
 		return err
 	}
@@ -708,7 +714,7 @@ func (c *cmp) compileMeta(n *ast.MetaNode) error {
 
 // compileHoist compiles {% hoist target="name" %}body{% endhoist %}.
 func (c *cmp) compileHoist(n *ast.HoistNode) error {
-	sub := &cmp{nameIdx: make(map[string]int)}
+	sub := &cmp{nameIdx: make(map[string]int), constIdx: make(map[any]int)}
 	if err := sub.compileBody(n.Body); err != nil {
 		return err
 	}
@@ -729,7 +735,7 @@ func (c *cmp) compileComponent(n *ast.ComponentNode) error {
 	// to the slot's own default content.
 	var fills []FillDef
 	if len(n.DefaultFill) > 0 {
-		defaultSub := &cmp{nameIdx: make(map[string]int)}
+		defaultSub := &cmp{nameIdx: make(map[string]int), constIdx: make(map[any]int)}
 		if err := defaultSub.compileBody(n.DefaultFill); err != nil {
 			return err
 		}
@@ -738,7 +744,7 @@ func (c *cmp) compileComponent(n *ast.ComponentNode) error {
 	}
 
 	for _, fill := range n.Fills {
-		sub := &cmp{nameIdx: make(map[string]int)}
+		sub := &cmp{nameIdx: make(map[string]int), constIdx: make(map[any]int)}
 		if err := sub.compileBody(fill.Body); err != nil {
 			return err
 		}

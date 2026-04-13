@@ -62,17 +62,19 @@ func WithSandbox(cfg SandboxConfig) Option {
 
 // Engine is the Wispy template engine. Create with New(). Safe for concurrent use.
 type Engine struct {
-	cfg     engineCfg
-	globals map[string]any
-	filters map[string]any // vm.FilterFn | *vm.FilterDef
-	cache   *lruCache
+	cfg       engineCfg
+	globals   map[string]any
+	filters   map[string]any         // vm.FilterFn | *vm.FilterDef (source of truth)
+	filterFns map[string]vm.FilterFn // resolved filter functions (hot-path lookup)
+	cache     *lruCache
 }
 
 // New creates a configured Engine.
 func New(opts ...Option) *Engine {
 	e := &Engine{
-		globals: make(map[string]any),
-		filters: make(map[string]any),
+		globals:   make(map[string]any),
+		filters:   make(map[string]any),
+		filterFns: make(map[string]vm.FilterFn),
 	}
 	for _, o := range opts {
 		o(&e.cfg)
@@ -83,11 +85,11 @@ func New(opts ...Option) *Engine {
 	}
 	e.cache = newLRUCache(cacheSize)
 
-	e.filters["safe"] = vm.FilterFn(func(v vm.Value, _ []vm.Value) (vm.Value, error) {
+	e.RegisterFilter("safe", vm.FilterFn(func(v vm.Value, _ []vm.Value) (vm.Value, error) {
 		return vm.SafeHTMLVal(v.String()), nil
-	})
+	}))
 	for name, fn := range filters.Builtins() {
-		e.filters[name] = fn
+		e.RegisterFilter(name, fn)
 	}
 	return e
 }
@@ -96,7 +98,18 @@ func New(opts ...Option) *Engine {
 func (e *Engine) SetGlobal(key string, value any) { e.globals[key] = value }
 
 // RegisterFilter registers a custom filter function.
-func (e *Engine) RegisterFilter(name string, fn any) { e.filters[name] = fn }
+func (e *Engine) RegisterFilter(name string, fn any) {
+	e.filters[name] = fn
+	// Pre-resolve to FilterFn for hot-path lookup.
+	switch f := fn.(type) {
+	case vm.FilterFn:
+		e.filterFns[name] = f
+	case func(vm.Value, []vm.Value) (vm.Value, error):
+		e.filterFns[name] = vm.FilterFn(f)
+	case *vm.FilterDef:
+		e.filterFns[name] = f.Fn
+	}
+}
 
 // RenderTemplate compiles and renders an inline template string.
 func (e *Engine) RenderTemplate(ctx context.Context, src string, data Data) (RenderResult, error) {
@@ -120,9 +133,9 @@ func (e *Engine) RenderTemplate(ctx context.Context, src string, data Data) (Ren
 		return RenderResult{}, err
 	}
 
-	er, err := vm.Execute(ctx, bc, map[string]any(data), e)
+	er, err := vm.Execute(ctx, bc, map[string]any(data), e, "")
 	if err != nil {
-		return RenderResult{}, wrapRuntimeErr(err)
+		return RenderResult{}, wrapRuntimeErr(err, "")
 	}
 	result := resultFromExecute(er)
 	if err := processGroveDirectives(&result, data); err != nil {
@@ -137,9 +150,9 @@ func (e *Engine) Render(ctx context.Context, name string, data Data) (RenderResu
 	if err != nil {
 		return RenderResult{}, err
 	}
-	er, err := vm.Execute(ctx, bc, map[string]any(data), e)
+	er, err := vm.Execute(ctx, bc, map[string]any(data), e, name)
 	if err != nil {
-		return RenderResult{}, wrapRuntimeErr(err)
+		return RenderResult{}, wrapRuntimeErr(err, name)
 	}
 	result := resultFromExecute(er)
 	if err := processGroveDirectives(&result, data); err != nil {
@@ -270,6 +283,8 @@ func (e *Engine) compileChecked(prog *ast.Program) (*compiler.Bytecode, error) {
 			return nil, err
 		}
 	}
+	// Pre-compile constants so the first render is as fast as subsequent ones.
+	vm.PrecompileConsts(bc)
 	return bc, nil
 }
 
@@ -307,22 +322,11 @@ func checkAllowedFilters(bc *compiler.Bytecode, allowed map[string]bool) error {
 // ─── vm.EngineIface implementation ───────────────────────────────────────────
 
 func (e *Engine) LookupFilter(name string) (vm.FilterFn, bool) {
-	v, ok := e.filters[name]
-	if !ok {
-		return nil, false
-	}
-	switch f := v.(type) {
-	case vm.FilterFn:
-		return f, true
-	case func(vm.Value, []vm.Value) (vm.Value, error):
-		return vm.FilterFn(f), true
-	case *vm.FilterDef:
-		return f.Fn, true
-	}
-	return nil, false
+	fn, ok := e.filterFns[name]
+	return fn, ok
 }
 
-func (e *Engine) StrictVariables() bool { return e.cfg.strictVariables }
+func (e *Engine) StrictVariables() bool      { return e.cfg.strictVariables }
 func (e *Engine) GlobalData() map[string]any { return e.globals }
 
 // MaxLoopIter returns the sandbox max loop iteration limit (0 = unlimited).
@@ -356,7 +360,7 @@ func processGroveDirectives(result *RenderResult, data Data) error {
 			break
 		}
 		attrEnd := findAttrEnd(body, idx+len(" grove:data="))
-		attrVal := extractQuotedValue(body[idx+len(" grove:data="):attrEnd])
+		attrVal := extractQuotedValue(body[idx+len(" grove:data=") : attrEnd])
 
 		// Find the element this attribute belongs to (scan backwards for <)
 		elemStart := strings.LastIndex(body[:idx], "<")
@@ -481,11 +485,11 @@ func (e *Engine) allowedTagsMap() map[string]bool {
 	return m
 }
 
-func wrapRuntimeErr(err error) error {
+func wrapRuntimeErr(err error, templateName string) error {
 	if _, ok := err.(*groverrors.RuntimeError); ok {
 		return err
 	}
-	return &groverrors.RuntimeError{Message: err.Error()}
+	return &groverrors.RuntimeError{Template: templateName, Message: err.Error()}
 }
 
 func resultFromExecute(er vm.ExecuteResult) RenderResult {
