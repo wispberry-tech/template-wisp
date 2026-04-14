@@ -1,0 +1,60 @@
+══════════════════════════════════════════════════════════
+  Grove Timing Benchmark
+  Date:       2026-04-14 16:38:38
+  Iterations: 100 (chunks: 20, warmup: 10)
+══════════════════════════════════════════════════════════
+
+  Results Key:
+  • Avg/render    — average time per render (lower is better)
+  • ops/sec       — renders per second (higher is better)
+  • Alloc/render  — heap memory allocated per render (lower is better)
+  • Peak Alloc    — peak heap memory during benchmark
+  • Min / Max     — fastest and slowest chunk times (indicates variance)
+  • ±StdDev       — standard deviation across chunks (lower is steadier)
+
+
+  Large Page
+  Engine               Avg/render      ops/sec Alloc/render   Peak Alloc          Min          Max      ±StdDev
+  ────────────────── ──────────── ──────────── ──────────── ──────────── ──────────── ──────────── ────────────
+  Grove                     4.1µs       242.0K        4.3KB      970.5KB        3.7µs        6.5µs        786ns
+  HTMLTemplate             10.8µs        92.5K        8.0KB        1.3MB        9.7µs       17.7µs        1.8µs
+  TextTemplate              2.9µs       348.2K        5.6KB        1.1MB        2.4µs        4.3µs        560ns
+  Pongo2                    6.2µs       161.1K        9.4KB        1.5MB        5.7µs        9.0µs        815ns
+  Jet                       2.4µs       419.1K        5.6KB        1.1MB        2.2µs        4.1µs        440ns
+  Liquid                    3.8µs       266.2K        9.3KB        1.5MB        2.8µs        7.3µs        980ns
+  Handlebars                9.6µs       103.8K       10.9KB        1.7MB        7.9µs       18.9µs        2.6µs
+
+  Large Loop (100 items)
+  Engine               Avg/render      ops/sec Alloc/render   Peak Alloc          Min          Max      ±StdDev
+  ────────────────── ──────────── ──────────── ──────────── ──────────── ──────────── ──────────── ────────────
+  Grove                   115.5µs         8.7K       17.6KB        2.4MB      109.3µs      134.0µs        6.9µs
+  HTMLTemplate            226.6µs         4.4K       16.8KB        2.3MB      212.9µs      264.1µs       16.4µs
+  TextTemplate             87.2µs        11.5K        2.8KB      936.8KB       76.8µs      133.5µs       16.4µs
+  Pongo2                  108.2µs         9.2K       26.5KB        3.2MB       86.4µs      184.5µs       26.0µs
+  Jet                      86.3µs        11.6K        1.0KB      825.6KB       64.4µs      118.9µs       21.9µs
+  Liquid                  143.8µs         7.0K        4.1KB        1.1MB      111.4µs      253.9µs       43.2µs
+  Handlebars              525.2µs         1.9K       11.9KB        1.9MB      496.7µs      571.3µs       21.1µs
+
+  Nested Loops (10x10)
+  Engine               Avg/render      ops/sec Alloc/render   Peak Alloc          Min          Max      ±StdDev
+  ────────────────── ──────────── ──────────── ──────────── ──────────── ──────────── ──────────── ────────────
+  Grove                    72.8µs        13.7K       10.4KB        1.8MB       68.6µs      105.4µs        8.0µs
+  HTMLTemplate            151.1µs         6.6K       19.0KB        2.6MB      128.4µs      212.8µs       25.3µs
+  TextTemplate             55.6µs        18.0K       23.1KB        2.9MB       51.8µs       82.9µs        7.0µs
+  Pongo2                   76.2µs        13.1K       18.5KB        2.5MB       61.5µs      138.6µs       19.4µs
+  Jet                      68.1µs        14.7K       22.6KB        2.9MB       41.2µs      104.8µs       19.8µs
+  Liquid                  115.4µs         8.7K       12.2KB        1.9MB       90.3µs      169.2µs       27.1µs
+  Handlebars              347.1µs         2.9K       15.9KB        2.3MB      302.0µs      386.3µs       25.6µs
+
+  Complex Page
+  Engine               Avg/render      ops/sec Alloc/render   Peak Alloc          Min          Max      ±StdDev
+  ────────────────── ──────────── ──────────── ──────────── ──────────── ──────────── ──────────── ────────────
+  Grove                   223.7µs         4.5K       28.0KB        3.5MB      200.5µs      299.6µs       25.2µs
+  HTMLTemplate            419.5µs         2.4K        2.0KB      892.2KB      374.8µs      621.0µs       56.1µs
+  TextTemplate            172.4µs         5.8K       14.3KB        2.1MB      146.9µs      244.2µs       27.4µs
+  Pongo2                  234.9µs         4.3K        6.5KB        1.4MB      200.5µs      289.6µs       21.2µs
+  Jet                     156.1µs         6.4K       25.7KB        3.3MB      136.4µs      198.2µs       21.8µs
+  Liquid                  360.5µs         2.8K        5.3KB        1.3MB      314.4µs      409.2µs       22.7µs
+  Handlebars              938.4µs         1.1K       27.1KB        3.5MB      846.8µs        1.0ms       47.9µs
+
+══════════════════════════════════════════════════════════
