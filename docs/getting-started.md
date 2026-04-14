@@ -65,7 +65,7 @@ result, err := eng.Render(
 
 Template names are forward-slash paths relative to the store root. `FileSystemStore` rejects absolute paths and `..` traversal for security.
 
-`Render` loads the template from the store by name, compiles it (with LRU caching), and executes it. Use `Render` instead of `RenderTemplate` when working with stored templates — it's required for `{% import %}`, `<Component>`, and other composition features.
+`Render` loads the template from the store by name, compiles it (with LRU caching), and executes it. Use `Render` instead of `RenderTemplate` when working with stored templates — it's required for `{% import %}` and other composition features.
 
 ## In-Memory Templates
 
@@ -187,7 +187,7 @@ if err != nil {
 }
 ```
 
-**`RuntimeError`** — errors during template execution (division by zero, missing required props, strict mode undefined variables):
+**`RuntimeError`** — errors during template execution (division by zero, strict mode undefined variables, loop iteration limits exceeded):
 
 ```go
 result, err := eng.Render(ctx, "page.html", data)
@@ -198,3 +198,83 @@ if err != nil {
 	}
 }
 ```
+
+## HTTP Handler Integration
+
+In a real HTTP server, render templates and assemble the response using `RenderResult`. The engine populates `result.Meta` with `{% meta %}` tags, `result.Assets` with CSS/JS from components, and `result.Hoisted` with `{% #hoist %}` content.
+
+**Full HTTP handler pattern:**
+
+```go
+package main
+
+import (
+	"context"
+	"fmt"
+	"net/http"
+	"strings"
+)
+
+func pageHandler(eng *grove.Engine) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		result, err := eng.Render(r.Context(), "page.grov", grove.Data{
+			"title": "My Page",
+			"posts": loadPosts(),
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		writeResult(w, result)
+	}
+}
+
+func writeResult(w http.ResponseWriter, result grove.RenderResult) {
+	body := result.Body
+
+	// Replace <!-- HEAD_ASSETS --> with hashed <link> tags
+	body = strings.Replace(body, "<!-- HEAD_ASSETS -->", result.HeadHTML(), 1)
+
+	// Build meta tags from result.Meta map
+	var meta strings.Builder
+	for name, content := range result.Meta {
+		if strings.HasPrefix(name, "og:") || strings.HasPrefix(name, "property:") {
+			meta.WriteString(fmt.Sprintf(`  <meta property="%s" content="%s">`+"\n", name, content))
+		} else {
+			meta.WriteString(fmt.Sprintf(`  <meta name="%s" content="%s">`+"\n", name, content))
+		}
+	}
+	body = strings.Replace(body, "<!-- HEAD_META -->", meta.String(), 1)
+
+	// Replace <!-- HEAD_HOISTED --> with hoisted content (e.g., preheaders in email)
+	body = strings.Replace(body, "<!-- HEAD_HOISTED -->", result.GetHoisted("head"), 1)
+
+	// Replace <!-- FOOT_ASSETS --> with hashed <script> tags
+	body = strings.Replace(body, "<!-- FOOT_ASSETS -->", result.FootHTML(), 1)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	fmt.Fprint(w, body)
+}
+```
+
+The base layout template uses HTML comment placeholders that `writeResult` replaces:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{% #slot "title" %}My Site{% /slot %}</title>
+  <!-- HEAD_ASSETS -->    {# Filled with result.HeadHTML() - stylesheets #}
+  <!-- HEAD_META -->      {# Filled with meta tags from result.Meta #}
+  <!-- HEAD_HOISTED -->   {# Filled with result.GetHoisted("head") #}
+</head>
+<body>
+  <main>{% slot "content" %}</main>
+  <!-- FOOT_ASSETS -->    {# Filled with result.FootHTML() - scripts #}
+</body>
+</html>
+```
+
+With the asset pipeline wired via `grove.WithAssetResolver(manifest.Resolve)`, `{% asset "path/to/file.css" %}` inside any component automatically bubbles up — the builder hashes and minifies it, and `result.HeadHTML()` includes a `<link>` tag pointing to the hashed URL.
+
+When you render this base layout, all assets declared in nested components (cards, buttons, nav, etc.) are collected and served by the handler at the hashed URLs.

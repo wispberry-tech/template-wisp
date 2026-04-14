@@ -123,8 +123,9 @@ Component assets look like:
 ```
 
 Placeholder comments in the base layout are replaced by the Go response
-assembler using `result.HeadHTML()`, `result.FootHTML()`, `result.Meta`,
-and `result.GetHoisted("head")` — see `main.go:writeResult`.
+assembler. `result.HeadHTML()` and `result.FootHTML()` inject `<link>` and `<script>` tags.
+`result.Meta` is a map of name/content pairs; the handler iterates it to build meta tags.
+`result.GetHoisted("head")` injects hoisted content — see `main.go:writeResult` for the full pattern.
 
 ---
 
@@ -154,9 +155,9 @@ and `result.GetHoisted("head")` — see `main.go:writeResult`.
   loop iterations. Any template that oversteps errors at render time.
 - Deep component nesting (`Base` → `DocsLayout` → page) with sidebar,
   breadcrumbs, and prev/next partials.
-- Colocated macros (`macros/admonitions.grov`, `macros/code-example.grov`)
-  with their own CSS — picked up by the asset builder just like
-  composites/primitives.
+- Colocated component macros (`macros/note.grov`, `macros/tip.grov`,
+  `macros/warning.grov`, `macros/code-example.grov`) with their own CSS —
+  picked up by the asset builder just like composites/primitives.
 
 The sandbox config must include `"asset"` in `AllowedTags` for the
 pipeline to work; the example shows the full whitelist.

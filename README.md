@@ -47,9 +47,7 @@ Grove templates use a single `{% %}` delimiter for server operations (control fl
 
 <Base>
   {% #fill "content" %}
-    {% asset "composites/card/card.css" type="stylesheet" %}
     {% meta name="description" content="Latest posts" %}
-
     <h1>{% title | upper %}</h1>
 
     {% #each posts as post %}
@@ -183,6 +181,63 @@ same tag passes through unchanged — the pipeline is fully opt-in and adds
 no overhead when absent. See [Asset Pipeline](docs/asset-pipeline.md) for
 watch mode, pruning, custom transformers, and the HTTP handler API.
 
+### Typical Web App
+
+A complete HTTP handler assembles the response from `RenderResult`:
+
+```go
+func pageHandler(eng *grove.Engine) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		result, err := eng.Render(r.Context(), "index.grov", grove.Data{
+			"title": "Home",
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// Collect assets from all components and inject placeholders
+		body := result.Body
+		body = strings.Replace(body, "<!-- HEAD_ASSETS -->", result.HeadHTML(), 1)
+		body = strings.Replace(body, "<!-- FOOT_ASSETS -->", result.FootHTML(), 1)
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, body)
+	}
+}
+```
+
+The base layout has placeholders for the injected content:
+
+```html
+<head>
+  <!-- HEAD_ASSETS --> {# <link> tags for all component CSS #}
+</head>
+<body>
+  ...
+  <!-- FOOT_ASSETS --> {# <script> tags for all component JS #}
+</body>
+```
+
+**Key patterns:**
+
+- **`SetGlobal`** — register site-wide variables: `eng.SetGlobal("site_name", "My Site")`
+- **`GroveResolve`** — domain structs implement this interface to expose fields safely:
+  ```go
+  func (p Product) GroveResolve(key string) (any, bool) {
+      switch key {
+      case "name": return p.Name, true
+      case "price": return p.Price, true
+      }
+      return nil, false
+  }
+  ```
+  Template access: `{% product.name %}`, `{% product.price | currency %}`
+- **`result.Meta`** — `{% meta %}` tags collected during render; iterate and build meta tag HTML
+- **`result.GetHoisted(name)`** — `{% #hoist name %}` content (e.g., email preheaders)
+
+See [Getting Started → HTTP Handler Integration](docs/getting-started.md#http-handler-integration) for the complete `writeResult` helper.
+
 ### Syntax at a Glance
 
 | Category | Syntax |
@@ -190,7 +245,7 @@ watch mode, pruning, custom transformers, and the HTTP handler API.
 | **Output** | `{% expr %}`, `{% value \| filter %}`, `{% cond ? a : b %}` |
 | **Control flow** | `{% #if %}`/`{% :else if %}`/`{% :else %}`/`{% /if %}`, `{% #each %}`/`{% :empty %}`/`{% /each %}` |
 | **Assignment** | `{% set %}`, `{% #let %}`/`{% /let %}` (multi-variable), `{% #capture %}`/`{% /capture %}` |
-| **Components** | `<Component>`, `{% import %}`, `{% slot %}`, `{% #fill %}`/`{% /fill %}` |
+| **Components** | `<ComponentName />`, `<Component is={expr}>` (dynamic), `{% import %}`, `{% slot %}`, `{% #fill %}`/`{% /fill %}` |
 | **Web primitives** | `{% asset %}`, `{% meta %}`, `{% #hoist %}`/`{% /hoist %}` |
 | **Data literals** | `[1, 2, 3]`, `{key: "value"}` |
 | **Other** | `{# comment #}`, `{% #verbatim %}`/`{% /verbatim %}`, whitespace control (`{%- -%}`) |
