@@ -4,9 +4,11 @@ import (
 	"context"
 	"path/filepath"
 	"runtime"
+	"regexp"
 	"testing"
 
 	grove "github.com/wispberry-tech/grove/pkg/grove"
+	"github.com/wispberry-tech/grove/pkg/grove/assets"
 
 	"github.com/stretchr/testify/require"
 )
@@ -124,4 +126,48 @@ func TestRenderAuthor(t *testing.T) {
 			require.NotEmpty(t, result.Body)
 		})
 	}
+}
+
+func TestAssetPipelineIntegration(t *testing.T) {
+	baseDir := testBaseDir()
+	loadData(baseDir)
+	templateDir := filepath.Join(baseDir, "templates")
+	outDir := t.TempDir()
+
+	builder := assets.NewWithDefaults(assets.Config{
+		SourceDir: templateDir,
+		OutputDir: outDir,
+		URLPrefix: "/dist",
+	})
+	manifest, err := builder.Build()
+	require.NoError(t, err)
+
+	// Manifest should include all logical asset names used in templates.
+	wantKeys := []string{
+		"primitives/button/button.css",
+		"primitives/button/button.js",
+		"composites/nav/nav.css",
+	}
+	for _, k := range wantKeys {
+		_, ok := manifest.Resolve(k)
+		require.True(t, ok, "manifest missing %q", k)
+	}
+
+	store := grove.NewFileSystemStore(templateDir)
+	eng := grove.New(
+		grove.WithStore(store),
+		grove.WithAssetResolver(manifest.Resolve),
+	)
+	eng.SetGlobal("site_name", "Meridian")
+	eng.SetGlobal("current_year", "2026")
+
+	pub := publishedPosts()
+	result, err := eng.Render(context.Background(), "index.grov", grove.Data{
+		"posts": postsToAny(pub),
+	})
+	require.NoError(t, err)
+
+	head := result.HeadHTML()
+	hashed := regexp.MustCompile(`/dist/[^"]*\.[0-9a-f]{8}\.css`)
+	require.True(t, hashed.MatchString(head), "expected hashed CSS URL in head: %q", head)
 }

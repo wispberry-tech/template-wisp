@@ -1,6 +1,6 @@
 <Component name="Button" label href="#" variant="primary" type="link">
-{% asset "/css/primitives/button/button.css" type="stylesheet" %}
-{% asset "/js/primitives/button/button.js" type="script" %}
+{% asset "primitives/button/button.css" type="stylesheet" %}
+{% asset "primitives/button/button.js" type="script" %}
 
 {% #if type == "link" %}
   <a href="{% href %}" class="btn btn-{% variant %}" data-button>{% label %}</a>

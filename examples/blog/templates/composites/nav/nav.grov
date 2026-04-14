@@ -1,6 +1,6 @@
 <Component name="Nav" site_name>
-{% asset "/css/composites/nav/nav.css" type="stylesheet" %}
-{% asset "/js/composites/nav/nav.js" type="script" %}
+{% asset "composites/nav/nav.css" type="stylesheet" %}
+{% asset "composites/nav/nav.js" type="script" %}
 
 <nav class="nav" data-nav aria-label="Main navigation">
   <a href="/" class="nav-brand">{% site_name %}</a>

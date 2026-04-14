@@ -1,6 +1,6 @@
 {% import Base from "base" %}
 {% import Breadcrumbs from "composites/breadcrumbs/breadcrumbs" %}
-{% asset "/css/tag-list.css" type="stylesheet" %}
+{% asset "tag-list.css" type="stylesheet" %}
 
 <Base>
   {% #fill "title" %}Tags &mdash; Meridian{% /fill %}
