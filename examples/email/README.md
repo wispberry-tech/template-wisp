@@ -15,7 +15,7 @@ Click any template to preview with different user scenarios.
 
 ### Core Grove Features
 
-- ✅ **Email-safe HTML** — Table layouts, inline styles, MSO compatibility
+- ✅ **Email-safe HTML** — Table layouts, inline styles, MSO compatibility (does **not** use the asset pipeline — email clients require inline styles, so `pkg/grove/assets` is not wired in)
 - ✅ **Component helpers** — Reusable Button, Divider, Spacer, Heading, UsageBar
 - ✅ **Preheaders** — `{% #hoist "preheader" %}` for email client subject line
 - ✅ **Captured blocks** — `{% #capture %}` for multi-use template sections

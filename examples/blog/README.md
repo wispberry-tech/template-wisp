@@ -17,7 +17,7 @@ go run ./examples/blog/
 - ✅ **Slots and inheritance** — Named slots for title/content, filled by child pages
 - ✅ **Loops and conditionals** — Grid rendering with `{% #each %}`, empty state checks
 - ✅ **Filters** — `truncate`, `length`, `default`, `safe` (for HTML body content)
-- ✅ **Asset management** — CSS with `{% asset %}` directive
+- ✅ **Asset pipeline** — `pkg/grove/assets` builder + minifier, logical-name `{% asset %}` refs resolved to content-hashed URLs via `WithAssetResolver`
 
 ### Design & UX
 
@@ -32,6 +32,7 @@ go run ./examples/blog/
 ```
 blog/
 ├── main.go                           # Server, routes, fixture data
+├── dist/                             # Generated: hashed CSS/JS + manifest.json
 ├── static/
 │   ├── style.css                     # Main stylesheet (imports shared tokens)
 │   ├── tokens.css                    # Design system tokens
@@ -222,6 +223,20 @@ Edit `examples/_shared/tokens.css` or override in `blog/static/style.css`:
   --color-primary: #YOUR_HEX;
 }
 ```
+
+## Asset Pipeline
+
+At startup, `main.go` runs `assets.Builder.Build()` over `templates/`. Each
+`.css` / `.js` file is minified (`pkg/grove/assets/minify`), content-hashed, and
+written to `dist/` alongside a `manifest.json`. The engine receives
+`manifest.Resolve` via `grove.WithAssetResolver`, so every `{% asset "..." %}`
+in templates is a *logical name* (e.g. `composites/nav/nav.css`) that gets
+rewritten to `/dist/composites/nav/nav.<hash>.css` at render time. The hashed
+files are served with `Cache-Control: immutable` by `builder.Route()`.
+
+`static/base.css` (a global token sheet) still uses `{% asset "/static/base.css" %}`
+— URL-style names with no manifest entry pass through unchanged, which is the
+intended escape hatch for hand-managed globals.
 
 ## Performance Notes
 

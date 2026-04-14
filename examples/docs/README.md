@@ -19,6 +19,7 @@ go run ./examples/docs/
 - ✅ **Code highlighting** — Syntax examples with language tags
 - ✅ **Admonitions** — Note/Warning/Tip blocks with styled containers
 - ✅ **Deep template inheritance** — Multiple levels of slot nesting
+- ✅ **Asset pipeline** — Colocated CSS hashed + minified via `pkg/grove/assets`, resolved through `WithAssetResolver`
 
 ### Design & Documentation Patterns
 
@@ -34,6 +35,7 @@ go run ./examples/docs/
 ```
 docs/
 ├── main.go                           # Server, routes, fixture data
+├── dist/                             # Generated: hashed CSS/JS + manifest.json
 ├── static/
 │   ├── docs.css                      # Main stylesheet (imports tokens)
 │   ├── tokens.css                    # Design system tokens
@@ -329,6 +331,17 @@ Key classes:
 - `.breadcrumb-bar` — Top navigation bar
 - `.note`, `.warning`, `.tip` — Admonition boxes
 - `.code-block` — Syntax-highlighted code
+
+## Asset Pipeline
+
+`main.go` runs `assets.Builder.Build()` at startup to minify + content-hash
+every `.css` / `.js` file colocated with templates (under `templates/partials/`
+and `templates/macros/`). Results go to `dist/` with a `manifest.json` index,
+served by `builder.Route()` at `/dist/*` with immutable cache headers. Templates
+reference them by logical name — e.g. `{% asset "partials/sidebar.css" ... %}` —
+and the engine rewrites those to `/dist/partials/sidebar.<hash>.css` at render
+time via `grove.WithAssetResolver(manifest.Resolve)`. The hand-managed
+`static/base.css` bypasses the pipeline (URL-style name → passthrough).
 
 ## Performance
 

@@ -153,15 +153,39 @@ examples/
 
 Each component owns its CSS and JS files. Components declare their dependencies via `{% asset %}`, which bubble up through composition and are deduplicated in `RenderResult`. Global styles live in `static/base.css` and load first (via `priority=10`).
 
+### Asset pipeline
+
+Three of the four examples (**blog**, **store**, **docs**) opt into the
+`pkg/grove/assets` pipeline: each calls `assets.Builder.Build()` at startup
+to minify and content-hash every colocated `.css`/`.js` into `dist/`, then
+passes `manifest.Resolve` to `grove.WithAssetResolver`. Templates reference
+assets by logical name (e.g. `composites/nav/nav.css`) and the engine rewrites
+them to `/dist/composites/nav/nav.<hash>.css` at render time.
+
+| Example | Pipeline | Minify | Notes |
+|---------|----------|--------|-------|
+| blog    | ✅       | ✅     | Reference implementation |
+| store   | ✅       | ✅     | Plus custom `currency` filter |
+| docs    | ✅       | ✅     | Combined with sandbox config |
+| email   | ❌       | —      | Email clients require inline styles |
+
+URL-style `{% asset "/static/base.css" %}` paths still work as a passthrough
+escape hatch for hand-managed global stylesheets.
+
 ---
 
 ## Running in Development
 
-For **live reloading** during development, use [entr](https://github.com/eradman/entr) or similar:
+For **live reloading** of templates, use [entr](https://github.com/eradman/entr) or similar:
 
 ```bash
 ls examples/blog/templates/*.grov | entr go run ./examples/blog/
 ```
+
+For **asset hot-rebuild**, swap `builder.Build()` for `builder.Watch(ctx, handlers)`
+(see `pkg/grove/assets/watch.go`) — it polls colocated CSS/JS on a 500ms tick
+and atomically swaps the manifest so the engine's resolver picks up new hashes
+without restart. Failed files keep their previous entry (partial swap).
 
 Each example includes sample data in `main.go` (fixture data for products, posts, etc.). Edit these files to customize the demo content.
 

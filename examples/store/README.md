@@ -19,6 +19,7 @@ go run ./examples/store/
 - ✅ **Loops with conditions** — Grid rendering, empty states, category navigation
 - ✅ **Captured variables** — `{% #capture %}` for complex template composition
 - ✅ **Custom filters** — `currency` filter registered in Go, used in templates
+- ✅ **Asset pipeline** — Colocated CSS/JS hashed + minified via `pkg/grove/assets`, resolved through `WithAssetResolver`
 
 ### Design & UX
 
@@ -34,6 +35,7 @@ go run ./examples/store/
 ```
 store/
 ├── main.go                           # Server, routes, fixture data
+├── dist/                             # Generated: hashed CSS/JS + manifest.json
 ├── static/
 │   ├── style.css                     # Main stylesheet
 │   ├── tokens.css                    # Design system tokens
@@ -290,6 +292,17 @@ In `templates/composites/product-card/product-card.grov`:
 ```
 
 Serve images from `static/images/` or external CDN.
+
+## Asset Pipeline
+
+`main.go` runs `assets.Builder.Build()` at startup, which scans `templates/`
+for colocated `.css` / `.js`, minifies them (`pkg/grove/assets/minify`),
+content-hashes the output, and writes `dist/` + `dist/manifest.json`. The
+engine is configured with `grove.WithAssetResolver(manifest.Resolve)`, so each
+logical `{% asset "composites/nav/nav.css" %}` in a component is rewritten to
+`/dist/composites/nav/nav.<hash>.css` at render time. `builder.Route()` mounts
+a path-safe handler with `Cache-Control: immutable` on hashed files.
+`static/base.css` uses the URL-style passthrough for hand-managed globals.
 
 ## Performance Notes
 
