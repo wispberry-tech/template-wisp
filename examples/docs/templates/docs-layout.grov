@@ -2,7 +2,6 @@
 {% import Breadcrumbs from "partials/breadcrumbs" %}
 {% import Sidebar from "partials/sidebar" %}
 
-<Component name="DocsLayout" sections all_pages current_slug breadcrumbs>
 <Base sections={sections}>
   {% #fill "nav" %}
     <nav class="nav">
@@ -27,4 +26,3 @@
     </div>
   {% /fill %}
 </Base>
-</Component>

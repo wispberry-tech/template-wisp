@@ -1,0 +1,5 @@
+  {% #if in_stock %}
+    <span class="badge badge-in-stock">In Stock</span>
+  {% :else %}
+    <span class="badge badge-out-of-stock">Out of Stock</span>
+  {% /if %}

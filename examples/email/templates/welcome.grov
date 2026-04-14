@@ -1,5 +1,8 @@
 {% import BaseEmail from "base-email" %}
-{% import * as H from "helpers" %}
+{% import Button from "button" %}
+{% import Divider from "divider" %}
+{% import Heading from "heading" %}
+{% import Spacer from "spacer" %}
 
 <BaseEmail>
   {% #fill "title" %}Welcome to Grove Cloud{% /fill %}
@@ -14,9 +17,9 @@
 
     {% greeting_block | safe %}
 
-    <H.Divider />
+    <Divider />
 
-    <H.Heading text={"Get Started in 3 Steps"} />
+    <Heading text={"Get Started in 3 Steps"} />
 
     <table cellpadding="0" cellspacing="0" border="0" width="100%">
       {% #let %}
@@ -39,10 +42,10 @@
       {% /each %}
     </table>
 
-    <H.Spacer height="8" />
-    <H.Button text="Go to Dashboard" href="https://app.grovecloud.io/dashboard" />
+    <Spacer height="8" />
+    <Button text="Go to Dashboard" href="https://app.grovecloud.io/dashboard" />
 
-    <H.Divider />
+    <Divider />
     <p style="color: #666; font-size: 14px;">Questions? Reply to this email or visit our <a href="https://app.grovecloud.io/help" style="color: #2E6740;">Help Center</a>.</p>
   {% /fill %}
 </BaseEmail>

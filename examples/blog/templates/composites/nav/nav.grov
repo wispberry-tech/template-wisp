@@ -1,4 +1,3 @@
-<Component name="Nav" site_name>
 {% asset "composites/nav/nav.css" type="stylesheet" %}
 {% asset "composites/nav/nav.js" type="script" %}
 
@@ -11,4 +10,3 @@
     {% #slot %}{% /slot %}
   </div>
 </nav>
-</Component>

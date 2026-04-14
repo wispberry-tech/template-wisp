@@ -1,6 +1,6 @@
 {% import Base from "base" %}
-{% import Price from "macros/pricing" %}
-{% import DiscountBadge from "macros/pricing" %}
+{% import Price from "macros/price" %}
+{% import DiscountBadge from "macros/discount-badge" %}
 {% import Breadcrumbs from "composites/breadcrumbs/breadcrumbs" %}
 {% import ProductCard from "composites/product-card/product-card" %}
 

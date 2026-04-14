@@ -1,0 +1,6 @@
+  {% set full = rating | floor %}
+  {% set half = rating - full >= 0.5 ? 1 : 0 %}
+  <span class="stars">
+    {% #each range(1, full) as i %}&#9733;{% /each %}{% #if half %}&#9734;{% /if %}
+  </span>
+  <span class="review-count">({% count %} {% count == 1 ? "review" : "reviews" %})</span>

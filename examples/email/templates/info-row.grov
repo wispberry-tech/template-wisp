@@ -1,0 +1,4 @@
+  <tr>
+    <td style="padding: 8px 0; color: #666666; width: 140px;">{% label %}</td>
+    <td style="padding: 8px 0; font-weight: bold;">{% value %}</td>
+  </tr>

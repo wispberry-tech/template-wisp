@@ -1,5 +1,4 @@
-<Component name="Breadcrumbs" breadcrumbs>
-{% asset "/css/partials/breadcrumbs.css" type="stylesheet" %}
+{% asset "partials/breadcrumbs.css" type="stylesheet" %}
 <nav class="breadcrumb-bar" aria-label="Page breadcrumb">
   {% #each breadcrumbs as crumb %}
     {% #if crumb.href %}
@@ -10,4 +9,3 @@
     {% /if %}
   {% /each %}
 </nav>
-</Component>

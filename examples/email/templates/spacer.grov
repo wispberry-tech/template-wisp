@@ -1,0 +1,2 @@
+  {% set height = height | default("16") %}
+  <div style="height: {% height %}px;"></div>

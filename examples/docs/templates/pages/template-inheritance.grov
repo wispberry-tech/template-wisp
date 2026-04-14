@@ -1,5 +1,7 @@
 {% import DocsLayout from "docs-layout" %}
-{% import * as Adm from "macros/admonitions" %}
+{% import Note from "macros/note" %}
+{% import Warning from "macros/warning" %}
+{% import Tip from "macros/tip" %}
 {% import PrevNext from "partials/prev-next" %}
 
 <DocsLayout sections={sections} all_pages={all_pages} current_slug={current_slug} breadcrumbs={breadcrumbs}>
@@ -9,7 +11,7 @@
     <article class="doc-page">
       <h1>{% page.title %}</h1>
 
-      <Adm.Tip message="This page is itself rendered using 3-level component composition. The base component defines the HTML shell, DocsLayout adds the sidebar, and this page fills in the content. View the template source to see it in action." />
+      <Tip message="This page is itself rendered using 3-level component composition. The base component defines the HTML shell, DocsLayout adds the sidebar, and this page fills in the content. View the template source to see it in action." />
 
       <div class="doc-body">
         {% page.body | safe %}

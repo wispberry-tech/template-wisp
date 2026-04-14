@@ -1,8 +1,6 @@
-<Component name="TagBadge" label color="gray" slug="">
 {% asset "primitives/tag-badge/tag-badge.css" type="stylesheet" %}
 {% #if slug %}
   <a href="/tag/{% slug %}" class="tag tag-{% color %}">{% label %}</a>
 {% :else %}
   <span class="tag tag-{% color %}">{% label %}</span>
 {% /if %}
-</Component>

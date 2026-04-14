@@ -1,5 +1,5 @@
 {% import Base from "base" %}
-{% import Price from "macros/pricing" %}
+{% import Price from "macros/price" %}
 {% import Breadcrumbs from "composites/breadcrumbs/breadcrumbs" %}
 
 <Base>

@@ -1,4 +1,3 @@
-<Component name="Breadcrumbs">
 {% asset "composites/breadcrumbs/breadcrumbs.css" type="stylesheet" %}
 <nav class="breadcrumb">
   {% #each breadcrumbs as crumb %}
@@ -10,4 +9,3 @@
     {% /if %}
   {% /each %}
 </nav>
-</Component>

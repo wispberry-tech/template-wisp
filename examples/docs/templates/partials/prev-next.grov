@@ -1,5 +1,4 @@
-<Component name="PrevNext" prev next>
-{% asset "/css/partials/prev-next.css" type="stylesheet" %}
+{% asset "partials/prev-next.css" type="stylesheet" %}
 <nav class="prev-next">
   {% #if prev %}
     <a href="/docs/{% prev.section_slug %}/{% prev.slug %}" class="prev-next-link prev-link">
@@ -16,4 +15,3 @@
     <span></span>
   {% /if %}
 </nav>
-</Component>

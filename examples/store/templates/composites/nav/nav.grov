@@ -1,5 +1,4 @@
-<Component name="Nav" site_name cart_count>
-{% asset "/css/composites/nav/nav.css" type="stylesheet" %}
+{% asset "composites/nav/nav.css" type="stylesheet" %}
 <nav class="nav" aria-label="Main navigation">
   <a href="/" class="nav-brand">{% site_name %}</a>
   <div class="nav-links">
@@ -11,4 +10,3 @@
     <input type="text" name="q" placeholder="Search products..." class="search-input" aria-label="Search products">
   </form>
 </nav>
-</Component>

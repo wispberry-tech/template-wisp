@@ -1,5 +1,4 @@
-<Component name="Sidebar" sections all_pages current_slug>
-{% asset "/css/partials/sidebar.css" type="stylesheet" %}
+{% asset "partials/sidebar.css" type="stylesheet" %}
 <nav class="sidebar-nav">
   {% #each sections as section %}
     {% set section_slug = section.slug %}
@@ -22,4 +21,3 @@
     </div>
   {% /each %}
 </nav>
-</Component>

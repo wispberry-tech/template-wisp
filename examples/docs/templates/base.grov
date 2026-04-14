@@ -1,4 +1,3 @@
-<Component name="Base" sections>
 {% asset "/static/base.css" type="stylesheet" priority=10 %}
 <!DOCTYPE html>
 <html lang="en">
@@ -34,4 +33,3 @@
   <!-- FOOT_ASSETS -->
 </body>
 </html>
-</Component>

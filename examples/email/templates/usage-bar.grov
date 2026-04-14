@@ -1,0 +1,13 @@
+  {% set color = color | default("") %}
+  {% #if not color %}
+    {% #if pct >= 90 %}
+      {% set color = "#dc3545" %}
+    {% :else if pct >= 75 %}
+      {% set color = "#ffc107" %}
+    {% :else %}
+      {% set color = "#2E6740" %}
+    {% /if %}
+  {% /if %}
+  <div style="background-color: #e9ecef; border-radius: 4px; height: 24px; margin: 8px 0; overflow: hidden;">
+    <div style="background-color: {% color %}; height: 100%; width: {% pct %}%; border-radius: 4px; transition: width 0.3s;"></div>
+  </div>
