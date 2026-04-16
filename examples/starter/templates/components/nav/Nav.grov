@@ -1,0 +1,21 @@
+{# Nav — site navigation. Uses globals: site_name, repo_url. #}
+{% asset "components/nav/nav.css" type="stylesheet" %}
+<nav class="nav" aria-label="Main navigation">
+  <div class="nav__inner container">
+    <a href="/" class="nav__brand">
+      <img src="/static/svg/logo.svg" alt="" class="nav__brand-img">
+      <span>{% site_name %}</span>
+    </a>
+    <div class="nav__links">
+      <a href="/" class="nav__link">Home</a>
+      <a href="/docs" class="nav__link">Docs</a>
+      <a href="{% repo_url %}" class="nav__link nav__link--external" target="_blank" rel="noopener noreferrer">
+        <span>GitHub</span>
+        <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7 17 17 7"></path>
+          <path d="M8 7h9v9"></path>
+        </svg>
+      </a>
+    </div>
+  </div>
+</nav>

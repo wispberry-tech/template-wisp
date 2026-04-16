@@ -1,0 +1,13 @@
+{# Section — titled content section. Required: title. Optional: eyebrow, lede, alt (bool). Slots: default, footer. #}
+{% asset "components/section/section.css" type="stylesheet" %}
+<section class="page-section{% #if alt %} page-section--alt{% /if %}">
+  <div class="container">
+    <header class="page-section__head">
+      {% #if eyebrow %}<div class="eyebrow">{% eyebrow %}</div>{% /if %}
+      <h2 class="page-section__title">{% title %}</h2>
+      {% #if lede %}<p class="page-section__lede text--muted">{% lede %}</p>{% /if %}
+    </header>
+    <div class="page-section__body">{% #slot %}{% /slot %}</div>
+    {% #slot "footer" %}{% /slot %}
+  </div>
+</section>

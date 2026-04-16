@@ -1,0 +1,32 @@
+{# Filters — shop sidebar filter form. Required: active (map with available, min, max, sort). Optional: base_path. #}
+{% asset "components/filters/filters.css" type="stylesheet" %}
+<form class="shop-filters" method="get">
+  <fieldset class="shop-filters__group">
+    <legend class="shop-filters__legend">Availability</legend>
+    <label class="shop-filters__check">
+      <input type="checkbox" name="available" value="1"{% #if active.available %} checked{% /if %}>
+      In stock only
+    </label>
+  </fieldset>
+  <fieldset class="shop-filters__group">
+    <legend class="shop-filters__legend">Price</legend>
+    <div class="shop-filters__range">
+      <label class="shop-filters__range-label">Min <input class="shop-filters__input" type="number" name="min" min="0" step="1" value="{% active.min %}" placeholder="$"></label>
+      <label class="shop-filters__range-label">Max <input class="shop-filters__input" type="number" name="max" min="0" step="1" value="{% active.max %}" placeholder="$"></label>
+    </div>
+  </fieldset>
+  <fieldset class="shop-filters__group">
+    <legend class="shop-filters__legend">Sort</legend>
+    <select class="shop-filters__input" name="sort">
+      <option value=""{% #if active.sort == "" %} selected{% /if %}>Featured</option>
+      <option value="price-asc"{% #if active.sort == "price-asc" %} selected{% /if %}>Price: low to high</option>
+      <option value="price-desc"{% #if active.sort == "price-desc" %} selected{% /if %}>Price: high to low</option>
+      <option value="rating"{% #if active.sort == "rating" %} selected{% /if %}>Highest rated</option>
+      <option value="title"{% #if active.sort == "title" %} selected{% /if %}>A&ndash;Z</option>
+    </select>
+  </fieldset>
+  <div class="shop-filters__actions">
+    <button type="submit" class="btn btn--primary">Apply</button>
+    <a href="{% base_path %}" class="btn">Reset</a>
+  </div>
+</form>

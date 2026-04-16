@@ -1,0 +1,26 @@
+{% asset "/static/css/tokens.css" type="stylesheet" priority=100 %}
+{% asset "/static/css/base.css" type="stylesheet" priority=90 %}
+{% asset "/static/css/pages.css" type="stylesheet" priority=80 %}
+{% asset "/static/js/cart.js" type="script" %}
+{% import Nav from "components/nav/Nav" %}
+{% import Footer from "components/footer/Footer" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% #slot "title" %}{% site_name %}{% /slot %}</title>
+  <!-- HEAD_META -->
+  <!-- HEAD_ASSETS -->
+  <!-- HEAD_HOIST -->
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <Nav site_name={site_name} />
+  <main id="main">
+    {% #slot "content" %}{% /slot %}
+  </main>
+  <Footer year={current_year} site_name={site_name} />
+  <!-- FOOT_ASSETS -->
+</body>
+</html>

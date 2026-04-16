@@ -1,0 +1,21 @@
+{# ProductCard — product grid card. Required: handle, title, image_svg, price_display. Optional: collection_title. Slots: badge, action, default. #}
+{% asset "components/product-card/product-card.css" type="stylesheet" %}
+<article class="product-card">
+  <a href="/products/{% handle %}" class="product-card__art">
+    <img class="product-card__art-img" src="/static/svg/{% image_svg %}" alt="{% title %}" loading="lazy">
+    <div class="product-card__badges">
+      {% #slot "badge" %}{% /slot %}
+    </div>
+  </a>
+  <div class="product-card__body">
+    <h3 class="product-card__title"><a class="product-card__title-link" href="/products/{% handle %}">{% title %}</a></h3>
+    <div class="product-card__meta">
+      <div class="product-card__price">{% price_display | safe %}</div>
+      {% #if collection_title %}<span class="product-card__collection">{% collection_title %}</span>{% /if %}
+    </div>
+    {% #slot %}{% /slot %}
+    <div class="product-card__action">
+      {% #slot "action" %}<a href="/products/{% handle %}" class="btn">View</a>{% /slot %}
+    </div>
+  </div>
+</article>

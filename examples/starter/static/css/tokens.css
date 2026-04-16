@@ -1,0 +1,129 @@
+/* Design tokens — DaisyUI-inspired semantic color system + full type scale.
+ * Every color, shadow, spacing, and font-size value used downstream comes
+ * from here. No raw hex, px, or rem in component CSS.
+ */
+:root {
+  /* ── Semantic color roles (DaisyUI pattern) ─────────────────────────── */
+
+  /* Base — page backgrounds and default text */
+  --color-base-100: #f8f7f4;        /* page background */
+  --color-base-200: #eeece6;        /* elevated surface, alt rows */
+  --color-base-300: #dedad0;        /* borders, dividers */
+  --color-base-content: #1c1917;    /* default text on base */
+  --color-base-content-muted: #57534e; /* secondary/dim text */
+
+  /* Primary — Grove green, main brand action */
+  --color-primary: #2e6740;
+  --color-primary-focus: #225030;
+  --color-primary-content: #ffffff;
+
+  /* Neutral — dark surface for nav, footer, overlays */
+  --color-neutral: #1c1917;
+  --color-neutral-focus: #111010;
+  --color-neutral-content: #e8e4dc;
+
+  /* Accent — secondary action, highlights, hover */
+  --color-accent: #4a9b63;
+  --color-accent-focus: #3a7a50;
+  --color-accent-content: #ffffff;
+
+  /* State — convey meaning; each has a -content for text contrast */
+  --color-info: #2e70a8;
+  --color-info-content: #ffffff;
+  --color-success: #2e6740;
+  --color-success-content: #ffffff;
+  --color-warning: #b45309;
+  --color-warning-content: #ffffff;
+  --color-error: #b91c1c;
+  --color-error-content: #ffffff;
+
+  /* ── Focus ring ──────────────────────────────────────────────────────── */
+  --color-ring: rgba(46, 103, 64, 0.4);
+  --focus-ring: 0 0 0 3px var(--color-ring);
+
+  /* ── Typography ──────────────────────────────────────────────────────── */
+  --font-sans: "Roboto Mono", ui-monospace, "Cascadia Code", "Fira Code",
+    monospace;
+  --font-mono: "Roboto Mono", ui-monospace, "Cascadia Code", "Fira Code",
+    monospace;
+
+  /* ── Font-size scale (Tailwind / DaisyUI) ────────────────────────────── */
+  --text-xs:   0.75rem;   /* 12px */
+  --text-sm:   0.875rem;  /* 14px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg:   1.125rem;  /* 18px */
+  --text-xl:   1.25rem;   /* 20px */
+  --text-2xl:  1.5rem;    /* 24px */
+  --text-code: 0.9em;     /* inline code relative to surrounding text */
+
+  /* ── Font weight ─────────────────────────────────────────────────────── */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+
+  /* ── Line height ─────────────────────────────────────────────────────── */
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.65;
+
+  /* ── Border ──────────────────────────────────────────────────────────── */
+  --border-width: 1px;
+
+  /* ── Spacing scale ───────────────────────────────────────────────────── */
+  --size-1: 4px;
+  --size-2: 8px;
+  --size-3: 12px;
+  --size-4: 16px;
+  --size-5: 24px;
+  --size-6: 32px;
+  --size-7: 48px;
+  --size-8: 64px;
+  --size-9: 96px;
+
+  /* ── Shape ───────────────────────────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* ── Elevation ───────────────────────────────────────────────────────── */
+  --shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.06);
+  --shadow-md: 0 4px 12px rgba(28, 25, 23, 0.1);
+  --shadow-lg: 0 12px 32px rgba(28, 25, 23, 0.14);
+
+  /* ── Motion ──────────────────────────────────────────────────────────── */
+  --transition: 150ms ease;
+
+  /* ── Layout ──────────────────────────────────────────────────────────── */
+  --container: 1400px;
+}
+
+/* ── Dark mode ─────────────────────────────────────────────────────────── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-base-100: #16140f;
+    --color-base-200: #1f1c16;
+    --color-base-300: #2c2821;
+    --color-base-content: #eceae3;
+    --color-base-content-muted: #a8a49a;
+
+    --color-primary: #5bb478;
+    --color-primary-focus: #7ac896;
+    --color-primary-content: #0b1a10;
+
+    --color-neutral: #0a0908;
+    --color-neutral-focus: #000000;
+    --color-neutral-content: #eceae3;
+
+    --color-accent: #7ac896;
+    --color-accent-focus: #9bd9b1;
+    --color-accent-content: #0b1a10;
+
+    --color-ring: rgba(122, 200, 150, 0.45);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+  }
+}

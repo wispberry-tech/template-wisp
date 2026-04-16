@@ -1,0 +1,5 @@
+{# NutritionRow — single row of a nutrition facts table. Required: label, value. #}
+<tr>
+  <th class="table__header" scope="row">{% label %}</th>
+  <td class="table__cell">{% value %}</td>
+</tr>

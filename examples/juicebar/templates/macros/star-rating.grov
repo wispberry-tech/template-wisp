@@ -1,0 +1,8 @@
+{% #if rating > 0 %}
+  {% set full = rating | floor %}
+  <span class="star-rating" aria-label="Rated {% rating %} of 5">
+    {% #each range(1, full) as i %}&#9733;{% /each %}
+    {% #each range(full + 1, 5) as i %}<span class="text--muted">&#9734;</span>{% /each %}
+    {% #if count > 0 %}<span class="star-rating__count">({% count %})</span>{% /if %}
+  </span>
+{% /if %}

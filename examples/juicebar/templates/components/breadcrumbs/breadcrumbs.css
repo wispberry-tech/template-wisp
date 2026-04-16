@@ -1,0 +1,3 @@
+/* Breadcrumb styles now live in base.css under .breadcrumbs; this file
+   keeps a pipeline-hashed entry so the component owns its stylesheet. */
+.breadcrumbs {}

@@ -1,0 +1,14 @@
+{% import Base from "base" %}
+
+<Base>
+  {% #fill "title" %}Not found &mdash; {% site_name %}{% /fill %}
+
+  {% #fill "content" %}
+    <section class="container--narrow not-found">
+      <div class="eyebrow">404</div>
+      <h1>This page is off the menu</h1>
+      <p class="lede">We couldn't find what you're looking for &mdash; it may have been retired, or the link may be off.</p>
+      <p><a href="/" class="btn btn--primary">Back to home</a> <a href="/shop" class="btn">Browse the shop</a></p>
+    </section>
+  {% /fill %}
+</Base>

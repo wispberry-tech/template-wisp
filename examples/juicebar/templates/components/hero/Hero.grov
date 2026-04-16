@@ -1,0 +1,13 @@
+{# Hero — top-of-page hero band. Slots: eyebrow, title, lede, cta, default (art). #}
+{% asset "components/hero/hero.css" type="stylesheet" %}
+<section class="hero">
+  <div class="hero__inner container">
+    <div class="hero__copy">
+      <div class="eyebrow">{% #slot "eyebrow" %}Fresh batch weekly{% /slot %}</div>
+      <h1 class="hero__title">{% #slot "title" %}Take a sip.{% /slot %}</h1>
+      <p class="hero__lede">{% #slot "lede" %}Cold-pressed juice, small-batch kombucha, and two-ounce boosters. Made in small rooms, delivered cold.{% /slot %}</p>
+      <div class="hero__actions">{% #slot "cta" %}<a href="/shop" class="btn btn--accent">Browse the shop</a>{% /slot %}</div>
+    </div>
+    <div class="hero__art">{% #slot %}{% /slot %}</div>
+  </div>
+</section>

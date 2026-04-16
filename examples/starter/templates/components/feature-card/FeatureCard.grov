@@ -1,0 +1,19 @@
+{# FeatureCard — required: title, href. Optional: slot "body". #}
+{% asset "components/feature-card/feature-card.css" type="stylesheet" %}
+<a
+  class="feature-card"
+  href="{% href %}"
+  target="_blank"
+  rel="noopener noreferrer"
+>
+  <h3 class="feature-card__title">
+    <span>{% title %}</span>
+    <svg class="feature-card__arrow" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M7 17 17 7"></path>
+      <path d="M8 7h9v9"></path>
+    </svg>
+  </h3>
+  <div class="feature-card__body">
+    {% #slot "body" %}{% /slot %}
+  </div>
+</a>

@@ -1,6 +1,0 @@
-  {% #if sale_amount > 0 %}
-    <span class="price-strike">{% amount | currency %}</span>
-    <span class="price-sale">{% sale_amount | currency %}</span>
-  {% :else %}
-    <span class="price-regular">{% amount | currency %}</span>
-  {% /if %}

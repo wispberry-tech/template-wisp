@@ -1,0 +1,17 @@
+{# Pagination — page nav. Required: page, total_pages. Optional: query_prefix. #}
+{% asset "components/pagination/pagination.css" type="stylesheet" %}
+{% #if total_pages > 1 %}
+<nav class="pagination" aria-label="Pagination">
+  {% #if page > 1 %}
+    <a href="?{% query_prefix %}page={% page - 1 %}" class="pagination__link">&larr; Prev</a>
+  {% :else %}
+    <span class="pagination__link pagination__link--disabled">&larr; Prev</span>
+  {% /if %}
+  <span class="pagination__info">Page {% page %} of {% total_pages %}</span>
+  {% #if page < total_pages %}
+    <a href="?{% query_prefix %}page={% page + 1 %}" class="pagination__link">Next &rarr;</a>
+  {% :else %}
+    <span class="pagination__link pagination__link--disabled">Next &rarr;</span>
+  {% /if %}
+</nav>
+{% /if %}

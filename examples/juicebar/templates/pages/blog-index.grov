@@ -1,0 +1,36 @@
+{% import Base from "base" %}
+{% import Breadcrumbs from "components/breadcrumbs/Breadcrumbs" %}
+
+<Base>
+  {% #fill "title" %}Journal &mdash; {% site_name %}{% /fill %}
+
+  {% #fill "content" %}
+    {% meta name="description" content="Brewing notes, ingredient stories, and behind-the-scenes posts from the Juicebar kitchen." %}
+
+    <Breadcrumbs crumbs={breadcrumbs} />
+
+    <section class="blog-index container">
+      <div class="eyebrow">Journal</div>
+      <h1 class="blog-index__title">Notes from the kitchen</h1>
+      <p class="lede">What we're brewing, where our pulp goes, and why the pepper matters.</p>
+
+      <div class="grid grid--2 blog-index__grid">
+        {% #each posts as post %}
+          <article class="post-card">
+            <a href="/blog/{% post.slug %}" class="post-card__art">
+              <img class="post-card__art-img" src="/static/svg/{% post.image_svg %}" alt="{% post.title %}" loading="lazy">
+            </a>
+            <div class="post-card__body">
+              <div class="post-card__meta text--muted">{% post.date %} &middot; {% post.author %}</div>
+              <h3 class="post-card__title"><a class="post-card__title-link" href="/blog/{% post.slug %}">{% post.title %}</a></h3>
+              <p>{% post.excerpt %}</p>
+              <a href="/blog/{% post.slug %}" class="post-card__read-more">Read more &rarr;</a>
+            </div>
+          </article>
+        {% :empty %}
+          <p class="empty-state">No posts yet &mdash; check back soon.</p>
+        {% /each %}
+      </div>
+    </section>
+  {% /fill %}
+</Base>

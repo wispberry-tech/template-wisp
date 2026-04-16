@@ -1,6 +1,0 @@
-  {% #if sale_price > 0 %}
-    {% #let %}
-      pct = ((price - sale_price) * 100) / price
-    {% /let %}
-    <span class="badge badge-sale">{% pct | floor %}% off</span>
-  {% /if %}

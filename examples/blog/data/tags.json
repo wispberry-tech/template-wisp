@@ -1,9 +1,0 @@
-[
-  {"name": "Go", "slug": "go", "color": "blue"},
-  {"name": "Templates", "slug": "templates", "color": "purple"},
-  {"name": "Web Dev", "slug": "web-dev", "color": "green"},
-  {"name": "Components", "slug": "components", "color": "orange"},
-  {"name": "Performance", "slug": "performance", "color": "red"},
-  {"name": "Getting Started", "slug": "getting-started", "color": "teal"},
-  {"name": "Releases", "slug": "releases", "color": "gray"}
-]

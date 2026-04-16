@@ -1,0 +1,9 @@
+.page-section { padding: var(--size-8) 0; }
+.page-section--alt { background: var(--color-bg-alt); }
+.page-section__head {
+  max-width: 680px;
+  margin-bottom: var(--size-6);
+}
+.page-section__title { font-size: clamp(1.6rem, 3vw, 2.4rem); }
+.page-section__lede { font-size: 1.05rem; margin: 0; }
+.page-section__body { display: block; }

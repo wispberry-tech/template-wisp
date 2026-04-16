@@ -1,0 +1,19 @@
+{# Hero — page hero section. Required: title. Optional: logo_src, tinted. Slots: lede, actions, extras. #}
+{% asset "components/hero/hero.css" type="stylesheet" %}
+<section class="hero {% #if tinted %}hero--tinted{% /if %}">
+  {% #if logo_src %}
+    <h1 class="visually-hidden">{% title %}</h1>
+    <img class="hero__logo" src="{% logo_src %}" alt="" width="387" height="190">
+  {% :else %}
+    <h1 class="hero__title">{% title %}</h1>
+  {% /if %}
+  <div class="hero__lede">
+    {% #slot "lede" %}{% /slot %}
+  </div>
+  <div class="hero__actions">
+    {% #slot "actions" %}{% /slot %}
+  </div>
+  <div class="hero__extras">
+    {% #slot "extras" %}{% /slot %}
+  </div>
+</section>

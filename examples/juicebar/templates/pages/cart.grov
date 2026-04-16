@@ -1,0 +1,28 @@
+{% import Base from "base" %}
+{% import Breadcrumbs from "components/breadcrumbs/Breadcrumbs" %}
+
+<Base>
+  {% #fill "title" %}Cart &mdash; {% site_name %}{% /fill %}
+
+  {% #fill "content" %}
+    {% meta name="description" content="Your Juicebar cart." %}
+
+    <Breadcrumbs crumbs={breadcrumbs} />
+
+    <section class="cart-page container">
+      <h1>Your cart</h1>
+      <p class="text--muted">Saved in your browser. We never store cart data server-side.</p>
+
+      <div id="cart-root" class="cart-root">
+        <div class="empty-state"><p>Loading cart&hellip;</p></div>
+      </div>
+
+      <noscript>
+        <div class="empty-state">
+          <p>Your cart is stored locally in your browser, which needs JavaScript enabled to work.</p>
+          <a href="/shop" class="btn btn--primary">Browse the shop</a>
+        </div>
+      </noscript>
+    </section>
+  {% /fill %}
+</Base>

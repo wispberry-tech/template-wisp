@@ -1,6 +1,0 @@
-[
-  {"name": "Getting Started", "slug": "getting-started", "description": "Install Grove and render your first template.", "order": 1},
-  {"name": "Template Syntax", "slug": "template-syntax", "description": "Variables, expressions, filters, and control flow.", "order": 2},
-  {"name": "Tags", "slug": "tags", "description": "Template inheritance, includes, components, and macros.", "order": 3},
-  {"name": "Advanced", "slug": "advanced", "description": "Asset management, sandboxing, custom filters, and Go integration.", "order": 4}
-]

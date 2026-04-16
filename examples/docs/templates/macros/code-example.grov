@@ -1,7 +1,0 @@
-{% asset "macros/code-example.css" type="stylesheet" %}
-<div class="code-example">
-  {% #if label %}
-    <div class="code-label">{% label %}</div>
-  {% /if %}
-  <pre><code>{% content %}</code></pre>
-</div>

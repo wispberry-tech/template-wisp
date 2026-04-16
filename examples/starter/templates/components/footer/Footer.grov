@@ -1,0 +1,29 @@
+{# Footer — site footer. Uses globals: site_name, year, repo_url, docs_url, pkg_url. #}
+{% asset "components/footer/footer.css" type="stylesheet" %}
+<footer class="footer">
+  <div class="footer__inner container">
+    <div class="footer__col footer__col--brand">
+      <div class="footer__brand">{% site_name %}</div>
+      <p class="footer__tagline">A bytecode-compiled template engine for Go.</p>
+    </div>
+
+    <nav class="footer__col" aria-label="Footer links">
+      <h4 class="footer__heading">Project</h4>
+      <ul class="footer__list">
+        <li><a href="{% repo_url %}" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+        <li><a href="{% docs_url %}" target="_blank" rel="noopener noreferrer">Docs</a></li>
+        <li><a href="{% pkg_url %}" target="_blank" rel="noopener noreferrer">pkg.go.dev</a></li>
+        <li><a href="{% repo_url %}/issues" target="_blank" rel="noopener noreferrer">Issues</a></li>
+      </ul>
+    </nav>
+
+    <div class="footer__col footer__col--meta">
+      <a class="footer__license" href="{% repo_url %}/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">
+        GPL-3.0
+      </a>
+      <div class="footer__copy">
+        &copy; {% year %} {% site_name %}.
+      </div>
+    </div>
+  </div>
+</footer>

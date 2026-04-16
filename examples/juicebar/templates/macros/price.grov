@@ -1,0 +1,6 @@
+{% #if sale_cents > 0 %}
+  <span class="price-strike text--muted">{% regular_cents | currency %}</span>
+  <span class="price-sale text--sale">{% sale_cents | currency %}</span>
+{% :else %}
+  <span class="price-regular">{% regular_cents | currency %}</span>
+{% /if %}

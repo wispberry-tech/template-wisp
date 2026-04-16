@@ -1,0 +1,31 @@
+{% import Base from "base" %}
+{% import Breadcrumbs from "components/breadcrumbs/Breadcrumbs" %}
+
+<Base>
+  {% #fill "title" %}{% page.title %} &mdash; {% site_name %}{% /fill %}
+
+  {% #fill "content" %}
+    {% meta name="description" content="The story behind Juicebar: two founders, one garage, a leaky kombucha tank." %}
+
+    <Breadcrumbs crumbs={breadcrumbs} />
+
+    <article class="container--narrow prose page-wrap">
+      <div class="eyebrow">About</div>
+      <h1>{% page.title %}</h1>
+      {% page.body_html | safe %}
+
+      <h2>How the shop renders</h2>
+      <p>This page &mdash; and the rest of Juicebar &mdash; is built with <a href="https://github.com/wispberry-tech/grove">Grove</a>, a bytecode-compiled template engine for Go. A short example of what that looks like:</p>
+      {% #verbatim %}
+<pre><code>{% import Base from "base" %}
+&lt;Base&gt;
+  {% #fill "content" %}
+    &lt;h1&gt;{% page.title %}&lt;/h1&gt;
+    {% page.body_html | safe %}
+  {% /fill %}
+&lt;/Base&gt;</code></pre>
+      {% /verbatim %}
+      <p>Templates compile once, render under a millisecond, and are safe for concurrent use. The full source of this example lives in <code>examples/juicebar</code>.</p>
+    </article>
+  {% /fill %}
+</Base>

@@ -1,0 +1,23 @@
+{# Nav — site navigation. Required: site_name. #}
+{% asset "components/nav/nav.css" type="stylesheet" %}
+<nav class="nav" aria-label="Main navigation">
+  <div class="nav__inner container">
+    <a href="/" class="nav__brand">
+      <span class="nav__brand-dot" aria-hidden="true"></span>
+      {% site_name %}
+    </a>
+    <div class="nav__links">
+      <a href="/shop" class="nav__link">Shop</a>
+      <a href="/shop/boosters" class="nav__link">Boosters</a>
+      <a href="/shop/kombuchas" class="nav__link">Kombuchas</a>
+      <a href="/shop/cold-pressed" class="nav__link">Cold-pressed</a>
+      <a href="/blog" class="nav__link">Journal</a>
+      <a href="/about" class="nav__link">About</a>
+    </div>
+    <div class="nav__actions">
+      <a href="/cart" class="nav__cart" aria-label="Cart">
+        Cart<span data-cart-count></span>
+      </a>
+    </div>
+  </div>
+</nav>

@@ -1,0 +1,1 @@
+(function(){function e(){var e=document.querySelector("[data-newsletter-form]");if(!e)return;e.addEventListener("submit",function(t){t.preventDefault();var n=e.querySelector("button");n&&(n.textContent="Thanks — see you next month")})}document.readyState==="loading"?document.addEventListener("DOMContentLoaded",e):e()})()

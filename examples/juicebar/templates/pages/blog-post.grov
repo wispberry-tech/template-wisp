@@ -1,0 +1,31 @@
+{% import Base from "base" %}
+{% import Breadcrumbs from "components/breadcrumbs/Breadcrumbs" %}
+
+<Base>
+  {% #fill "title" %}{% post.title %} &mdash; {% site_name %} Journal{% /fill %}
+
+  {% #fill "content" %}
+    {% #hoist "head" %}
+      <meta name="description" content="{% post.excerpt %}">
+      <meta property="og:title" content="{% post.title %}">
+      <meta property="og:description" content="{% post.excerpt %}">
+      <meta property="og:image" content="/static/svg/{% post.image_svg %}">
+    {% /hoist %}
+
+    <Breadcrumbs crumbs={breadcrumbs} />
+
+    <article class="blog-post">
+      <header class="blog-post__head container--narrow">
+        <div class="eyebrow">{% post.date %} &middot; {% post.author %}</div>
+        <h1>{% post.title %}</h1>
+        <p class="lede">{% post.excerpt %}</p>
+      </header>
+      <div class="blog-post__hero container--narrow">
+        <img class="blog-post__hero-img" src="/static/svg/{% post.image_svg %}" alt="{% post.title %}">
+      </div>
+      <div class="blog-post__body prose container--narrow">
+        {% post.body_html | safe %}
+      </div>
+    </article>
+  {% /fill %}
+</Base>

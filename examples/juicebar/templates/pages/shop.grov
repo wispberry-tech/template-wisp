@@ -1,0 +1,52 @@
+{% import Base from "base" %}
+{% import Breadcrumbs from "components/breadcrumbs/Breadcrumbs" %}
+{% import Filters from "components/filters/Filters" %}
+{% import ProductCard from "components/product-card/ProductCard" %}
+{% import Price from "macros/price" %}
+{% import Badge from "macros/badge" %}
+
+<Base>
+  {% #fill "title" %}{% heading %} &mdash; {% site_name %}{% /fill %}
+
+  {% #fill "content" %}
+    {% meta name="description" content="{% heading %} — shop Juicebar cold-press juice, kombucha, and boosters." %}
+
+    <Breadcrumbs crumbs={breadcrumbs} />
+
+    <section class="shop-hero container">
+      <div class="eyebrow">{% eyebrow %}</div>
+      <h1 class="shop-hero__title">{% heading %}</h1>
+      {% #if lede %}<p class="lede">{% lede %}</p>{% /if %}
+    </section>
+
+    <div class="shop-layout container">
+      <aside class="shop-sidebar">
+        <Filters active={active} base_path={base_path} />
+      </aside>
+
+      <section class="shop-main">
+        <div class="shop-meta">
+          <span>{% result_count %} {% result_count == 1 ? "product" : "products" %}</span>
+        </div>
+
+        <div class="grid grid--3">
+          {% #each products as product %}
+            {% #let %}
+              display_price = product.sale_price_cents > 0 ? product.sale_price_cents : product.price_cents
+            {% /let %}
+            {% #capture price_html %}
+              <Price regular_cents={product.price_cents} sale_cents={product.sale_price_cents} />
+            {% /capture %}
+            <ProductCard handle={product.handle} title={product.title} image_svg={product.image_svg} price_display={price_html} collection_title={product.collection.title}>
+              {% #fill "badge" %}
+                <Badge available={product.available} regular_cents={product.price_cents} sale_cents={product.sale_price_cents} bestseller={product.bestseller} />
+              {% /fill %}
+            </ProductCard>
+          {% :empty %}
+            <p class="empty-state">No products match these filters. <a href="{% base_path %}">Clear filters</a>.</p>
+          {% /each %}
+        </div>
+      </section>
+    </div>
+  {% /fill %}
+</Base>

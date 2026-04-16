@@ -1,0 +1,34 @@
+{% import Base from "base" %}
+{% import Hero from "components/hero/Hero" %}
+{% import FeatureCard from "components/feature-card/FeatureCard" %}
+
+<Base>
+  {% #fill "title" %}Grove — Documentation{% /fill %}
+
+  {% #fill "content" %}
+    {% meta name="description" content="Grove documentation — syntax, components, filters, web primitives, asset pipeline, and API reference." %}
+
+    <div class="page-wrap">
+      <div class="container">
+        <Hero title="Documentation">
+          {% #fill "lede" %}
+            The canonical docs live on GitHub. Pick a topic — each card
+            opens the corresponding Markdown file in the repository.
+          {% /fill %}
+        </Hero>
+
+        <div class="grid grid--cards-wide">
+          {% #each doc_links as d %}
+            <FeatureCard title={d.title} href={d.href}>
+              {% #fill "body" %}
+                {% d.description %}
+              {% /fill %}
+            </FeatureCard>
+          {% :empty %}
+            <p>No documentation entries to display.</p>
+          {% /each %}
+        </div>
+      </div>
+    </div>
+  {% /fill %}
+</Base>

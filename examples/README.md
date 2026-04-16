@@ -1,199 +1,88 @@
 # Grove Template Engine — Examples
 
-This directory contains four complete examples demonstrating Grove's capabilities:
+This directory contains one reference application that exercises every
+major Grove feature in a single cohesive codebase: **Juicebar**.
 
-## Quick Start
+Juicebar replaces the previous four demos (`store/`, `blog/`, `docs/`,
+`email/`) — having one polished, complete example proved easier to learn
+from than four partial slices. See `spec/2026-04-14-juicebar-example-plan.md`
+for the design rationale.
 
-Run any example locally with Go:
-
-```bash
-go run ./examples/blog/     # Start Meridian tech blog
-go run ./examples/store/    # Start Coldfront Supply Co. shop
-go run ./examples/email/    # Start email template preview server
-go run ./examples/docs/     # Start Grove documentation site
-```
-
-Each example runs on its own port (look for "listening on" in the output).
-
----
-
-## Example Breakdown
-
-### 📝 Blog — *Meridian* (`blog/`)
-
-A **professional tech publication** with article management, tagging, author bios, and deep reading experiences.
-
-**Demonstrates:**
-- Component composition (base layouts, cards, author profiles)
-- Per-component CSS and JS co-located with `.grov` templates
-- Conditional rendering (`{% if %}`) and loops (`{% each %}`)
-- Template inheritance via slots (`{% slot %}` / `{% #fill %}`)
-- Semantic HTML and accessibility patterns
-- Advanced CSS patterns (drop caps, serif typography)
-- Mobile-responsive design with hamburger navigation
-
-**Design approach:** Editorial sophistication — Georgia serif body text, generous whitespace, dark header/footer with cream backgrounds.
-
----
-
-### 🏪 Store — *Coldfront Supply Co.* (`store/`)
-
-A **premium outdoor equipment shop** with product catalogs, filtering, sorting, cart management, and checkout.
-
-**Demonstrates:**
-- Reusable component system (extracted Nav, Footer, ProductCard)
-- Complex data structures (products, categories, cart items)
-- Form handling and JavaScript interop (sort dropdown with query param preservation)
-- Captured variables via `{% #let %}` blocks
-- Custom filter registration (`currency` filter in Go)
-- Grid layouts at multiple breakpoints
-- Loading states and accessibility in interactive components
-
-**Design approach:** Functional clarity — white product cards on cream pages, consistent spacing scale, button hierarchy (primary/secondary/ghost).
-
----
-
-### ✉️ Email — *Grove Cloud* (`email/`)
-
-**Transactional email templates** for order confirmations, password resets, plan changes, usage alerts, and account welcome.
-
-**Demonstrates:**
-- Email-safe HTML patterns (table-based layouts, inline styles)
-- Component helpers for common patterns (buttons, dividers, spacers, usage bars)
-- Preheader optimization via `{% #hoist %}`
-- Captured blocks for reusable email content
-- Variable scope and conditional rendering for user-specific messaging
-- Cross-example integration (order confirmations reference Coldfront Supply Co.)
-
-**Design approach:** Professional SaaS emails — green header accent, clear information hierarchy, MSO-safe HTML for Outlook compatibility.
-
----
-
-### 📚 Docs — *Grove Documentation* (`docs/`)
-
-**Developer documentation** for Grove's template syntax, built-in filters, and architecture.
-
-**Demonstrates:**
-- Sidebar navigation with active-page highlighting
-- Deep component nesting (Base → DocsLayout → page templates)
-- Code examples and admonition blocks (Note/Warning/Tip)
-- Search and category filtering
-- Landing page with quick-start section
-- Accessibility: breadcrumbs, skip-to-content link, proper nav semantics
-
-**Design approach:** Technical simplicity — minimal decoration, readable monospace code, dark sidebar for navigation hierarchy.
-
----
-
-## Design System
-
-All examples share a **unified design foundation** (`_shared/tokens.css`):
-
-- **Colors:** Primary green (#2E6740), dark navy, cream page background, semantic alerts
-- **Spacing:** 4px base unit (--space-1 through --space-16)
-- **Typography:** System sans-serif for UI, serif for editorial, monospace for code
-- **Components:** Buttons, cards, forms, navigation, tables with consistent styling
-
-Each example extends the shared tokens with its own personality:
-- **Meridian** adds Georgia serif, drop-cap styling, featured content
-- **Coldfront** adds product grids, sticky sidebars, cart tables  
-- **Grove Cloud** adds email-safe tables, usage bars, transactional affordances
-- **Docs** adds sidebar highlight, code block headers, admonitions
-
----
-
-## What You'll Learn
-
-Working through these examples, you'll master:
-
-✅ **Component Architecture:** How to build reusable components with proper prop passing  
-✅ **Layout Patterns:** Base layouts, slots, nested components, sidebar+main patterns  
-✅ **Control Flow:** Loops, conditionals, empty states, ternary expressions  
-✅ **Data Binding:** Passing data through component trees, scope handling  
-✅ **Interop:** Capturing template output, registering custom filters, hoisting content  
-✅ **Accessibility:** Semantic HTML, ARIA labels, keyboard navigation, skip links  
-✅ **Responsive Design:** Mobile-first CSS, grid layouts, breakpoint management  
-✅ **Production Patterns:** Error handling, loading states, form submission  
-
----
-
-## File Structure
-
-```
-examples/
-├── _shared/
-│   └── tokens.css              # Shared design tokens (imported by all)
-├── blog/
-│   ├── main.go                 # Server & data fixtures
-│   ├── static/
-│   │   ├── base.css            # Global resets, layout, utilities
-│   │   └── tokens.css          # Copy of shared tokens
-│   └── templates/
-│       ├── base.grov           # Main layout — declares base.css
-│       ├── index.grov          # Homepage
-│       ├── post.grov           # Single article
-│       ├── composites/
-│       │   ├── nav/
-│       │   │   ├── nav.grov    # Navigation component
-│       │   │   ├── nav.css     # Nav styles (co-located)
-│       │   │   └── nav.js      # Mobile menu toggle
-│       │   └── card/
-│       │       ├── card.grov   # Post card component
-│       │       └── card.css    # Card styles (co-located)
-│       └── primitives/
-│           └── button/
-│               ├── button.grov # Button component
-│               ├── button.css  # Button styles (co-located)
-│               └── button.js   # Loading state behavior
-├── store/
-├── email/
-├── docs/
-└── README.md                   # This file
-```
-
-Each component owns its CSS and JS files. Components declare their dependencies via `{% asset %}`, which bubble up through composition and are deduplicated in `RenderResult`. Global styles live in `static/base.css` and load first (via `priority=10`).
-
-### Asset pipeline
-
-Three of the four examples (**blog**, **store**, **docs**) opt into the
-`pkg/grove/assets` pipeline: each calls `assets.Builder.Build()` at startup
-to minify and content-hash every colocated `.css`/`.js` into `dist/`, then
-passes `manifest.Resolve` to `grove.WithAssetResolver`. Templates reference
-assets by logical name (e.g. `composites/nav/nav.css`) and the engine rewrites
-them to `/dist/composites/nav/nav.<hash>.css` at render time.
-
-| Example | Pipeline | Minify | Notes |
-|---------|----------|--------|-------|
-| blog    | ✅       | ✅     | Reference implementation |
-| store   | ✅       | ✅     | Plus custom `currency` filter |
-| docs    | ✅       | ✅     | Combined with sandbox config |
-| email   | ❌       | —      | Email clients require inline styles |
-
-URL-style `{% asset "/static/base.css" %}` paths still work as a passthrough
-escape hatch for hand-managed global stylesheets.
-
----
-
-## Running in Development
-
-For **live reloading** of templates, use [entr](https://github.com/eradman/entr) or similar:
+## Quick start
 
 ```bash
-ls examples/blog/templates/*.grov | entr go run ./examples/blog/
+go run ./examples/juicebar
+# → http://localhost:3001
 ```
 
-For **asset hot-rebuild**, swap `builder.Build()` for `builder.Watch(ctx, handlers)`
-(see `pkg/grove/assets/watch.go`) — it polls colocated CSS/JS on a 500ms tick
-and atomically swaps the manifest so the engine's resolver picks up new hashes
-without restart. Failed files keep their previous entry (partial swap).
+## What it demonstrates
 
-Each example includes sample data in `main.go` (fixture data for products, posts, etc.). Edit these files to customize the demo content.
+| Feature | Where to look |
+|---|---|
+| Components + named slots + fills | `templates/components/product-card/ProductCard.grov` (badge, action, default slots) |
+| Default slot content | `templates/components/hero/Hero.grov` |
+| `{% import %}` macros | `templates/macros/{price,badge,star-rating,nutrition-row}.grov` |
+| `{% #let %}` / `{% #capture %}` | `templates/pages/shop.grov`, `templates/pages/product.grov` |
+| `{% #each ... :empty %}` | `templates/pages/shop.grov` |
+| `{% #hoist "head" %}` (JSON-LD, per-page meta) | `templates/pages/product.grov` |
+| `{% meta %}` | page templates |
+| `{% asset %}` through a `Manifest` | every component CSS declaration |
+| `{% #verbatim %}` | `templates/pages/about.grov` |
+| `GroveResolve` with closure registry | `main.go` `Product.GroveResolve("collection")` |
+| Custom filter (`currency`) | `main.go` `eng.RegisterFilter("currency", …)` |
+| Sandbox (`MaxLoopIter`) | `main.go` `grove.WithSandbox(…)` |
+| Asset pipeline + minify | `main.go` `assets.NewWithDefaults(…)` |
+| Transactional email templates | `/preview/email/order`, `/preview/email/welcome` |
 
----
+## Page inventory
 
-## Learn More
+| Route | What it shows |
+|---|---|
+| `/` | Hero + bestsellers + collection tiles + testimonial + bundle CTA |
+| `/shop` · `/shop/{collection}` | Grid with sidebar filters (availability, price) + sort |
+| `/products/{handle}` | Image, price, variants, ingredients, nutrition, FAQ, related, JSON-LD |
+| `/cart` | SSR shell hydrated by `static/js/cart.js` (localStorage) |
+| `/blog` · `/blog/{slug}` | Journal index + article |
+| `/about` · `/contact` · `/sustainability` | Content pages |
+| `POST /contact` | Demo submit handler |
+| `/preview/email/order` · `/preview/email/welcome` | Transactional email templates with sample data |
 
-- [Grove Repository](https://github.com/wispberry-tech/grove)
-- Grove uses the sigil-based syntax: `{% ... %}` for directives, `{% variable %}` for output
-- All templates are compiled to bytecode and executed on Grove's stack-based VM
-- Performance: templates render in microseconds, support concurrent rendering
+## File layout
+
+```
+juicebar/
+├── main.go              # server, heavily commented — read top to bottom
+├── data/                # JSON: products, collections, posts, pages
+├── static/              # tokens.css, base.css, pages.css, cart.js, SVGs
+└── templates/
+    ├── base.grov
+    ├── pages/           # one per route
+    ├── components/      # Nav, Footer, Hero, Section, ProductCard, …
+    ├── macros/          # price, badge, star-rating, nutrition-row
+    └── emails/          # order-confirmation, welcome
+```
+
+## Asset pipeline
+
+Component CSS lives beside its `.grov` file (e.g.
+`templates/components/nav/nav.css`). The asset builder scans `templates/`,
+hashes each file, writes to `dist/`, and publishes a manifest that Grove's
+`{% asset %}` tag consults at render time. Logical names like
+`"components/nav/nav.css"` resolve to hashed URLs like
+`/dist/components/nav/nav.<hash>.css`.
+
+Global stylesheets (`tokens.css`, `base.css`, `pages.css`) and the client
+cart JS live under `static/` and are served unmodified at `/static/…`.
+
+## Cart persistence
+
+The cart lives in `localStorage` under the key `juicebar:cart`. The server
+never sees it — `cart.grov` renders an empty shell that `cart.js` hydrates
+after fetching `/static/data/products.json`. This keeps the server fully
+stateless and keeps `main.go` focused on Grove features, not session code.
+
+## SVGs
+
+Placeholder product and collection art is generated by
+`static/svg/_gen.sh`. Re-run it to swap the palette; outputs are committed
+so fresh clones render without a build step.

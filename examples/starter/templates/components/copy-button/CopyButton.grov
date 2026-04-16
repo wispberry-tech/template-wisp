@@ -1,0 +1,16 @@
+{# CopyButton — required: value. Renders the value as <code> with a copy icon on the right. #}
+{% asset "components/copy-button/copy-button.css" type="stylesheet" %}
+{% asset "components/copy-button/copy-button.js" type="script" defer %}
+<div class="copy-button" data-copy-value="{% value %}">
+  <code class="copy-button__value">{% value %}</code>
+  <button type="button" class="copy-button__btn" aria-label="Copy to clipboard">
+    <svg class="copy-button__icon copy-button__icon--copy" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+      <path d="M5 15V5a2 2 0 0 1 2-2h10"></path>
+    </svg>
+    <svg class="copy-button__icon copy-button__icon--check" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="m5 12 5 5L20 7"></path>
+    </svg>
+  </button>
+  <span class="copy-button__status visually-hidden" aria-live="polite"></span>
+</div>

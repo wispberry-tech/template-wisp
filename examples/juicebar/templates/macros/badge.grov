@@ -1,0 +1,10 @@
+{% #if not available %}
+  <span class="badge badge--out">Sold out</span>
+{% :else if sale_cents > 0 %}
+  {% #let %}
+    pct = ((regular_cents - sale_cents) * 100) / regular_cents
+  {% /let %}
+  <span class="badge badge--sale">{% pct | floor %}% off</span>
+{% :else if bestseller %}
+  <span class="badge badge--new">Bestseller</span>
+{% /if %}

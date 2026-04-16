@@ -1,0 +1,30 @@
+{% asset "/static/css/tokens.css" type="stylesheet" priority=100 %}
+{% asset "/static/css/base.css" type="stylesheet" priority=90 %}
+{% asset "layout.css" type="stylesheet" priority=80 %}
+{% import Nav from "components/nav/Nav" %}
+{% import Footer from "components/footer/Footer" %}
+{% #hoist "head" %}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;600;700&display=swap">
+{% /hoist %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% #slot "title" %}Grove — A template engine for Go{% /slot %}</title>
+  <!-- HEAD_META -->
+  <!-- HEAD_ASSETS -->
+  <!-- HEAD_HOIST -->
+</head>
+<body>
+  <a href="#main" class="skip-link">Skip to main content</a>
+  <Nav site_name={site_name} />
+  <main id="main">
+    {% #slot "content" %}{% /slot %}
+  </main>
+  <Footer site_name={site_name} year={year} />
+  <!-- FOOT_ASSETS -->
+</body>
+</html>

@@ -1,0 +1,15 @@
+{% import Base from "base" %}
+
+<Base>
+  {% #fill "title" %}Thanks &mdash; {% site_name %}{% /fill %}
+
+  {% #fill "content" %}
+    <section class="container--narrow page-wrap">
+      <div class="eyebrow">Thanks</div>
+      <h1>We got your message</h1>
+      <p class="lede">We'll reply to {% email %} within one business day.</p>
+      <p><a href="/" class="btn">Back to home</a></p>
+      <p class="text--muted contact-success__note">This is a demo: nothing was sent.</p>
+    </section>
+  {% /fill %}
+</Base>

@@ -1,0 +1,14 @@
+{# Breadcrumbs — page context navigation. Required: crumbs (array of {label, href?}). The last crumb must omit href to mark the current page. #}
+{% asset "components/breadcrumbs/breadcrumbs.css" type="stylesheet" %}
+{% #if crumbs | length > 0 %}
+<nav class="breadcrumbs container" aria-label="Breadcrumb">
+  {% #each crumbs as crumb %}
+    {% #if crumb.href %}
+      <a class="breadcrumbs__link" href="{% crumb.href %}">{% crumb.label %}</a>
+      <span class="breadcrumbs__sep" aria-hidden="true">/</span>
+    {% :else %}
+      <span aria-current="page">{% crumb.label %}</span>
+    {% /if %}
+  {% /each %}
+</nav>
+{% /if %}

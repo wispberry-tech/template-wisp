@@ -1,8 +1,0 @@
-{% asset "primitives/button/button.css" type="stylesheet" %}
-{% asset "primitives/button/button.js" type="script" %}
-
-{% #if type == "link" %}
-  <a href="{% href %}" class="btn btn-{% variant %}" data-button>{% label %}</a>
-{% :else %}
-  <button type="{% type %}" class="btn btn-{% variant %}" data-button>{% label %}</button>
-{% /if %}

@@ -1,0 +1,16 @@
+{
+  "assets": {
+    "components/breadcrumbs/breadcrumbs.css": "/dist/components/breadcrumbs/breadcrumbs.e3b0c442.css",
+    "components/bundle/bundle.css": "/dist/components/bundle/bundle.0b4af52d.css",
+    "components/collection-card/collection-card.css": "/dist/components/collection-card/collection-card.708d9f26.css",
+    "components/filters/filters.css": "/dist/components/filters/filters.20e825cd.css",
+    "components/footer/footer.css": "/dist/components/footer/footer.4b1c7318.css",
+    "components/footer/footer.js": "/dist/components/footer/footer.df110f8a.js",
+    "components/hero/hero.css": "/dist/components/hero/hero.3d7a8688.css",
+    "components/nav/nav.css": "/dist/components/nav/nav.f1a2260f.css",
+    "components/pagination/pagination.css": "/dist/components/pagination/pagination.f9db8a2a.css",
+    "components/product-card/product-card.css": "/dist/components/product-card/product-card.0523e9f7.css",
+    "components/section/section.css": "/dist/components/section/section.736d6173.css",
+    "components/testimonial/testimonial.css": "/dist/components/testimonial/testimonial.a3821f37.css"
+  }
+}

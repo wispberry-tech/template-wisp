@@ -1,0 +1,76 @@
+{% import Base from "base" %}
+{% import Hero from "components/hero/Hero" %}
+{% import Section from "components/section/Section" %}
+{% import ProductCard from "components/product-card/ProductCard" %}
+{% import CollectionCard from "components/collection-card/CollectionCard" %}
+{% import Testimonial from "components/testimonial/Testimonial" %}
+{% import Bundle from "components/bundle/Bundle" %}
+{% import Price from "macros/price" %}
+{% import Badge from "macros/badge" %}
+
+<Base>
+  {% #fill "title" %}{% site_name %} &mdash; Cold-pressed juice &amp; kombucha{% /fill %}
+
+  {% #fill "content" %}
+    {% meta name="description" content="Cold-pressed juice, 14-day small-batch kombucha, and two-ounce boosters. Made in small rooms, delivered cold." %}
+    {% meta property="og:title" content="Juicebar — Take a sip" %}
+    {% meta property="og:description" content="Cold-pressed juice and small-batch kombucha, delivered cold." %}
+
+    <Hero>
+      {% #fill "eyebrow" %}Fresh batch every Monday{% /fill %}
+      {% #fill "title" %}Take a sip.{% /fill %}
+      {% #fill "lede" %}Cold-pressed juice, 14-day kombucha, two-ounce boosters. Made in small rooms. Delivered cold.{% /fill %}
+      {% #fill "cta" %}
+        <a href="/shop" class="btn btn--accent">Shop all</a>
+        <a href="/shop/boosters" class="btn">Try a booster</a>
+      {% /fill %}
+      <img src="/static/svg/products/fiery-ginger.svg" alt="Fiery Ginger Booster bottle">
+    </Hero>
+
+    <Section title="Bestsellers" eyebrow="Most ordered this month" lede="The drinks our regulars can't stop reordering.">
+      <div class="grid grid--3">
+        {% #each bestsellers as product %}
+          {% #capture price_html %}
+            <Price regular_cents={product.price_cents} sale_cents={product.sale_price_cents} />
+          {% /capture %}
+          <ProductCard handle={product.handle} title={product.title} image_svg={product.image_svg} price_display={price_html} collection_title={product.collection.title}>
+            {% #fill "badge" %}
+              <Badge available={product.available} regular_cents={product.price_cents} sale_cents={product.sale_price_cents} bestseller={product.bestseller} />
+            {% /fill %}
+          </ProductCard>
+        {% :empty %}
+          <p class="empty-state">No bestsellers yet &mdash; check back soon.</p>
+        {% /each %}
+      </div>
+    </Section>
+
+    <Section title="Shop by collection" alt={true}>
+      <div class="grid grid--2">
+        {% #each collections as c %}
+          <CollectionCard handle={c.handle} title={c.title} tagline={c.tagline} description={c.description} image_svg={c.image_svg} />
+        {% /each %}
+      </div>
+    </Section>
+
+    <Section title="What people say">
+      <Testimonial author="Maya D." role="Portland, OR">
+        The Fiery Ginger Booster replaced my morning coffee and I didn't even notice until week three. Then I noticed, and I was fine.
+      </Testimonial>
+    </Section>
+
+    <Section title="Bundle up" alt={true} lede="Save versus singles &mdash; or try a curated mix.">
+      <div class="grid">
+        {% #each bundles as product %}
+          {% #capture bundle_price %}
+            <Price regular_cents={product.price_cents} sale_cents={product.sale_price_cents} />
+          {% /capture %}
+          <Bundle handle={product.handle} title={product.title} description={product.description} image_svg={product.image_svg} price_display={bundle_price} />
+        {% /each %}
+      </div>
+    </Section>
+
+    <Section title="Made with care" eyebrow="Sustainability" lede="Glass bottles, composted pulp, carbon-offset shipping. We can't make it free &mdash; we can make it honest.">
+      <p><a href="/sustainability" class="btn">Read how we do it</a></p>
+    </Section>
+  {% /fill %}
+</Base>

@@ -1,0 +1,127 @@
+{% import Base from "base" %}
+{% import Breadcrumbs from "components/breadcrumbs/Breadcrumbs" %}
+{% import ProductCard from "components/product-card/ProductCard" %}
+{% import Price from "macros/price" %}
+{% import Badge from "macros/badge" %}
+{% import StarRating from "macros/star-rating" %}
+{% import NutritionRow from "macros/nutrition-row" %}
+
+<Base>
+  {% #fill "title" %}{% product.title %} &mdash; {% site_name %}{% /fill %}
+
+  {% #fill "content" %}
+    {% #hoist "head" %}
+      <meta name="description" content="{% product.description %}">
+      <meta property="og:title" content="{% product.title %} — Juicebar">
+      <meta property="og:description" content="{% product.description %}">
+      <meta property="og:image" content="/static/svg/{% product.image_svg %}">
+      <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "{% product.title %}",
+        "image": "/static/svg/{% product.image_svg %}",
+        "description": "{% product.description %}",
+        "brand": { "@type": "Brand", "name": "{% site_name %}" },
+        "aggregateRating": { "@type": "AggregateRating", "ratingValue": "{% product.rating %}", "reviewCount": "{% product.review_count %}" }
+      }
+      </script>
+    {% /hoist %}
+
+    <Breadcrumbs crumbs={breadcrumbs} />
+
+    <article class="product-detail container">
+      <div class="product-detail__art">
+        <img class="product-detail__art-img" src="/static/svg/{% product.image_svg %}" alt="{% product.title %}">
+      </div>
+      <div class="product-detail__info">
+        <div class="eyebrow">{% product.collection.title %}</div>
+        <h1 class="product-detail__info-title">{% product.title %}</h1>
+        <StarRating rating={product.rating} count={product.review_count} />
+
+        <div class="product-detail__price">
+          <Price regular_cents={product.price_cents} sale_cents={product.sale_price_cents} />
+          <Badge available={product.available} regular_cents={product.price_cents} sale_cents={product.sale_price_cents} bestseller={product.bestseller} />
+        </div>
+
+        {% #if product.sale_price_cents > 0 %}
+          {% #capture savings_line %}
+            {% #let %}
+              savings = product.price_cents - product.sale_price_cents
+            {% /let %}
+            <p class="product-detail__savings">You save <strong>{% savings | currency %}</strong> versus the regular price.</p>
+          {% /capture %}
+          {% savings_line | safe %}
+        {% /if %}
+
+        <p class="product-detail__lede">{% product.description %}</p>
+
+        {% #if product.sizes | length > 0 %}
+          <div class="form-field">
+            <label class="form-field__label" for="size-select">Size</label>
+            <select class="form-field__input" id="size-select">
+              {% #each product.sizes as s %}<option value="{% s %}">{% s %}</option>{% /each %}
+            </select>
+          </div>
+        {% /if %}
+
+        <div class="form-field">
+          <label class="form-field__label" for="qty-select">Qty</label>
+          <select class="form-field__input" id="qty-select">
+            {% #each range(1, 6) as n %}<option value="{% n %}">{% n %}</option>{% /each %}
+          </select>
+        </div>
+
+        {% #if product.available %}
+          <button type="button" class="btn btn--accent btn--add" data-cart-add="{% product.handle %}" data-label="Add to cart">Add to cart</button>
+        {% :else %}
+          <button type="button" class="btn" disabled>Sold out &mdash; back soon</button>
+        {% /if %}
+      </div>
+    </article>
+
+    <section class="product-detail__extra container">
+      <div class="product-detail__col">
+        <h2 class="product-detail__col-title">Ingredients</h2>
+        <ul class="ingredient-list">
+          {% #each product.ingredients as ing %}<li class="ingredient-list__item">{% ing %}</li>{% /each %}
+        </ul>
+      </div>
+      {% #if product.nutrition | length > 0 %}
+      <div class="product-detail__col">
+        <h2 class="product-detail__col-title">Nutrition</h2>
+        <table class="table">
+          {% #each product.nutrition as row %}
+            <NutritionRow label={row.label} value={row.value} />
+          {% /each %}
+        </table>
+      </div>
+      {% /if %}
+      {% #if product.faq | length > 0 %}
+      <div class="product-detail__col">
+        <h2 class="product-detail__col-title">FAQ</h2>
+        <dl class="faq">
+          {% #each product.faq as item %}
+            <dt class="faq__question">{% item.q %}</dt>
+            <dd class="faq__answer">{% item.a %}</dd>
+          {% /each %}
+        </dl>
+      </div>
+      {% /if %}
+    </section>
+
+    {% #if related | length > 0 %}
+      <section class="container page-wrap">
+        <h2>You might also like</h2>
+        <div class="grid grid--3">
+          {% #each related as rp %}
+            {% #capture rp_price %}
+              <Price regular_cents={rp.price_cents} sale_cents={rp.sale_price_cents} />
+            {% /capture %}
+            <ProductCard handle={rp.handle} title={rp.title} image_svg={rp.image_svg} price_display={rp_price} collection_title={rp.collection.title} />
+          {% /each %}
+        </div>
+      </section>
+    {% /if %}
+  {% /fill %}
+</Base>

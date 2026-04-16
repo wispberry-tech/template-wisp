@@ -1,0 +1,34 @@
+[
+  {
+    "id": "boosters",
+    "handle": "boosters",
+    "title": "Boosters",
+    "tagline": "A shot of something fierce",
+    "description": "Concentrated wellness shots — ginger, turmeric, beetroot. Two ounces, zero compromise.",
+    "image_svg": "collections/boosters.svg"
+  },
+  {
+    "id": "kombuchas",
+    "handle": "kombuchas",
+    "title": "Kombuchas",
+    "tagline": "Fizz with a past",
+    "description": "Small-batch brews fermented 14 days. Live cultures, half the sugar of store-bought.",
+    "image_svg": "collections/kombuchas.svg"
+  },
+  {
+    "id": "cold-pressed",
+    "handle": "cold-pressed",
+    "title": "Cold-pressed",
+    "tagline": "Nothing but the fruit",
+    "description": "Hydraulic-pressed juices. No heat, no oxidation, no bottled yesterday.",
+    "image_svg": "collections/cold-pressed.svg"
+  },
+  {
+    "id": "bundles",
+    "handle": "bundles",
+    "title": "Bundles",
+    "tagline": "Better together",
+    "description": "Curated three- and six-packs. Save up to 20% versus singles.",
+    "image_svg": "collections/bundles.svg"
+  }
+]

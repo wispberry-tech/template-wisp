@@ -1,0 +1,61 @@
+{# Email template: inline styles required by email clients; see STANDARDS.md §5 #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Order confirmation &mdash; {% site_name %}</title>
+</head>
+<body style="margin:0;padding:0;background:#fdf8f1;font-family:Georgia,serif;color:#1b1b1b;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fdf8f1;padding:32px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.06);">
+        <tr>
+          <td style="padding:40px 32px 24px;border-bottom:1px solid #e5dcc7;">
+            <div style="font-size:12px;letter-spacing:0.1em;text-transform:uppercase;color:#8f3d00;font-weight:700;">Order confirmed</div>
+            <h1 style="margin:8px 0 0;font-size:28px;">Thanks, {% customer_name %}.</h1>
+            <p style="color:#5c564c;margin:8px 0 0;">Order <strong>#{% order_id %}</strong> &middot; placed {% order_date %}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+              {% #each items as item %}
+                <tr>
+                  <td style="padding:12px 0;border-bottom:1px solid #f1e8d3;">
+                    <strong>{% item.title %}</strong>
+                    <div style="color:#5c564c;font-size:13px;">{% item.size %} &middot; Qty {% item.qty %}</div>
+                  </td>
+                  <td style="padding:12px 0;border-bottom:1px solid #f1e8d3;text-align:right;font-weight:700;">{% item.line_cents | currency %}</td>
+                </tr>
+              {% /each %}
+              <tr>
+                <td style="padding:12px 0;color:#5c564c;">Subtotal</td>
+                <td style="padding:12px 0;text-align:right;">{% subtotal_cents | currency %}</td>
+              </tr>
+              <tr>
+                <td style="padding:12px 0;color:#5c564c;">Shipping</td>
+                <td style="padding:12px 0;text-align:right;">{% shipping_cents | currency %}</td>
+              </tr>
+              <tr>
+                <td style="padding:16px 0 4px;border-top:2px solid #1b1b1b;font-weight:700;font-size:18px;">Total</td>
+                <td style="padding:16px 0 4px;border-top:2px solid #1b1b1b;text-align:right;font-weight:700;font-size:18px;">{% total_cents | currency %}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:24px 32px;background:#f5ecdc;">
+            <p style="margin:0;color:#5c564c;font-size:14px;">Shipping to <strong>{% shipping_address %}</strong>. Refrigerated overnight &mdash; keep an eye out for the courier.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px;text-align:center;color:#8a7f6a;font-size:12px;">
+            You are receiving this email because you placed an order with {% site_name %}.<br>
+            Questions? Reply to this email any time.
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>

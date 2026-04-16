@@ -1,0 +1,25 @@
+{% import Base from "base" %}
+{% import Hero from "components/hero/Hero" %}
+{% import Button from "components/button/Button" %}
+
+<Base>
+  {% #fill "title" %}Not Found — Grove{% /fill %}
+
+  {% #fill "content" %}
+    <div class="page-wrap">
+      <div class="container">
+        <Hero title="404">
+          {% #fill "lede" %}
+            That page does not exist. The site is small — try the home
+            page or jump straight into the docs.
+          {% /fill %}
+          {% #fill "actions" %}
+            <Button href="/" variant="primary">Back to home</Button>
+            <Button href="/docs" variant="outline">Browse docs</Button>
+            <Button href={issues_url} variant="ghost" external={true}>Report a broken link</Button>
+          {% /fill %}
+        </Hero>
+      </div>
+    </div>
+  {% /fill %}
+</Base>

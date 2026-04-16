@@ -1,0 +1,9 @@
+{# Testimonial — pull-quote with attribution. Required: author. Optional: role. Slot: default (quote body). #}
+{% asset "components/testimonial/testimonial.css" type="stylesheet" %}
+<figure class="testimonial">
+  <blockquote class="testimonial__quote">{% #slot %}{% /slot %}</blockquote>
+  <figcaption class="testimonial__caption">
+    <strong>{% author %}</strong>
+    {% #if role %}<span class="testimonial__role"> &middot; {% role %}</span>{% /if %}
+  </figcaption>
+</figure>

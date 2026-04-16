@@ -1,0 +1,13 @@
+{# CollectionCard — collection preview card. Required: handle, title, tagline, description, image_svg. #}
+{% asset "components/collection-card/collection-card.css" type="stylesheet" %}
+<a href="/shop/{% handle %}" class="collection-card">
+  <div class="collection-card__art">
+    <img class="collection-card__art-img" src="/static/svg/{% image_svg %}" alt="{% title %}" loading="lazy">
+  </div>
+  <div class="collection-card__body">
+    <div class="eyebrow">{% tagline %}</div>
+    <h3 class="collection-card__title">{% title %}</h3>
+    <p class="collection-card__desc">{% description | truncate(100) %}</p>
+    <span class="collection-card__link">Shop the collection &rarr;</span>
+  </div>
+</a>

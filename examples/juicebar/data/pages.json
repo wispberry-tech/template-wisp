@@ -1,0 +1,17 @@
+[
+  {
+    "slug": "about",
+    "title": "About Juicebar",
+    "body_html": "<p class=\"lede\">Juicebar is a small cold-press and kombucha company. We make drinks we want to drink, and we sell them to people who want to drink them too.</p><h2>Who we are</h2><p>Nora Pell and Ben Ashworth started Juicebar in 2022 out of a converted garage. We had a hydraulic press, a leaky kombucha tank, and strong opinions about sugar.</p><p>Today there are twelve of us. We still press every bottle ourselves, we still brew kombucha for 14 days, and we still argue about recipes every Tuesday morning.</p><h2>What we make</h2><p>Three collections. Boosters — two-ounce concentrate shots. Kombuchas — 14-day small-batch brews. Cold-pressed — hydraulic-pressed raw juices. Plus bundles that pull them together.</p><h2>Where we ship</h2><p>Refrigerated overnight, anywhere in the lower 48. Live cultures in the kombucha, no preservatives in the juice — temperature control matters.</p>"
+  },
+  {
+    "slug": "contact",
+    "title": "Contact us",
+    "body_html": "<p>Questions about an order, wholesale inquiries, or something else? Drop us a note below and we'll reply within one business day.</p><p>For urgent order issues, call the kitchen at <strong>(555) 481-9922</strong> weekdays, 9a–5p Pacific.</p>"
+  },
+  {
+    "slug": "sustainability",
+    "title": "Sustainability",
+    "body_html": "<p class=\"lede\">We can't pretend that shipping refrigerated glass bottles across the country is environmentally free. We try to make the honest trade-offs.</p><h2>Glass, not plastic</h2><p>Every bottle is glass, and every bottle is reusable. Mail them back in the prepaid carton that came with your order, get a $0.25 credit per bottle on your next purchase.</p><h2>Pulp goes to cows</h2><p>We press about two tons of fruit pulp a week. Every bit of it goes to a dairy farm 40 minutes east of the kitchen — cows eat the sweet fruit pulp, the rest composts into soil.</p><h2>Cold shipping is the honest cost</h2><p>Overnight refrigerated shipping has a carbon cost we can't offset away. We buy offsets from Climeworks for 120% of our shipping emissions. It's not perfect. It's what we can do today.</p><h2>What we still haven't figured out</h2><p>The insulated liners inside every shipping carton are made of recycled denim, but the outer cooling gel packs are single-use plastic. We are looking for a better option.</p>"
+  }
+]

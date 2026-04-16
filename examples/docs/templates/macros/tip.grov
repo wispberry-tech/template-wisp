@@ -1,6 +1,0 @@
-  {% asset "macros/admonitions.css" type="stylesheet" %}
-  {% set title = title | default("Tip") %}
-  <div class="admonition admonition-tip">
-    <strong>{% title %}</strong>
-    <div>{% message | safe %}</div>
-  </div>

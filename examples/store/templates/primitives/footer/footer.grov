@@ -1,4 +1,0 @@
-{% asset "primitives/footer/footer.css" type="stylesheet" %}
-<footer class="footer">
-  <p>&copy; {% year %} Coldfront Supply Co. Built with the <a href="https://github.com/wispberry-tech/grove">Grove</a> template engine.</p>
-</footer>

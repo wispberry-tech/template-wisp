@@ -1,0 +1,280 @@
+[
+  {
+    "id": "p01",
+    "handle": "fiery-ginger-booster",
+    "title": "Fiery Ginger Booster",
+    "price_cents": 650,
+    "sale_price_cents": 0,
+    "available": true,
+    "collection_id": "boosters",
+    "sizes": ["2 oz"],
+    "description": "A two-ounce wake-up call. Fresh ginger root, cayenne, lemon, a drop of raw honey.",
+    "ingredients": ["Ginger root", "Lemon", "Cayenne", "Raw honey", "Filtered water"],
+    "nutrition": [
+      {"label": "Calories", "value": "35"},
+      {"label": "Sugar", "value": "6g"},
+      {"label": "Vitamin C", "value": "20% DV"}
+    ],
+    "faq": [
+      {"q": "How hot is it?", "a": "Warming, not burning. Think fresh ginger, not hot sauce."},
+      {"q": "Is it pasteurized?", "a": "No — cold-pressed and bottled the same day. Refrigerate on arrival."}
+    ],
+    "image_svg": "products/fiery-ginger.svg",
+    "rating": 4.7,
+    "review_count": 128,
+    "featured": true,
+    "bestseller": true
+  },
+  {
+    "id": "p02",
+    "handle": "turmeric-sunrise",
+    "title": "Turmeric Sunrise",
+    "price_cents": 700,
+    "sale_price_cents": 550,
+    "available": true,
+    "collection_id": "boosters",
+    "sizes": ["2 oz"],
+    "description": "Turmeric, orange, black pepper. The pepper matters — it's how the curcumin absorbs.",
+    "ingredients": ["Turmeric root", "Orange", "Lemon", "Black pepper", "Agave"],
+    "nutrition": [
+      {"label": "Calories", "value": "40"},
+      {"label": "Sugar", "value": "7g"}
+    ],
+    "faq": [
+      {"q": "Will it stain?", "a": "Yes. Drink it, don't spill it."}
+    ],
+    "image_svg": "products/turmeric-sunrise.svg",
+    "rating": 4.5,
+    "review_count": 84,
+    "featured": true,
+    "bestseller": false
+  },
+  {
+    "id": "p03",
+    "handle": "beetroot-charge",
+    "title": "Beetroot Charge",
+    "price_cents": 650,
+    "sale_price_cents": 0,
+    "available": true,
+    "collection_id": "boosters",
+    "sizes": ["2 oz"],
+    "description": "Pre-workout, pre-anything. Beetroot and ginger, nothing added.",
+    "ingredients": ["Beetroot", "Ginger root", "Lemon"],
+    "nutrition": [
+      {"label": "Calories", "value": "45"},
+      {"label": "Nitrates", "value": "500mg"}
+    ],
+    "faq": [
+      {"q": "When should I drink it?", "a": "60–90 minutes before exercise for the full effect."}
+    ],
+    "image_svg": "products/beetroot-charge.svg",
+    "rating": 4.4,
+    "review_count": 61,
+    "featured": false,
+    "bestseller": true
+  },
+  {
+    "id": "p04",
+    "handle": "classic-ginger-kombucha",
+    "title": "Classic Ginger Kombucha",
+    "price_cents": 550,
+    "sale_price_cents": 0,
+    "available": true,
+    "collection_id": "kombuchas",
+    "sizes": ["12 oz", "16 oz"],
+    "description": "Our house kombucha. 14-day brew, green tea base, fresh pressed ginger.",
+    "ingredients": ["Filtered water", "Green tea", "Cane sugar (consumed in fermentation)", "Ginger", "Live cultures"],
+    "nutrition": [
+      {"label": "Calories", "value": "30"},
+      {"label": "Sugar", "value": "4g"},
+      {"label": "Probiotics", "value": "1 billion CFU"}
+    ],
+    "faq": [
+      {"q": "How much alcohol?", "a": "Trace — under 0.5% ABV, non-alcoholic by FDA definition."}
+    ],
+    "image_svg": "products/classic-ginger-kombucha.svg",
+    "rating": 4.8,
+    "review_count": 312,
+    "featured": true,
+    "bestseller": true
+  },
+  {
+    "id": "p05",
+    "handle": "hibiscus-rose-kombucha",
+    "title": "Hibiscus Rose Kombucha",
+    "price_cents": 600,
+    "sale_price_cents": 0,
+    "available": true,
+    "collection_id": "kombuchas",
+    "sizes": ["12 oz", "16 oz"],
+    "description": "Dried hibiscus, a whisper of rose. Pours ruby, drinks dry.",
+    "ingredients": ["Filtered water", "Green tea", "Cane sugar", "Hibiscus flower", "Rose petal", "Live cultures"],
+    "nutrition": [
+      {"label": "Calories", "value": "25"},
+      {"label": "Sugar", "value": "3g"}
+    ],
+    "faq": [],
+    "image_svg": "products/hibiscus-rose-kombucha.svg",
+    "rating": 4.6,
+    "review_count": 97,
+    "featured": false,
+    "bestseller": false
+  },
+  {
+    "id": "p06",
+    "handle": "blueberry-basil-kombucha",
+    "title": "Blueberry Basil Kombucha",
+    "price_cents": 600,
+    "sale_price_cents": 500,
+    "available": true,
+    "collection_id": "kombuchas",
+    "sizes": ["12 oz"],
+    "description": "Wild blueberries, Thai basil. Summer in a bottle; on sale while the berries hold out.",
+    "ingredients": ["Filtered water", "Green tea", "Cane sugar", "Blueberry", "Thai basil", "Live cultures"],
+    "nutrition": [
+      {"label": "Calories", "value": "35"},
+      {"label": "Sugar", "value": "5g"}
+    ],
+    "faq": [],
+    "image_svg": "products/blueberry-basil-kombucha.svg",
+    "rating": 4.3,
+    "review_count": 54,
+    "featured": false,
+    "bestseller": false
+  },
+  {
+    "id": "p07",
+    "handle": "green-machine",
+    "title": "Green Machine",
+    "price_cents": 850,
+    "sale_price_cents": 0,
+    "available": true,
+    "collection_id": "cold-pressed",
+    "sizes": ["12 oz", "16 oz"],
+    "description": "Kale, spinach, cucumber, green apple, lemon, ginger. The one you drink when you mean it.",
+    "ingredients": ["Kale", "Spinach", "Cucumber", "Green apple", "Lemon", "Ginger"],
+    "nutrition": [
+      {"label": "Calories", "value": "110"},
+      {"label": "Sugar", "value": "16g"},
+      {"label": "Vitamin K", "value": "400% DV"}
+    ],
+    "faq": [
+      {"q": "How long does it keep?", "a": "Cold-pressed juices keep 3 days refrigerated. Don't freeze."}
+    ],
+    "image_svg": "products/green-machine.svg",
+    "rating": 4.6,
+    "review_count": 201,
+    "featured": true,
+    "bestseller": true
+  },
+  {
+    "id": "p08",
+    "handle": "citrus-sunrise",
+    "title": "Citrus Sunrise",
+    "price_cents": 800,
+    "sale_price_cents": 0,
+    "available": true,
+    "collection_id": "cold-pressed",
+    "sizes": ["12 oz", "16 oz"],
+    "description": "Orange, grapefruit, carrot, turmeric. Morning in a bottle.",
+    "ingredients": ["Orange", "Grapefruit", "Carrot", "Turmeric"],
+    "nutrition": [
+      {"label": "Calories", "value": "130"},
+      {"label": "Sugar", "value": "24g"},
+      {"label": "Vitamin C", "value": "180% DV"}
+    ],
+    "faq": [],
+    "image_svg": "products/citrus-sunrise.svg",
+    "rating": 4.5,
+    "review_count": 142,
+    "featured": false,
+    "bestseller": true
+  },
+  {
+    "id": "p09",
+    "handle": "pineapple-mint",
+    "title": "Pineapple Mint",
+    "price_cents": 800,
+    "sale_price_cents": 0,
+    "available": false,
+    "collection_id": "cold-pressed",
+    "sizes": ["12 oz"],
+    "description": "Whole pineapple, fresh mint, lime. Back in stock next week.",
+    "ingredients": ["Pineapple", "Mint", "Lime"],
+    "nutrition": [
+      {"label": "Calories", "value": "120"},
+      {"label": "Sugar", "value": "22g"}
+    ],
+    "faq": [],
+    "image_svg": "products/pineapple-mint.svg",
+    "rating": 4.7,
+    "review_count": 73,
+    "featured": false,
+    "bestseller": false
+  },
+  {
+    "id": "p10",
+    "handle": "daily-three-pack",
+    "title": "Daily Three-Pack",
+    "price_cents": 2400,
+    "sale_price_cents": 1999,
+    "available": true,
+    "collection_id": "bundles",
+    "sizes": ["3 × 2 oz"],
+    "description": "One each of Fiery Ginger, Turmeric Sunrise, Beetroot Charge. 17% off singles.",
+    "ingredients": ["Ginger root", "Turmeric root", "Beetroot", "Lemon", "Orange", "Cayenne", "Black pepper"],
+    "nutrition": [
+      {"label": "Servings", "value": "3"}
+    ],
+    "faq": [
+      {"q": "Can I pick the flavors?", "a": "Not yet — the three-pack is curated for daily rotation."}
+    ],
+    "image_svg": "products/daily-three-pack.svg",
+    "rating": 4.9,
+    "review_count": 188,
+    "featured": true,
+    "bestseller": true
+  },
+  {
+    "id": "p11",
+    "handle": "brew-six-pack",
+    "title": "Kombucha Six-Pack",
+    "price_cents": 3400,
+    "sale_price_cents": 2899,
+    "available": true,
+    "collection_id": "bundles",
+    "sizes": ["6 × 12 oz"],
+    "description": "Two of each kombucha. Classic Ginger, Hibiscus Rose, Blueberry Basil.",
+    "ingredients": ["Filtered water", "Green tea", "Cane sugar", "Ginger", "Hibiscus", "Rose petal", "Blueberry", "Thai basil", "Live cultures"],
+    "nutrition": [
+      {"label": "Servings", "value": "6"}
+    ],
+    "faq": [],
+    "image_svg": "products/brew-six-pack.svg",
+    "rating": 4.7,
+    "review_count": 95,
+    "featured": false,
+    "bestseller": false
+  },
+  {
+    "id": "p12",
+    "handle": "reset-ritual",
+    "title": "Reset Ritual Bundle",
+    "price_cents": 4800,
+    "sale_price_cents": 0,
+    "available": true,
+    "collection_id": "bundles",
+    "sizes": ["Mixed"],
+    "description": "Three cold-pressed juices + three boosters. A long weekend in a box.",
+    "ingredients": ["Kale", "Spinach", "Cucumber", "Orange", "Grapefruit", "Carrot", "Pineapple", "Mint", "Ginger", "Turmeric", "Beetroot"],
+    "nutrition": [
+      {"label": "Servings", "value": "6"}
+    ],
+    "faq": [],
+    "image_svg": "products/reset-ritual.svg",
+    "rating": 4.8,
+    "review_count": 42,
+    "featured": true,
+    "bestseller": false
+  }
+]

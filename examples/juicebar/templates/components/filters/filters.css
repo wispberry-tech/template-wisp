@@ -1,0 +1,56 @@
+.shop-filters {
+  background: var(--color-card);
+  padding: var(--size-5);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  position: sticky;
+  top: 90px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-5);
+  border: 0;
+}
+.shop-filters__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-3);
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+.shop-filters__legend {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-ink-muted);
+  font-weight: 600;
+  padding: 0;
+}
+.shop-filters__check {
+  display: flex;
+  align-items: center;
+  gap: var(--size-2);
+  font-size: 0.95rem;
+}
+.shop-filters__range {
+  display: flex;
+  gap: var(--size-3);
+}
+.shop-filters__range-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-1);
+  font-size: 0.8rem;
+  color: var(--color-ink-muted);
+  flex: 1;
+}
+.shop-filters__input {
+  padding: var(--size-2) var(--size-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  font: inherit;
+  width: 100%;
+}
+.shop-filters__actions { display: flex; gap: var(--size-2); }
+.shop-filters__actions .btn { flex: 1; text-align: center; }

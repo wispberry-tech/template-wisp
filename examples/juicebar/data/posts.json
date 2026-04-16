@@ -1,0 +1,47 @@
+[
+  {
+    "slug": "why-14-days",
+    "title": "Why we brew our kombucha for 14 days",
+    "excerpt": "Most commercial kombucha brews for 7. We brew twice as long. Here's what changes.",
+    "body_html": "<p>Most commercial kombucha ferments for 7 days. We ferment for 14. The extra week isn't marketing — it's chemistry.</p><p>In the first seven days, the yeast and bacteria convert most of the sugar to alcohol, then to acetic and gluconic acid. The result is tart, lightly carbonated, and still quite sweet. By day 14, residual sugars drop from around 8g per serving to under 4g, acid content rises, and the drink develops a drier finish.</p><h2>What it costs us</h2><p>Twice the fermentation time means half the tank throughput. We've had to be patient about scaling. But the drink we sell today is the drink we want to drink.</p><h2>What you taste</h2><p>Lower sugar, more complexity, a finish closer to dry cider than soda. Try our Classic Ginger against any 7-day brew and tell us we're wrong.</p>",
+    "author": "Nora Pell",
+    "date": "2026-03-18",
+    "image_svg": "collections/kombuchas.svg"
+  },
+  {
+    "slug": "the-pepper-matters",
+    "title": "The pepper matters: why turmeric without black pepper is wasted",
+    "excerpt": "A little chemistry on curcumin absorption, and why every bottle of our Turmeric Sunrise has a crack of pepper.",
+    "body_html": "<p>Curcumin — the bright-yellow active compound in turmeric — has a bioavailability problem. Your body absorbs almost none of it on its own.</p><p>Piperine, the active compound in black pepper, blocks the liver enzyme that breaks curcumin down. With 1/20th of a teaspoon of pepper, curcumin absorption jumps roughly 2000%. That is not a typo.</p><p>Every bottle of Turmeric Sunrise has a measured crack of black pepper. You can't taste it. You can feel what it does.</p>",
+    "author": "Ben Ashworth",
+    "date": "2026-03-02",
+    "image_svg": "products/turmeric-sunrise.svg"
+  },
+  {
+    "slug": "cold-pressed-vs-juiced",
+    "title": "Cold-pressed vs. centrifugal: what the marketing gets right",
+    "excerpt": "Hydraulic pressing really is different. But not for every reason the label tells you.",
+    "body_html": "<p>Centrifugal juicers spin a blade at 10,000 RPM to pulverize fruit and fling the pulp out. Fast, cheap, and they introduce heat and oxygen — both of which break down enzymes and vitamins.</p><p>Hydraulic presses crush the fruit slowly, at low temperature, with no spinning blade. You get more juice per pound of fruit, and the juice oxidizes more slowly in the bottle.</p><p>The marketing says cold-pressed is <em>healthier</em>. The honest answer is: it is when you drink it within a few days. After that, vitamins decay either way. Drink it fresh.</p>",
+    "author": "Nora Pell",
+    "date": "2026-02-14",
+    "image_svg": "collections/cold-pressed.svg"
+  },
+  {
+    "slug": "what-we-compost",
+    "title": "What we compost: where two tons of fruit pulp goes every week",
+    "excerpt": "Running a juice company means generating pulp. Here's where ours ends up.",
+    "body_html": "<p>Every week we put about two tons of fruit pulp into the back of a pickup and drive it 40 minutes east to a dairy farm. The cows eat the sweet stuff. The rest gets composted into soil that grows next year's greens.</p><p>It is not a carbon-neutral operation. It is a lot better than a landfill.</p>",
+    "author": "Ben Ashworth",
+    "date": "2026-01-28",
+    "image_svg": "collections/bundles.svg"
+  },
+  {
+    "slug": "starting-juicebar",
+    "title": "How Juicebar started: a garage, a press, a leaky tank",
+    "excerpt": "We did not have a business plan. We had a press, a kombucha tank that leaked, and a list of friends.",
+    "body_html": "<p>We started Juicebar in a garage in late 2022. The press was secondhand. The kombucha tank leaked from the bottom valve for a full year before we admitted we needed a new one. We sold our first bottles at a weekend farmers' market for $8 each because we couldn't figure out what else to charge.</p><p>Four years later the garage is a proper kitchen, the tank doesn't leak, and we ship to half the state. The bottles are still $8.</p>",
+    "author": "Nora Pell",
+    "date": "2026-01-05",
+    "image_svg": "collections/boosters.svg"
+  }
+]

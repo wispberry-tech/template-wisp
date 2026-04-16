@@ -1,0 +1,43 @@
+{% import Base from "base" %}
+{% import Hero from "components/hero/Hero" %}
+{% import FeatureCard from "components/feature-card/FeatureCard" %}
+{% import CopyButton from "components/copy-button/CopyButton" %}
+{% import Button from "components/button/Button" %}
+
+<Base>
+  {% #fill "title" %}Grove — A template engine for Go{% /fill %}
+
+  {% #fill "content" %}
+    {% meta name="description" content="Grove: a bytecode-compiled template engine for Go. Components, colocated assets, and a safe shared-bytecode VM." %}
+
+    <div class="page-wrap">
+      <div class="container">
+        <Hero title="Grove" logo_src="/static/img/grove-full-logo@2x.png" tinted={true}>
+          {% #fill "lede" %}
+            A bytecode-compiled template engine for Go — components,
+            colocated assets, and a safe shared-bytecode VM.
+          {% /fill %}
+          {% #fill "actions" %}
+            <Button href={repo_url} variant="primary" external={true}>View on GitHub</Button>
+            <Button href={docs_url} variant="outline" external={true}>Read the docs</Button>
+          {% /fill %}
+          {% #fill "extras" %}
+            <CopyButton value="go get github.com/wispberry-tech/grove" />
+          {% /fill %}
+        </Hero>
+
+        <div class="grid grid--cards-wide">
+          {% #each highlights as h %}
+            <FeatureCard title={h.title} href={h.href}>
+              {% #fill "body" %}
+                {% h.description %}
+              {% /fill %}
+            </FeatureCard>
+          {% :empty %}
+            <p>No highlights to display.</p>
+          {% /each %}
+        </div>
+      </div>
+    </div>
+  {% /fill %}
+</Base>

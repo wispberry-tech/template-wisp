@@ -1,0 +1,43 @@
+{# Footer — site footer. Required: site_name, year. #}
+{% asset "components/footer/footer.css" type="stylesheet" %}
+{% asset "components/footer/footer.js" type="script" %}
+<footer class="footer">
+  <div class="footer__inner container">
+    <div class="footer__col">
+      <div class="footer__brand">{% site_name %}</div>
+      <p class="footer__muted">Cold-pressed juice, small-batch kombucha, two-ounce boosters. Made in small rooms, delivered cold.</p>
+    </div>
+    <div class="footer__col">
+      <h4 class="footer__col-title">Shop</h4>
+      <ul class="footer__list">
+        <li><a class="footer__link" href="/shop">All products</a></li>
+        <li><a class="footer__link" href="/shop/boosters">Boosters</a></li>
+        <li><a class="footer__link" href="/shop/kombuchas">Kombuchas</a></li>
+        <li><a class="footer__link" href="/shop/cold-pressed">Cold-pressed</a></li>
+        <li><a class="footer__link" href="/shop/bundles">Bundles</a></li>
+      </ul>
+    </div>
+    <div class="footer__col">
+      <h4 class="footer__col-title">Company</h4>
+      <ul class="footer__list">
+        <li><a class="footer__link" href="/about">About</a></li>
+        <li><a class="footer__link" href="/sustainability">Sustainability</a></li>
+        <li><a class="footer__link" href="/blog">Journal</a></li>
+        <li><a class="footer__link" href="/contact">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer__col">
+      <h4 class="footer__col-title">Stay in touch</h4>
+      <p class="footer__muted">One email a month, no more. Recipes, new releases, occasional coupons.</p>
+      <form class="footer__newsletter" action="/contact" method="post" data-newsletter-form>
+        <label class="visually-hidden" for="footer-email">Email address</label>
+        <input class="footer__newsletter-input" id="footer-email" type="email" name="email" placeholder="you@email.com" required>
+        <button type="submit" class="btn btn--primary footer__newsletter-submit">Sign up</button>
+      </form>
+    </div>
+  </div>
+  <div class="footer__bottom container">
+    <span>&copy; {% year %} {% site_name %}. All rights reserved.</span>
+    <span class="footer__muted">Built with <a class="footer__link" href="https://github.com/wispberry-tech/grove">Grove</a>.</span>
+  </div>
+</footer>

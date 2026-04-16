@@ -1,0 +1,7 @@
+{# Button — Optional: href, variant (primary|outline|ghost), external. Slot: default (label). #}
+{% asset "components/button/button.css" type="stylesheet" %}
+{% #if href %}
+  <a class="btn{% #if variant %} btn--{% variant %}{% /if %}" href="{% href %}"{% #if external %} target="_blank" rel="noopener noreferrer"{% /if %}>{% #slot %}{% /slot %}</a>
+{% :else %}
+  <button type="button" class="btn{% #if variant %} btn--{% variant %}{% /if %}">{% #slot %}{% /slot %}</button>
+{% /if %}

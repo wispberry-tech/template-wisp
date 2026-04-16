@@ -1,0 +1,16 @@
+{# Bundle — featured bundle promo. Required: handle, title, description, image_svg, price_display. #}
+{% asset "components/bundle/bundle.css" type="stylesheet" %}
+<div class="bundle">
+  <div class="bundle__art">
+    <img class="bundle__art-img" src="/static/svg/{% image_svg %}" alt="{% title %}">
+  </div>
+  <div class="bundle__body">
+    <div class="eyebrow">Bundle</div>
+    <h3 class="bundle__title">{% title %}</h3>
+    <p class="bundle__desc">{% description %}</p>
+    <div class="bundle__footer">
+      <span class="bundle__price">{% price_display | safe %}</span>
+      <a href="/products/{% handle %}" class="btn btn--accent">See bundle</a>
+    </div>
+  </div>
+</div>
