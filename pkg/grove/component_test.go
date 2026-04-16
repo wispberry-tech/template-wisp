@@ -342,3 +342,65 @@ func TestComponent_SelfClosingComponentInEachFillPosition(t *testing.T) {
 		})
 	}
 }
+
+// Tier 2 #4: name collision — caller var and component prop share a name.
+// Fill body renders in caller scope, so `{% name %}` inside the fill must bind
+// to the caller's var, NOT the component's prop. Asymmetric: the component
+// body sees only the prop.
+func TestComponent_FillAndBody_NameCollisionResolvesIndependently(t *testing.T) {
+	store := grove.NewMemoryStore()
+	store.Set("wrap.html", `body={% name %}|slot={% slot %}`)
+	store.Set("page.html", `{% import Wrap from "wrap" %}<Wrap name="prop">fill={% name %}</Wrap>`)
+	require.Equal(t,
+		`body=prop|slot=fill=caller`,
+		renderComponent(t, store, "page.html", grove.Data{"name": "caller"}))
+}
+
+// Tier 2 #5: mutation across the fill boundary.
+// A fill body runs in a NEW scope whose parent is the caller's scope
+// (internal/vm/vm.go OP_SLOT: `v.sc = scope.New(frame.callerScope)`).
+// Reads fall through, but writes stay local — unlike `for` loops which do not
+// push a scope (see TestSet_InLoop_PersistsAfterLoop). Both `set` and `#let`
+// inside a fill are therefore invisible to the caller after the component
+// returns.
+func TestComponent_FillBodyScope_DoesNotLeakWrites(t *testing.T) {
+	store := grove.NewMemoryStore()
+	store.Set("wrap.html", `<{% slot %}>`)
+
+	t.Run("set does not leak", func(t *testing.T) {
+		store.Set("page.html",
+			`{% import Wrap from "wrap" %}`+
+				`{% set x = "before" %}`+
+				`<Wrap>{% set x = "after" %}in</Wrap>`+
+				`[{% x %}]`)
+		require.Equal(t, `<in>[before]`, renderComponent(t, store, "page.html", grove.Data{}))
+	})
+
+	t.Run("let does not leak", func(t *testing.T) {
+		store.Set("page.html",
+			`{% import Wrap from "wrap" %}`+
+				`{% set x = "before" %}`+
+				"<Wrap>{% #let %}\n  x = \"inside\"\n{% /let %}in</Wrap>"+
+				`[{% x %}]`)
+		require.Equal(t, `<in>[before]`, renderComponent(t, store, "page.html", grove.Data{}))
+	})
+}
+
+// Tier 2 #6: loop.parent across a component boundary via a fill.
+// A fill body runs in caller scope. If the caller is iterating when it invokes
+// the component, an inner loop in the fill must see the caller's loop as its
+// parent. Conversely, an inner loop in the component body (isolated scope)
+// must NOT see the caller's loop.
+func TestComponent_LoopParentAcrossFillBoundary(t *testing.T) {
+	store := grove.NewMemoryStore()
+	store.Set("wrap.html", `[{% slot %}]`)
+	store.Set("page.html",
+		`{% import Wrap from "wrap" %}`+
+			`{% #each outer as o %}<Wrap>{% #each inner as i %}{% loop.parent.index %}:{% loop.index %};{% /each %}</Wrap>{% /each %}`)
+	require.Equal(t,
+		`[1:1;1:2;][2:1;2:2;]`,
+		renderStore(t, store, "page.html", grove.Data{
+			"outer": []int{10, 20},
+			"inner": []int{1, 2},
+		}))
+}
