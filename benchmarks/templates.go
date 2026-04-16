@@ -30,13 +30,13 @@ var SimpleTemplates = map[string]string{
 // --- Loop: iterate over a slice ---
 
 var LoopTemplates = map[string]string{
-	EngGrove: `<ul>{% #each items as item %}<li>{% item %}</li>{% /each %}</ul>`,
+	EngGrove:        `<ul>{% #each items as item %}<li>{% item %}</li>{% /each %}</ul>`,
 	EngHTMLTemplate: `<ul>{{range .Items}}<li>{{.}}</li>{{end}}</ul>`,
 	EngTextTemplate: `<ul>{{range .Items}}<li>{{.}}</li>{{end}}</ul>`,
-	EngPongo2: `<ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>`,
-	EngJet:    `<ul>{{range _, item := .Items}}<li>{{item}}</li>{{end}}</ul>`,
-	EngLiquid: `<ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>`,
-	EngHandlebars: `<ul>{{#each items}}<li>{{this}}</li>{{/each}}</ul>`,
+	EngPongo2:       `<ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>`,
+	EngJet:          `<ul>{{range _, item := .Items}}<li>{{item}}</li>{{end}}</ul>`,
+	EngLiquid:       `<ul>{% for item in items %}<li>{{ item }}</li>{% endfor %}</ul>`,
+	EngHandlebars:   `<ul>{{#each items}}<li>{{this}}</li>{{/each}}</ul>`,
 }
 
 // --- Conditional: if/elif/else ---
@@ -130,7 +130,6 @@ var ComplexTemplates = map[string]string{
 </article>
 {{/each}}
 </div>`,
-
 }
 
 // --- Data types ---

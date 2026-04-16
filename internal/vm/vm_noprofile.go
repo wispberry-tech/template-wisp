@@ -18,6 +18,6 @@ const CatCount = 0
 
 type profileState struct{}
 
-func profileInit() profileState                          { return profileState{} }
-func profileRecord(_ *profileState, _ compiler.Opcode)   {}
-func profileFlush(_ *profileState)                       {}
+func profileInit() profileState                        { return profileState{} }
+func profileRecord(_ *profileState, _ compiler.Opcode) {}
+func profileFlush(_ *profileState)                     {}

@@ -92,10 +92,10 @@ func BoolVal(b bool) Value {
 	return v
 }
 
-func IntVal(n int64) Value                { return Value{typ: TypeInt, ival: n} }
-func FloatVal(f float64) Value            { return Value{typ: TypeFloat, fval: f} }
-func StringVal(s string) Value            { return Value{typ: TypeString, sval: s} }
-func SafeHTMLVal(s string) Value          { return Value{typ: TypeSafeHTML, sval: s} }
+func IntVal(n int64) Value        { return Value{typ: TypeInt, ival: n} }
+func FloatVal(f float64) Value    { return Value{typ: TypeFloat, fval: f} }
+func StringVal(s string) Value    { return Value{typ: TypeString, sval: s} }
+func SafeHTMLVal(s string) Value  { return Value{typ: TypeSafeHTML, sval: s} }
 func ListVal(items []Value) Value { return Value{typ: TypeList, oval: items} }
 
 // MapVal creates a TypeMap Value that stores the raw map[string]any directly.
@@ -410,7 +410,7 @@ func GetAttr(obj Value, name string, strict bool) (Value, error) {
 	switch obj.typ {
 	case TypeMap:
 		if v, ok := obj.MapGetVal(name); ok {
-			return v, nil  // v is already a Value, no FromAny needed
+			return v, nil // v is already a Value, no FromAny needed
 		}
 		if strict {
 			return Nil, fmt.Errorf("undefined attribute %q", name)
@@ -478,7 +478,7 @@ func GetIndex(obj, key Value) (Value, error) {
 	case TypeMap:
 		k := key.String()
 		if v, ok := obj.MapGetVal(k); ok {
-			return v, nil  // v is already a Value, no FromAny needed
+			return v, nil // v is already a Value, no FromAny needed
 		}
 		return Nil, nil
 	}

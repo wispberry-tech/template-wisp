@@ -5,10 +5,10 @@ package lexer
 type TokenKind uint8
 
 const (
-	TK_EOF          TokenKind = iota
-	TK_TEXT                   // raw text between delimiters
-	TK_TAG_START              // {% or {%-
-	TK_TAG_END                // %} or -%}
+	TK_EOF       TokenKind = iota
+	TK_TEXT                // raw text between delimiters
+	TK_TAG_START           // {% or {%-
+	TK_TAG_END             // %} or -%}
 	// Literals
 	TK_STRING // "..." or '...'
 	TK_INT    // 123
@@ -42,14 +42,14 @@ const (
 	TK_GT  // >
 	TK_GTE // >=
 	// Boolean keywords
-	TK_AND  // and
-	TK_OR   // or
-	TK_NOT  // not
+	TK_AND      // and
+	TK_OR       // or
+	TK_NOT      // not
 	TK_QUESTION // ?  (ternary)
 	TK_COLON    // :  (ternary)
 	TK_LBRACE   // { (map literal)
 	TK_RBRACE   // } (map literal)
-	TK_IN   // in   (for...in)
+	TK_IN       // in   (for...in)
 	// Svelte-style sigil tokens inside {% %}
 	TK_BLOCK_OPEN   // #keyword  (Value = keyword, e.g. "if", "each", "fill")
 	TK_BLOCK_BRANCH // :keyword  (Value = keyword, e.g. "else", "empty")

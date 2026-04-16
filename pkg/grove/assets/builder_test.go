@@ -24,9 +24,9 @@ func TestBuilder_WritesHashedFiles(t *testing.T) {
 	src := t.TempDir()
 	dst := t.TempDir()
 	writeTree(t, src, map[string]string{
-		"a.css":               ".a { color: red; }",
-		"primitives/b.js":     "console.log('b');",
-		"ignored.txt":         "skip me",
+		"a.css":           ".a { color: red; }",
+		"primitives/b.js": "console.log('b');",
+		"ignored.txt":     "skip me",
 	})
 
 	b := NewWithDefaults(Config{SourceDir: src, OutputDir: dst})

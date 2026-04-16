@@ -182,4 +182,3 @@ func formatBytes(b uint64) string {
 		return fmt.Sprintf("%dB", b)
 	}
 }
-

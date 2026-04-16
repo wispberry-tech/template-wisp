@@ -16,8 +16,8 @@ func setupServeBuilder(t *testing.T) (*Builder, string) {
 	src := t.TempDir()
 	dst := t.TempDir()
 	writeTree(t, src, map[string]string{
-		"app.css":         ".app{}",
-		"nested/site.js":  "console.log(1);",
+		"app.css":        ".app{}",
+		"nested/site.js": "console.log(1);",
 	})
 	b := NewWithDefaults(Config{SourceDir: src, OutputDir: dst})
 	_, err := b.Build()

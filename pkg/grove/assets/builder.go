@@ -345,4 +345,3 @@ func emit(onEvent func(Event), e Event) {
 		onEvent(e)
 	}
 }
-
