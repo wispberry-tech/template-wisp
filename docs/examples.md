@@ -1,60 +1,56 @@
 # Examples
 
-The `examples/` directory contains four complete apps. See
-[`examples/README.md`](../examples/README.md) for the high-level tour and
-per-example README files for design notes.
-
-| Example | Port | Uses asset pipeline | Notable features |
-|---------|------|---------------------|------------------|
-| [blog](../examples/blog)   | 3000 | ✅ | Component composition, slots, `safe`-filtered HTML body |
-| [store](../examples/store) | 3001 | ✅ | Custom `currency` filter, filtering/sort via query params |
-| [docs](../examples/docs)   | 3002 | ✅ | Sandbox config, sidebar + breadcrumbs, macros |
-| [email](../examples/email) | 3003 | ❌ (inline styles) | `{% #hoist %}` preheaders, MSO-safe HTML |
+The `examples/` directory contains a single reference application —
+**Juicebar** — that exercises every major Grove feature in one cohesive
+codebase. See [`examples/README.md`](../examples/README.md) for the full
+tour and `spec/2026-04-14-juicebar-example-plan.md` for the design
+rationale behind consolidating four prior demos into one.
 
 ```bash
-go run ./examples/blog
-go run ./examples/store
-go run ./examples/docs
-go run ./examples/email
+go run ./examples/juicebar
+# → http://localhost:3001
 ```
 
----
+## Feature-to-file map
 
-## Blog (reference)
+| Feature | File |
+|---|---|
+| Components + named slots + fills | `examples/juicebar/templates/components/product-card/ProductCard.grov` |
+| Default slot content | `examples/juicebar/templates/components/hero/Hero.grov` |
+| Macros via `{% import %}` | `examples/juicebar/templates/macros/*.grov` |
+| `{% #let %}` / `{% #capture %}` / `{% #each ... :empty %}` | `examples/juicebar/templates/pages/{shop,product}.grov` |
+| `{% meta %}` | page templates |
+| `{% #hoist "head" %}` (JSON-LD, per-page meta) | `examples/juicebar/templates/pages/product.grov` |
+| `{% asset %}` through a `Manifest` | every component CSS declaration |
+| `{% #verbatim %}` | `examples/juicebar/templates/pages/about.grov` |
+| `GroveResolve` via closure over registry | `examples/juicebar/main.go` `Product.GroveResolve("collection")` |
+| Custom filter (`currency`) | `examples/juicebar/main.go` |
+| Sandbox (`MaxLoopIter`) | `examples/juicebar/main.go` |
+| Asset pipeline + minify | `examples/juicebar/main.go` |
+| Transactional email templates | `examples/juicebar/templates/emails/`, served at `/preview/email/*` |
 
-`examples/blog/` is the canonical Grove integration. It's the smallest example
-with every feature wired up.
-
-### Project structure
+## Project structure
 
 ```
-examples/blog/
-├── main.go
-├── data/                           JSON fixtures: authors, tags, posts
-├── dist/                           Generated: hashed CSS/JS + manifest.json
-├── static/
-│   ├── base.css                    Hand-managed global styles
-│   └── tokens.css
+examples/juicebar/
+├── main.go                   # server — heavily commented, read top to bottom
+├── data/                     # JSON: products, collections, posts, pages
+├── dist/                     # Generated: hashed CSS/JS + manifest.json
+├── static/                   # globals (tokens.css, base.css, pages.css, cart.js, SVGs)
 └── templates/
-    ├── base.grov                   Root layout with slots
-    ├── index.grov                  Homepage
-    ├── post.grov                   Single post page
-    ├── composites/
-    │   ├── card/{card.grov,card.css}
-    │   ├── nav/{nav.grov,nav.css,nav.js}
-    │   ├── author-card/...
-    │   └── breadcrumbs/...
-    └── primitives/
-        ├── footer/{footer.grov,footer.css}
-        ├── tag-badge/{tag-badge.grov,tag-badge.css}
-        └── button/{button.grov,button.css,button.js}
+    ├── base.grov
+    ├── pages/                # home, shop, product, cart, blog-*, about, contact, …
+    ├── components/           # Nav, Footer, Hero, Section, ProductCard, …
+    ├── macros/               # price, badge, star-rating, nutrition-row
+    └── emails/               # order-confirmation, welcome
 ```
 
-Each component co-locates its CSS / JS. The builder (see below) walks
-`templates/`, hashes + minifies every `.css` / `.js`, and writes them to
-`dist/` with a manifest.
+Every component colocates its `.grov` + `.css`. The asset builder scans
+`templates/`, hashes and minifies each CSS/JS file, writes to `dist/`,
+and publishes a manifest that Grove's `{% asset %}` tag consults at
+render time.
 
-### The Go application
+## Engine wire-up
 
 ```go
 builder := assets.NewWithDefaults(assets.Config{
@@ -66,123 +62,85 @@ builder := assets.NewWithDefaults(assets.Config{
     ManifestPath:   filepath.Join(distDir, "manifest.json"),
 })
 manifest, err := builder.Build()
-if err != nil {
-    log.Fatalf("asset build failed: %v", err)
-}
+if err != nil { log.Fatal(err) }
 
-store := grove.NewFileSystemStore(templateDir)
 eng := grove.New(
-    grove.WithStore(store),
+    grove.WithStore(grove.NewFileSystemStore(templateDir)),
     grove.WithAssetResolver(manifest.Resolve),
+    grove.WithSandbox(grove.SandboxConfig{MaxLoopIter: 5000}),
 )
+eng.SetGlobal("site_name", "Juicebar")
+eng.RegisterFilter("currency", grove.FilterFn(...))
 
-// HTTP routing
 distPattern, distHandler := builder.Route()
 r.Handle(distPattern+"*", distHandler)
 ```
 
-`WithAssetResolver(manifest.Resolve)` means every logical
-`{% asset "composites/nav/nav.css" %}` in the templates is rewritten to
-`/dist/composites/nav/nav.<hash>.css` at render time. `builder.Route()`
-serves those files with `Cache-Control: immutable`. See
-[Asset Pipeline](asset-pipeline.md) for the full API.
+`{% asset "components/nav/nav.css" %}` in a template is rewritten at
+render time to `/dist/components/nav/nav.<hash>.css` via
+`manifest.Resolve`. `builder.Route()` serves those files with
+`Cache-Control: immutable`. See [Asset Pipeline](asset-pipeline.md) for
+the full API.
 
-### Templates
+## Base template pattern
 
-`base.grov` keeps the hand-managed global as a URL-style (passthrough)
-asset and composes nav/footer components:
+`base.grov` declares the global assets and uses placeholder comments that
+the Go response assembler fills in from `RenderResult`:
 
 ```html
-{% asset "/static/base.css" type="stylesheet" priority=10 %}
-{% import Nav from "composites/nav" %}
-{% import Footer from "primitives/footer" %}
+{% asset "/static/css/tokens.css" type="stylesheet" priority=100 %}
+{% asset "/static/css/base.css"   type="stylesheet" priority=90 %}
+{% asset "/static/js/cart.js"     type="script" %}
+{% import Nav from "components/nav/Nav" %}
+{% import Footer from "components/footer/Footer" %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>{% #slot "title" %}Grove Blog{% /slot %}</title>
-  <!-- HEAD_ASSETS -->
+  <title>{% #slot "title" %}{% site_name %}{% /slot %}</title>
   <!-- HEAD_META -->
-  <!-- HEAD_HOISTED -->
+  <!-- HEAD_ASSETS -->
+  <!-- HEAD_HOIST -->
 </head>
 <body>
   <Nav site_name={site_name} />
-  <main class="container">{% slot "content" %}</main>
-  <Footer year={current_year} />
+  <main>{% #slot "content" %}{% /slot %}</main>
+  <Footer year={current_year} site_name={site_name} />
   <!-- FOOT_ASSETS -->
 </body>
 </html>
 ```
 
-Component assets look like:
+`result.HeadHTML()` / `result.FootHTML()` inject `<link>` / `<script>`
+tags from `{% asset %}` references. `result.Meta` is a map that the
+handler iterates to build `<meta>` tags. `result.GetHoisted("head")`
+returns whatever any template pushed via `{% #hoist "head" %}`. See
+`examples/juicebar/main.go` `writeResult` for the full substitution pass.
 
-```html
-{# composites/nav/nav.grov #}
-{% asset "composites/nav/nav.css" type="stylesheet" %}
-{% asset "composites/nav/nav.js"  type="script" %}
-<nav class="nav">...</nav>
-```
+## Cart: localStorage, not cookies
 
-Placeholder comments in the base layout are replaced by the Go response
-assembler. `result.HeadHTML()` and `result.FootHTML()` inject `<link>` and `<script>` tags.
-`result.Meta` is a map of name/content pairs; the handler iterates it to build meta tags.
-`result.GetHoisted("head")` injects hoisted content — see `main.go:writeResult` for the full pattern.
+The cart is client-side only. `pages/cart.grov` renders an empty shell;
+`static/js/cart.js` hydrates it from `localStorage`. The server never
+sees the cart, which keeps `main.go` focused on Grove features and avoids
+session plumbing that has nothing to do with the template engine.
 
----
+## Emails
 
-## Store
-
-`examples/store/` adds:
-
-- A custom filter registered from Go:
-  ```go
-  eng.RegisterFilter("currency", grove.FilterFn(func(v grove.Value, _ []grove.Value) (grove.Value, error) {
-      cents, _ := v.ToInt64()
-      return grove.StringValue(fmt.Sprintf("$%d.%02d", cents/100, cents%100)), nil
-  }))
-  ```
-  Templates then use `{% product.price | currency %}`.
-- Cookie-based cart state (`cartHandler`, `cartAddHandler`).
-- Query-string filtering + sorting in `productsHandler`.
-- Same asset pipeline wiring as blog.
-
----
-
-## Docs
-
-`examples/docs/` demonstrates:
-
-- `grove.WithSandbox(...)` restricting allowed tags / filters and capping
-  loop iterations. Any template that oversteps errors at render time.
-- Deep component nesting (`Base` → `DocsLayout` → page) with sidebar,
-  breadcrumbs, and prev/next partials.
-- Colocated component macros (`macros/note.grov`, `macros/tip.grov`,
-  `macros/warning.grov`, `macros/code-example.grov`) with their own CSS —
-  picked up by the asset builder just like composites/primitives.
-
-The sandbox config must include `"asset"` in `AllowedTags` for the
-pipeline to work; the example shows the full whitelist.
-
----
-
-## Email
-
-`examples/email/` is the one example that **does not** use the asset
-pipeline. Email clients (especially Outlook) require inline styles, so
-component `{% asset %}` tags would be useless. Instead the example leans
-on `{% #hoist "preheader" %}`, captured blocks, and table-based layouts
-with MSO conditional comments. See its README for the full feature list.
-
----
+`templates/emails/order-confirmation.grov` and `welcome.grov` use inline
+styles and table layouts — the Outlook-friendly shape. They're served at
+`/preview/email/order` and `/preview/email/welcome` with canned sample
+data, so the same engine preview route that renders the website also
+demos transactional output.
 
 ## Running for development
 
-For template hot-reload, use `entr` or similar:
+Template hot-reload with `entr`:
 
 ```bash
-ls examples/blog/templates/**/*.grov | entr -r go run ./examples/blog
+find examples/juicebar/templates -name '*.grov' | entr -r go run ./examples/juicebar
 ```
 
 For asset hot-rebuild, swap `builder.Build()` for
-`builder.Watch(ctx, handlers)` — it polls at 500 ms, debounces 100 ms,
-and calls `engine.SetAssetResolver` on each rebuild so new hashes take
-effect immediately. See [Asset Pipeline → Watch mode](asset-pipeline.md#watch-mode-development).
+`builder.Watch(ctx, handlers)` — it polls, debounces, and calls
+`engine.SetAssetResolver` on each rebuild so new hashes take effect
+immediately. See
+[Asset Pipeline → Watch mode](asset-pipeline.md#watch-mode-development).

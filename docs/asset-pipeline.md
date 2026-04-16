@@ -249,5 +249,6 @@ image optimization, HMR.
 - [API Reference](api-reference.md#asset-pipeline) — full Go API
 - [`spec/asset-pipeline.md`](../spec/asset-pipeline.md) — design rationale
   and historical context
-- [`examples/blog`](../examples/blog), [`examples/store`](../examples/store),
-  [`examples/docs`](../examples/docs) — working integrations
+- [`examples/juicebar`](../examples/juicebar) — working integration with
+  minified component assets, a hashed manifest, and a custom `currency`
+  filter

@@ -293,4 +293,4 @@ Full documentation is in the [`docs/`](docs/index.md) directory:
 - [Web Primitives](docs/web-primitives.md) — ImportAsset, SetMeta, Hoist, RenderResult
 - [Asset Pipeline](docs/asset-pipeline.md) — Builder, Manifest, resolver, minify, watch mode
 - [API Reference](docs/api-reference.md) — Go types, methods, and configuration
-- [Examples](docs/examples.md) — blog/store/docs/email walkthroughs
+- [Examples](docs/examples.md) — the unified `examples/juicebar` walkthrough

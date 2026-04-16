@@ -64,7 +64,4 @@ Tests use table-driven patterns with `testify/require`. Test helpers `newEngine(
 
 - `spec/` — Design specifications (asset pipeline, syntax improvements, test coverage) and comparative analysis
 - `docs/` — User-facing documentation (syntax, components, filters, web primitives, asset pipeline, API reference)
-- `examples/blog/` — Reference blog app; also migrated to the asset pipeline
-- `examples/store/` — E-commerce example (asset pipeline + custom `currency` filter)
-- `examples/docs/` — Documentation site example (asset pipeline + sandbox config)
-- `examples/email/` — Transactional email templates (no asset pipeline; inline styles)
+- `examples/juicebar/` — Single reference app (shop + blog + content pages + transactional email previews) exercising every major Grove feature. See `spec/2026-04-14-juicebar-example-plan.md` for design rationale.
