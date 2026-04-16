@@ -304,3 +304,41 @@ func TestComponent_FillWithNestedSlotDoesNotClobberOuterFrame(t *testing.T) {
 	// could look up the "b" fill.
 	require.Equal(t, `[<i>A</i>|B]`, renderComponent(t, store, "page.html", grove.Data{}))
 }
+
+// Tier 1 #1: self-closing inner component in each fill position.
+// Matrix over position × outer-slot-count. Exercises the frame-restore path in
+// OP_SLOT with a self-closing invocation (no body) whose own OP_SLOT fires the
+// default-fallback branch — a different code path than block-form.
+func TestComponent_SelfClosingComponentInEachFillPosition(t *testing.T) {
+	store := grove.NewMemoryStore()
+	store.Set("outer3.html", `[{% #slot "a" %}-{% /slot %}|{% #slot "b" %}-{% /slot %}|{% #slot "c" %}-{% /slot %}]`)
+	store.Set("inner.html", `<i>{% #slot %}def{% /slot %}</i>`)
+
+	cases := []struct {
+		name string
+		page string
+		want string
+	}{
+		{
+			"pos1",
+			`{% import Outer from "outer3" %}{% import Inner from "inner" %}<Outer>{% #fill "a" %}<Inner />{% /fill %}{% #fill "b" %}B{% /fill %}{% #fill "c" %}C{% /fill %}</Outer>`,
+			`[<i>def</i>|B|C]`,
+		},
+		{
+			"pos2",
+			`{% import Outer from "outer3" %}{% import Inner from "inner" %}<Outer>{% #fill "a" %}A{% /fill %}{% #fill "b" %}<Inner />{% /fill %}{% #fill "c" %}C{% /fill %}</Outer>`,
+			`[A|<i>def</i>|C]`,
+		},
+		{
+			"pos3",
+			`{% import Outer from "outer3" %}{% import Inner from "inner" %}<Outer>{% #fill "a" %}A{% /fill %}{% #fill "b" %}B{% /fill %}{% #fill "c" %}<Inner />{% /fill %}</Outer>`,
+			`[A|B|<i>def</i>]`,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			store.Set("page.html", tc.page)
+			require.Equal(t, tc.want, renderComponent(t, store, "page.html", grove.Data{}))
+		})
+	}
+}

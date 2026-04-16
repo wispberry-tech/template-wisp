@@ -214,3 +214,21 @@ func TestImport_CircularDependency_Error(t *testing.T) {
 	err := renderStoreErr(t, store, "page.html", grove.Data{})
 	require.Error(t, err)
 }
+
+// Tier 1 #2: a fill body that runs a loop, each iteration invoking an inner
+// component. Every iteration's OP_COMPONENT push/pop must not corrupt the
+// outer frame — subsequent outer slots must still resolve their fills.
+func TestComponent_FillLoopInnerComponent_OuterSlotsSurvive(t *testing.T) {
+	store := grove.NewMemoryStore()
+	store.Set("outer.html", `[{% #slot "items" %}{% /slot %}|{% #slot "tail" %}{% /slot %}]`)
+	store.Set("row.html", `<r>{% #slot %}{% /slot %}</r>`)
+	store.Set("page.html",
+		`{% import Outer from "outer" %}{% import Row from "row" %}`+
+			`<Outer>`+
+			`{% #fill "items" %}{% #each xs as x %}<Row>{% x %}</Row>{% /each %}{% /fill %}`+
+			`{% #fill "tail" %}END{% /fill %}`+
+			`</Outer>`)
+	require.Equal(t,
+		`[<r>a</r><r>b</r><r>c</r>|END]`,
+		renderStore(t, store, "page.html", grove.Data{"xs": []string{"a", "b", "c"}}))
+}

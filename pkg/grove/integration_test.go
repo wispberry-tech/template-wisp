@@ -3,6 +3,7 @@ package grove_test
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -163,4 +164,37 @@ func TestIntegration_HoistInsideLayoutFill(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "<body>content</body>", result.Body)
 	require.Contains(t, result.GetHoisted("head"), ".x{}")
+}
+
+// Tier 1 #3: component nesting depth limit.
+// VM's compStack is fixed at 16 (internal/vm/vm.go). The engine must accept up
+// to 16 nested invocations and reject the 17th with a clear error, not panic.
+// Each level is a distinct component file (import cycles are forbidden).
+func TestIntegration_ComponentDepthLimit(t *testing.T) {
+	build := func(depth int) *grove.MemoryStore {
+		store := grove.NewMemoryStore()
+		// Leaf renders nothing special.
+		store.Set(fmt.Sprintf("c%d.html", depth-1), `<leaf/>`)
+		// Each level imports the next and wraps its slot.
+		for i := depth - 2; i >= 0; i-- {
+			tmpl := fmt.Sprintf(`{%% import Next from "c%d" %%}<l>{%% slot %%}<Next /></l>`, i+1)
+			store.Set(fmt.Sprintf("c%d.html", i), tmpl)
+		}
+		store.Set("page.html", `{% import Root from "c0" %}<Root />`)
+		return store
+	}
+
+	t.Run("depth=16 renders", func(t *testing.T) {
+		store := build(16)
+		eng := grove.New(grove.WithStore(store))
+		_, err := eng.Render(context.Background(), "page.html", grove.Data{})
+		require.NoError(t, err)
+	})
+	t.Run("depth=17 errors cleanly", func(t *testing.T) {
+		store := build(17)
+		eng := grove.New(grove.WithStore(store))
+		_, err := eng.Render(context.Background(), "page.html", grove.Data{})
+		require.Error(t, err)
+		require.Contains(t, strings.ToLower(err.Error()), "nesting")
+	})
 }
