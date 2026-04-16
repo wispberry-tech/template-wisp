@@ -472,3 +472,27 @@ func TestIf_EmptyListIsFalsy(t *testing.T) {
 }
 
 // These edge cases are already covered by existing tests above.
+
+// Tier 3 #7: filter pipelines inside the condition of `#if` and inside a
+// ternary. Existing TestExpressions_TernaryFilterPrecedence covers filter on
+// the value-branch; this covers filter on the condition itself.
+func TestIf_FilterChainInCondition(t *testing.T) {
+	eng := newEngine(t)
+	result := render(t, eng,
+		`{% #if items | length %}has {% items | length %}{% :else %}empty{% /if %}`,
+		grove.Data{"items": []string{"a", "b"}})
+	require.Equal(t, "has 2", result)
+
+	result = render(t, eng,
+		`{% #if items | length %}has{% :else %}empty{% /if %}`,
+		grove.Data{"items": []string{}})
+	require.Equal(t, "empty", result)
+}
+
+func TestTernary_FilterChainInCondition(t *testing.T) {
+	eng := newEngine(t)
+	result := render(t, eng,
+		`{% (items | length) > 0 ? "has" : "empty" %}`,
+		grove.Data{"items": []string{"a"}})
+	require.Equal(t, "has", result)
+}

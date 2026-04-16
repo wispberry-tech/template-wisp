@@ -198,3 +198,31 @@ func TestIntegration_ComponentDepthLimit(t *testing.T) {
 		require.Contains(t, strings.ToLower(err.Error()), "nesting")
 	})
 }
+
+// Tier 5 #11: VM pool hygiene after a mid-render error. Render instances are
+// pooled via sync.Pool. A render that errors mid-execution must reset VM state
+// (scope stack, component stack, capture buffer) before returning to the pool
+// — otherwise a subsequent render reuses the same VM and sees leaked state.
+//
+// Trigger: strict mode + undefined variable inside a deep nested fill, which
+// errors after pushing component/scope frames. Second render on the same
+// engine must then produce a clean result without that leaked state. Run many
+// iterations to raise the probability that the same pooled VM is reused.
+func TestIntegration_VMPoolResetAfterError(t *testing.T) {
+	store := grove.NewMemoryStore()
+	store.Set("wrap.html", `[{% slot %}]`)
+	store.Set("bad.html", `{% import Wrap from "wrap" %}<Wrap>{% undefined_var %}</Wrap>`)
+	store.Set("good.html", `{% import Wrap from "wrap" %}<Wrap>ok</Wrap>`)
+
+	eng := grove.New(grove.WithStore(store), grove.WithStrictVariables(true))
+	ctx := context.Background()
+
+	for i := 0; i < 50; i++ {
+		_, err := eng.Render(ctx, "bad.html", grove.Data{})
+		require.Error(t, err, "iteration %d: bad render should error", i)
+
+		result, err := eng.Render(ctx, "good.html", grove.Data{})
+		require.NoError(t, err, "iteration %d: good render should succeed", i)
+		require.Equal(t, "[ok]", result.Body, "iteration %d: clean output", i)
+	}
+}

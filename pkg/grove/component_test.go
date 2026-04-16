@@ -386,6 +386,30 @@ func TestComponent_FillBodyScope_DoesNotLeakWrites(t *testing.T) {
 	})
 }
 
+// Tier 3 #8: `{% #capture %}` around a component invocation, and capture
+// inside a fill body. Verifies that captured output includes component output
+// (not just its pre-render source) and that a capture inside a fill buffers
+// correctly without leaking into the component body.
+func TestComponent_CaptureOfComponentOutput(t *testing.T) {
+	store := grove.NewMemoryStore()
+	store.Set("box.html", `[{% slot %}]`)
+
+	t.Run("capture wraps component call", func(t *testing.T) {
+		store.Set("page.html",
+			`{% import Box from "box" %}`+
+				`{% #capture c %}<Box>inner</Box>{% /capture %}`+
+				`<({% c %})>`)
+		require.Equal(t, `<([inner])>`, renderComponent(t, store, "page.html", grove.Data{}))
+	})
+
+	t.Run("capture inside fill body", func(t *testing.T) {
+		store.Set("page.html",
+			`{% import Box from "box" %}`+
+				`<Box>{% #capture c %}ab{% /capture %}{% c %}-{% c %}</Box>`)
+		require.Equal(t, `[ab-ab]`, renderComponent(t, store, "page.html", grove.Data{}))
+	})
+}
+
 // Tier 2 #6: loop.parent across a component boundary via a fill.
 // A fill body runs in caller scope. If the caller is iterating when it invokes
 // the component, an inner loop in the fill must see the caller's loop as its

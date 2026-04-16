@@ -182,3 +182,32 @@ func TestLayout_FourLevelChain(t *testing.T) {
 	store.Set("gc.html", `{% import C from "c" %}<C>{% #fill "x" %}gc{% /fill %}</C>`)
 	require.Equal(t, "[gc]", renderLayout(t, store, "gc.html", grove.Data{}))
 }
+
+// Tier 4 #10: five-level layout chain. Extends TestLayout_FourLevelChain by
+// adding one more re-exposing layer. Each level re-exposes its parent's slot
+// via its own `{% #slot %}` with the same name, so the deepest caller's fill
+// has to tunnel through four intermediate components' frames.
+func TestLayout_FiveLevelChain(t *testing.T) {
+	store := grove.NewMemoryStore()
+	store.Set("l0.html", `[{% #slot "x" %}l0{% /slot %}]`)
+	store.Set("l1.html", `{% import L0 from "l0" %}<L0>{% #fill "x" %}{% #slot "x" %}l1{% /slot %}{% /fill %}</L0>`)
+	store.Set("l2.html", `{% import L1 from "l1" %}<L1>{% #fill "x" %}{% #slot "x" %}l2{% /slot %}{% /fill %}</L1>`)
+	store.Set("l3.html", `{% import L2 from "l2" %}<L2>{% #fill "x" %}{% #slot "x" %}l3{% /slot %}{% /fill %}</L2>`)
+	store.Set("l4.html", `{% import L3 from "l3" %}<L3>{% #fill "x" %}{% #slot "x" %}l4{% /slot %}{% /fill %}</L3>`)
+	store.Set("page.html", `{% import L4 from "l4" %}<L4>{% #fill "x" %}page{% /fill %}</L4>`)
+	require.Equal(t, "[page]", renderLayout(t, store, "page.html", grove.Data{}))
+}
+
+// Partial-override variant: only the bottom provides a fill; all intermediate
+// levels fall back to their own `{% #slot %}` defaults. Deepest level reaches
+// its static default, so the output is "l0" (the topmost default).
+func TestLayout_FiveLevelChain_AllFallbacks(t *testing.T) {
+	store := grove.NewMemoryStore()
+	store.Set("l0.html", `[{% #slot "x" %}l0{% /slot %}]`)
+	store.Set("l1.html", `{% import L0 from "l0" %}<L0>{% #fill "x" %}{% #slot "x" %}l1{% /slot %}{% /fill %}</L0>`)
+	store.Set("l2.html", `{% import L1 from "l1" %}<L1>{% #fill "x" %}{% #slot "x" %}l2{% /slot %}{% /fill %}</L1>`)
+	store.Set("l3.html", `{% import L2 from "l2" %}<L2>{% #fill "x" %}{% #slot "x" %}l3{% /slot %}{% /fill %}</L2>`)
+	store.Set("l4.html", `{% import L3 from "l3" %}<L3>{% #fill "x" %}{% #slot "x" %}l4{% /slot %}{% /fill %}</L3>`)
+	store.Set("page.html", `{% import L4 from "l4" %}<L4 />`)
+	require.Equal(t, "[l4]", renderLayout(t, store, "page.html", grove.Data{}))
+}
